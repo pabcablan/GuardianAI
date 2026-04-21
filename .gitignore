@@ -248,6 +248,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+node_modules/
+dist/
+.vite/
 
 # Spyder project settings
 .spyderproject

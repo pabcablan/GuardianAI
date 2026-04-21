@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/app/app.tsx","./src/features/chat/types.ts","./src/features/chat/application/chatapplicationservice.ts","./src/features/chat/components/chatworkspace.tsx","./src/features/chat/components/conversationpanel.tsx","./src/features/chat/components/sidebar.tsx","./src/features/chat/hooks/usechatworkspace.ts"],"version":"5.9.3"}

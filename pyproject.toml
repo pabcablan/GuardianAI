@@ -3,4 +3,8 @@ name = "guardianai"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "fastapi>=0.115.0",
+    "python-multipart>=0.0.9",
+    "uvicorn>=0.32.0",
+]

@@ -1,6 +1,13 @@
 """
 Puertos del modulo Web IU.
 
-Aqui irian las interfaces que definen como la interfaz web se comunica
-con los servicios de aplicacion y con el resto de modulos.
+Aqui se definen los contratos que necesita la capa de aplicacion para
+trabajar con el backend del chat sin depender de implementaciones
+concretas.
+
+Organizacion:
+- `internal/`: puertos propios del modulo para chats, mensajes,
+  documentos y streaming
+- `external/`: puertos de integracion con otros modulos o servicios
+  externos como LLM, procesamiento documental o privacidad
 """
