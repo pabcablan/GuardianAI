@@ -10,6 +10,12 @@ from application.usecases.load_chat import LoadChatUseCase
 from application.usecases.rename_chat import RenameChatUseCase
 from application.usecases.send_message import SendMessageUseCase
 from application.usecases.stream_response import StreamResponseUseCase
+from infrastructure.adapters.connected_document_service import (
+    ConnectedDocumentService,
+)
+from infrastructure.adapters.http_document_processing_client import (
+    HttpDocumentProcessingClient,
+)
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 
 
@@ -27,13 +33,15 @@ class WebUiContainer:
 
 def build_container() -> WebUiContainer:
     gateway = InMemoryChatGateway()
+    document_processor = HttpDocumentProcessingClient()
+    document_service = ConnectedDocumentService(gateway, document_processor)
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
         list_chats=ListChatsUseCase(gateway),
         load_chat=LoadChatUseCase(gateway),
         send_message=SendMessageUseCase(gateway),
-        attach_document=AttachDocumentUseCase(gateway),
+        attach_document=AttachDocumentUseCase(document_service),
         delete_chat=DeleteChatUseCase(gateway),
         rename_chat=RenameChatUseCase(gateway),
         stream_response=StreamResponseUseCase(gateway),
