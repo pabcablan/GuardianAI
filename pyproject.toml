@@ -2,9 +2,27 @@
 name = "guardianai"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
+    "accelerate>=1.13.0",
     "fastapi>=0.115.0",
+    "pillow>=11.0.0",
+    "pymupdf>=1.26.0",
+    "pypdf>=6.10.0",
     "python-multipart>=0.0.9",
+    "transformers>=4.55.0",
     "uvicorn>=0.32.0",
+    "torch",
+    "torchvision",
+    "torchaudio",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

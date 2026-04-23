@@ -8,10 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from infrastructure.ports.external.document_processing_port import (
-    DocumentProcessingPort,
-    ExtractDocumentRequest,
-    ExtractDocumentResponse,
-)
+    DocumentProcessingPort, ExtractDocumentRequest, ExtractDocumentResponse)
 
 
 class DocumentProcessingError(RuntimeError):
@@ -39,7 +36,7 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
         )
 
         try:
-            with urlopen(http_request, timeout=120) as response:
+            with urlopen(http_request, timeout=600) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except HTTPError as error:
             detail = self._read_error_detail(error)

@@ -8,11 +8,8 @@ from domain.document import (
     ExtractionProgressCallback,
     ProcessingDocument,
 )
-from infrastructure.adapters.extract_vlm import (
-    extract_pdf_text,
-    save_extracted_text,
-    save_uploaded_pdf,
-)
+from infrastructure.adapters.extract_vlm import save_extracted_text, save_uploaded_pdf
+from infrastructure.adapters.pdf_text_extractor import extract_pdf_text_with_fallback
 from infrastructure.ports.internal.document_extractor_port import (
     DocumentExtractorPort,
 )
@@ -36,7 +33,7 @@ class LocalDocumentExtractor(DocumentExtractorPort):
             self._storage_dir / f"{document_id}_{safe_filename}",
         )
 
-        extracted_text, page_count = extract_pdf_text(
+        extracted_text, page_count = extract_pdf_text_with_fallback(
             document.content,
             progress_callback=progress_callback,
         )

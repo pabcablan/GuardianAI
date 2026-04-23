@@ -7,8 +7,7 @@ from pathlib import Path
 
 from domain.document import ExtractionProgress, ExtractionProgressCallback
 
-
-MODEL_NAME = "unsloth/Qwen3.5-2B"
+MODEL_NAME = "unsloth/Qwen3.5-9B"
 GPU_INDEX = 1
 PROMPT = """Transcribe todo el texto visible de esta pagina exactamente como aparece.
 Manten el contenido literal.
