@@ -1,15 +1,26 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from application.usecases.attach_document import AttachDocumentCommand
+from application.usecases.attach_document import (
+    AttachDocumentCompleted,
+    AttachDocumentFailed,
+    AttachDocumentProgress,
+)
 from application.usecases.create_chat import CreateChatCommand
 from application.usecases.rename_chat import RenameChatCommand
 from application.usecases.send_message import SendMessageCommand
 from application.usecases.stream_response import StreamResponseCommand
 from infrastructure.adapters.api.dependencies import build_container
 from infrastructure.adapters.api.schemas import (
+    AttachDocumentCompletedResponse,
+    AttachDocumentErrorResponse,
+    AttachDocumentProgressResponse,
     AttachDocumentResponse,
     ChatDetailResponse,
     ChatMessageResponse,
@@ -147,6 +158,70 @@ async def attach_document(
     return AttachDocumentResponse(
         document_id=result.document_id,
         filename=result.filename,
+    )
+
+
+@app.post("/api/chats/{chat_id}/documents/stream")
+async def attach_document_stream(
+    chat_id: str,
+    file: UploadFile = File(...),
+) -> StreamingResponse:
+    filename = file.filename or "document.pdf"
+    content_type = file.content_type or ""
+    content = await file.read()
+
+    try:
+        events = container.attach_document.stream(
+            AttachDocumentCommand(
+                chat_id=chat_id,
+                filename=filename,
+                content_type=content_type,
+                content=content,
+            )
+        )
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found.",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    def event_stream():
+        try:
+            for event in events:
+                if isinstance(event, AttachDocumentProgress):
+                    payload = AttachDocumentProgressResponse(
+                        stage=event.stage,
+                        current=event.current,
+                        total=event.total,
+                        message=event.message,
+                    ).model_dump()
+                elif isinstance(event, AttachDocumentCompleted):
+                    payload = AttachDocumentCompletedResponse(
+                        document_id=event.document_id,
+                        filename=event.filename,
+                    ).model_dump()
+                elif isinstance(event, AttachDocumentFailed):
+                    payload = AttachDocumentErrorResponse(
+                        detail=event.detail,
+                    ).model_dump()
+                else:
+                    payload = AttachDocumentErrorResponse(
+                        detail="Unknown attach document event.",
+                    ).model_dump()
+
+                yield json.dumps(payload, ensure_ascii=True) + "\n"
+        except RuntimeError as error:
+            payload = AttachDocumentErrorResponse(detail=str(error)).model_dump()
+            yield json.dumps(payload, ensure_ascii=True) + "\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="application/x-ndjson",
     )
 
 

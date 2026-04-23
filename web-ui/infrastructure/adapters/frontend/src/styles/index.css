@@ -544,6 +544,82 @@ input {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.processing-card {
+  display: grid;
+  gap: 12px;
+  max-width: min(760px, 100%);
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+    #342d31;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.processing-card__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.processing-card__eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.processing-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.processing-card__stage {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.processing-card__message {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.processing-card__bar {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.processing-card__bar-fill {
+  display: block;
+  height: 100%;
+  width: 20%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #dcd7ce, #ffffff);
+  transition: width 220ms ease;
+}
+
+.processing-card__bar--indeterminate .processing-card__bar-fill {
+  width: 34%;
+  animation: processing-indeterminate 1.2s ease-in-out infinite;
+}
+
+.processing-card__meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.68);
+}
+
 .composer {
   display: grid;
   gap: 8px;
@@ -646,6 +722,13 @@ input {
   cursor: not-allowed;
 }
 
+.composer__upload:disabled,
+.file-banner__clear:disabled,
+.composer__input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .conversation__status {
   font-size: 0.82rem;
   color: rgba(179, 178, 178, 0.72);
@@ -686,5 +769,15 @@ input {
 
   .message {
     max-width: 100%;
+  }
+}
+
+@keyframes processing-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(320%);
   }
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import type { ChatThread } from "../types";
+
+import type { ChatThread, DocumentProcessingStatus } from "../types";
 
 interface ConversationPanelProps {
   chat: ChatThread | null;
@@ -7,6 +8,8 @@ interface ConversationPanelProps {
   errorMessage: string | null;
   isLoadingChats: boolean;
   isResponding: boolean;
+  isInteractionLocked: boolean;
+  documentProcessingStatus: DocumentProcessingStatus | null;
   pendingFile: File | null;
   onDraftChange: (value: string) => void;
   onFileSelect: (file: File | null) => void;
@@ -20,6 +23,8 @@ export function ConversationPanel({
   errorMessage,
   isLoadingChats,
   isResponding,
+  isInteractionLocked,
+  documentProcessingStatus,
   pendingFile,
   onDraftChange,
   onFileSelect,
@@ -47,12 +52,50 @@ export function ConversationPanel({
 
   return (
     <section
-      className={`conversation ${isDragOver ? "conversation--drag-over" : ""}`}
+      className={`conversation ${isDragOver ? "conversation--drag-over" : ""}`.trim()}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <div className="conversation__canvas">
+        {documentProcessingStatus ? (
+          <section className="processing-card" aria-live="polite" aria-atomic="true">
+            <div className="processing-card__header">
+              <div>
+                <p className="processing-card__eyebrow">Procesando documento</p>
+                <h2 className="processing-card__title">{documentProcessingStatus.filename}</h2>
+              </div>
+              <span className="processing-card__stage">{documentProcessingStatus.stage}</span>
+            </div>
+            <p className="processing-card__message">{documentProcessingStatus.message}</p>
+            <div
+              className={`processing-card__bar ${documentProcessingStatus.progress === null ? "processing-card__bar--indeterminate" : ""}`.trim()}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={
+                documentProcessingStatus.progress === null
+                  ? undefined
+                  : Math.round(documentProcessingStatus.progress * 100)
+              }
+            >
+              <span
+                className="processing-card__bar-fill"
+                style={
+                  documentProcessingStatus.progress === null
+                    ? undefined
+                    : { width: `${Math.max(8, documentProcessingStatus.progress * 100)}%` }
+                }
+              />
+            </div>
+            <p className="processing-card__meta">
+              {documentProcessingStatus.progress === null
+                ? "Esperando actualizaciones del backend..."
+                : `${documentProcessingStatus.current} de ${documentProcessingStatus.total}`}
+            </p>
+          </section>
+        ) : null}
+
         {errorMessage ? (
           <div className="conversation__welcome">
             <p className="conversation__welcome-title">No se pudo cargar el chat</p>
@@ -106,9 +149,10 @@ export function ConversationPanel({
               className="file-banner__clear"
               type="button"
               onClick={onClearFile}
+              disabled={isInteractionLocked}
               aria-label="Quitar documento seleccionado"
             >
-              ×
+              x
             </button>
           </div>
         ) : null}
@@ -120,9 +164,10 @@ export function ConversationPanel({
             rows={3}
             placeholder="Pregunta lo que quieras"
             value={draft}
+            disabled={isInteractionLocked}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
+              if (event.key === "Enter" && !event.shiftKey && !isInteractionLocked) {
                 event.preventDefault();
                 onSubmit();
               }
@@ -134,11 +179,13 @@ export function ConversationPanel({
               className="composer__file-input"
               type="file"
               accept=".pdf,application/pdf"
+              disabled={isInteractionLocked}
               onChange={(event) => onFileSelect(event.target.files?.[0] ?? null)}
             />
             <button
               className="composer__upload"
               type="button"
+              disabled={isInteractionLocked}
               onClick={() => fileInputRef.current?.click()}
               aria-label="Subir archivo PDF"
             >
@@ -148,7 +195,7 @@ export function ConversationPanel({
               className="composer__button"
               type="button"
               onClick={onSubmit}
-              disabled={(!draft.trim() && !pendingFile) || isResponding}
+              disabled={(!draft.trim() && !pendingFile) || isInteractionLocked}
               aria-label="Enviar mensaje"
             >
               <img className="icon-image" src="/icons/send-message.svg" alt="" aria-hidden="true" />
@@ -156,7 +203,8 @@ export function ConversationPanel({
           </div>
         </div>
         <span className="conversation__status">
-          {isResponding ? "Generando respuesta..." : chat?.title || "Listo para empezar"}
+          {documentProcessingStatus?.message
+            ?? (isResponding ? "Generando respuesta..." : chat?.title || "Listo para empezar")}
         </span>
       </footer>
     </section>

@@ -7,8 +7,8 @@ from pathlib import Path
 
 from domain.document import ExtractionProgress, ExtractionProgressCallback
 
-MODEL_NAME = "unsloth/Qwen3.5-9B"
-GPU_INDEX = 1
+MODEL_NAME = "unsloth/Qwen3.5-2B"
+GPU_INDEX = 0
 PROMPT = """Transcribe todo el texto visible de esta pagina exactamente como aparece.
 Manten el contenido literal.
 No anadas explicaciones.
@@ -119,6 +119,16 @@ def extract_pdf_text(
     *,
     progress_callback: ExtractionProgressCallback | None = None,
 ) -> tuple[str, int]:
+    if progress_callback is not None:
+        progress_callback(
+            ExtractionProgress(
+                stage="starting",
+                current=0,
+                total=1,
+                message="Cargando modelo VLM para extraer el documento...",
+            )
+        )
+
     model, processor = load_runtime_vlm()
     images = pdf_to_images(pdf_bytes, scale=DPI_SCALE)
     total_pages = len(images)

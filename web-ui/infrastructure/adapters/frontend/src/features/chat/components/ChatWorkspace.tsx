@@ -11,6 +11,8 @@ export function ChatWorkspace() {
     errorMessage,
     isLoadingChats,
     isResponding,
+    documentProcessingStatus,
+    isInteractionLocked,
     selectChat,
     createChat,
     sendMessage,
@@ -20,6 +22,10 @@ export function ChatWorkspace() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   function handleFileSelect(file: File | null) {
+    if (isInteractionLocked) {
+      return;
+    }
+
     if (!file) {
       return;
     }
@@ -31,6 +37,16 @@ export function ChatWorkspace() {
     }
 
     setPendingFile(file);
+  }
+
+  async function handleSubmit() {
+    const didSend = await sendMessage(draft, pendingFile);
+    if (!didSend) {
+      return;
+    }
+
+    setDraft("");
+    setPendingFile(null);
   }
 
   return (
@@ -50,14 +66,14 @@ export function ChatWorkspace() {
           errorMessage={errorMessage}
           isLoadingChats={isLoadingChats}
           isResponding={isResponding}
+          isInteractionLocked={isInteractionLocked}
+          documentProcessingStatus={documentProcessingStatus}
           pendingFile={pendingFile}
           onDraftChange={setDraft}
           onFileSelect={handleFileSelect}
           onClearFile={() => setPendingFile(null)}
           onSubmit={() => {
-            void sendMessage(draft, pendingFile);
-            setDraft("");
-            setPendingFile(null);
+            void handleSubmit();
           }}
         />
       </section>

@@ -51,5 +51,24 @@ class AttachDocumentResponse(BaseModel):
     filename: str
 
 
+class AttachDocumentProgressResponse(BaseModel):
+    event: str = "progress"
+    stage: str
+    current: int
+    total: int
+    message: str
+
+
+class AttachDocumentCompletedResponse(BaseModel):
+    event: str = "completed"
+    document_id: str
+    filename: str
+
+
+class AttachDocumentErrorResponse(BaseModel):
+    event: str = "error"
+    detail: str
+
+
 class StreamResponse(BaseModel):
     chunks: list[str]

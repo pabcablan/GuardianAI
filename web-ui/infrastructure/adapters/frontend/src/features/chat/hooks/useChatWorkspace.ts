@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 import { createChatApplicationService } from "../application/chatApplicationService";
-import type { ChatSummary, ChatThread } from "../types";
+import type {
+  ChatSummary,
+  ChatThread,
+  DocumentProcessingStatus,
+} from "../types";
 
 
 function getErrorMessage(error: unknown): string {
@@ -17,6 +21,8 @@ export function useChatWorkspace() {
   const [isResponding, setIsResponding] = useState(false);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [documentProcessingStatus, setDocumentProcessingStatus] =
+    useState<DocumentProcessingStatus | null>(null);
 
   useEffect(() => {
     void loadChats();
@@ -118,10 +124,10 @@ export function useChatWorkspace() {
   async function sendMessage(
     content: string,
     pendingFile: File | null = null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const normalizedContent = content.trim();
     if (!normalizedContent && !pendingFile) {
-      return;
+      return false;
     }
 
     setIsResponding(true);
@@ -141,7 +147,31 @@ export function useChatWorkspace() {
       }
 
       if (pendingFile) {
-        await serviceRef.current.attachDocument(activeChatId, pendingFile);
+        setDocumentProcessingStatus({
+          filename: pendingFile.name,
+          stage: "uploading",
+          message: "Subiendo PDF al backend...",
+          current: 0,
+          total: 1,
+          progress: null,
+        });
+
+        await serviceRef.current.attachDocumentWithProgress(
+          activeChatId,
+          pendingFile,
+          (status) => {
+            setDocumentProcessingStatus(status);
+          },
+        );
+
+        setDocumentProcessingStatus({
+          filename: pendingFile.name,
+          stage: "completed",
+          message: "Documento procesado. Actualizando el chat...",
+          current: 1,
+          total: 1,
+          progress: 1,
+        });
       }
 
       if (normalizedContent) {
@@ -150,8 +180,12 @@ export function useChatWorkspace() {
 
       await loadChats(activeChatId);
       await loadChatDetail(activeChatId);
+      setDocumentProcessingStatus(null);
+      return true;
     } catch (error) {
+      setDocumentProcessingStatus(null);
       setErrorMessage(getErrorMessage(error));
+      return false;
     } finally {
       setIsResponding(false);
     }
@@ -164,6 +198,8 @@ export function useChatWorkspace() {
     errorMessage,
     isLoadingChats,
     isResponding,
+    documentProcessingStatus,
+    isInteractionLocked: isResponding || documentProcessingStatus !== null,
     selectChat,
     createChat,
     sendMessage,

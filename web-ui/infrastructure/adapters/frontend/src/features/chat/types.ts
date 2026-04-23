@@ -17,3 +17,12 @@ export interface ChatSummary {
 export interface ChatThread extends ChatSummary {
   messages: ChatMessage[];
 }
+
+export interface DocumentProcessingStatus {
+  filename: string;
+  stage: string;
+  message: string;
+  current: number;
+  total: number;
+  progress: number | null;
+}
