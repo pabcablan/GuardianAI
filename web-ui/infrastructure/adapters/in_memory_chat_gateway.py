@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from application.usecases.attach_document import AttachDocumentResult
 from application.usecases.create_chat import CreateChatResult
 from application.usecases.list_chats import ChatSummary
 from application.usecases.load_chat import ChatDetail
@@ -10,7 +9,6 @@ from application.usecases.send_message import SendMessageResult
 from domain.chat import Chat
 from domain.message import Message
 from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
-from infrastructure.ports.internal.document_service_port import DocumentServicePort
 from infrastructure.ports.internal.message_service_port import MessageServicePort
 from infrastructure.ports.internal.stream_service_port import StreamServicePort
 
@@ -18,7 +16,6 @@ from infrastructure.ports.internal.stream_service_port import StreamServicePort
 class InMemoryChatGateway(
     ChatRepositoryPort,
     MessageServicePort,
-    DocumentServicePort,
     StreamServicePort,
 ):
     def __init__(self) -> None:
@@ -71,18 +68,6 @@ class InMemoryChatGateway(
             assistant_message_id=assistant_message.message_id,
             assistant_content=assistant_message.content,
         )
-
-    def attach_document(
-        self,
-        chat_id: str,
-        filename: str,
-        content_type: str,
-        content: bytes,
-    ) -> AttachDocumentResult:
-        self._require_chat(chat_id)
-        document_id = f"doc-{self._generate_id()}"
-        _ = (content_type, content)
-        return AttachDocumentResult(document_id=document_id, filename=filename)
 
     def delete_chat(self, chat_id: str) -> None:
         self._chats.pop(chat_id, None)

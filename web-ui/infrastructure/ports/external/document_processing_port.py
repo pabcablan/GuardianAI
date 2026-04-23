@@ -13,14 +13,6 @@ class ExtractDocumentRequest:
 
 
 @dataclass(frozen=True)
-class ExtractDocumentResponse:
-    document_id: str
-    filename: str
-    extracted_text: str
-    page_count: int
-
-
-@dataclass(frozen=True)
 class ExtractDocumentProgressEvent:
     event: str
     stage: str
@@ -52,12 +44,6 @@ DocumentExtractionEvent = (
 
 
 class DocumentProcessingPort(Protocol):
-    def extract_document(
-        self,
-        request: ExtractDocumentRequest,
-    ) -> ExtractDocumentResponse:
-        """Send a document to the document-processor module."""
-
     def stream_extract_document(
         self,
         request: ExtractDocumentRequest,

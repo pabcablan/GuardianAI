@@ -26,3 +26,19 @@ export interface DocumentProcessingStatus {
   total: number;
   progress: number | null;
 }
+
+export type AnonymizationOption =
+  | "personNames"
+  | "identityDocuments"
+  | "emails"
+  | "addresses"
+  | "phones"
+  | "organizations"
+  | "relevantCodes";
+
+export type AnonymizationMode = "anonymize" | "keep";
+
+export type AnonymizationSettings = Record<
+  AnonymizationOption,
+  AnonymizationMode
+>;

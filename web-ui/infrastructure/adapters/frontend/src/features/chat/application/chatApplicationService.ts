@@ -117,17 +117,6 @@ export class ChatApplicationService {
     await this.ensure_success(response);
   }
 
-  async attachDocument(chatId: string, file: File): Promise<void> {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/documents`, {
-      method: "POST",
-      body: formData,
-    });
-    await this.ensure_success(response);
-  }
-
   async attachDocumentWithProgress(
     chatId: string,
     file: File,

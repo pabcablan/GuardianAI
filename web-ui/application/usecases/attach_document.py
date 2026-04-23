@@ -16,12 +16,6 @@ class AttachDocumentCommand:
 
 
 @dataclass(frozen=True)
-class AttachDocumentResult:
-    document_id: str
-    filename: str
-
-
-@dataclass(frozen=True)
 class AttachDocumentProgress:
     event: str
     stage: str
@@ -51,20 +45,6 @@ AttachDocumentStreamEvent = (
 class AttachDocumentUseCase:
     def __init__(self, gateway: DocumentServicePort) -> None:
         self._gateway = gateway
-
-    def execute(self, command: AttachDocumentCommand) -> AttachDocumentResult:
-        document = DocumentAttachment(
-            filename=command.filename,
-            content_type=command.content_type,
-            content=command.content,
-        )
-
-        return self._gateway.attach_document(
-            chat_id=command.chat_id,
-            filename=document.filename,
-            content_type=document.content_type,
-            content=document.content,
-        )
 
     def stream(self, command: AttachDocumentCommand) -> Iterator[AttachDocumentStreamEvent]:
         document = DocumentAttachment(

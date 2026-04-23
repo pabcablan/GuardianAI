@@ -3,14 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from application.usecases.extract_document import ExtractDocumentCommand
 from domain.document import ExtractionProgress
 from infrastructure.adapters.api.dependencies import build_container
-from infrastructure.adapters.api.schemas import ExtractDocumentResponse
 from infrastructure.adapters.api.schemas import (
     ExtractionCompletedResponse,
     ExtractionErrorResponse,
@@ -38,41 +37,6 @@ app.add_middleware(
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.post(
-    "/api/documents/extract",
-    response_model=ExtractDocumentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def extract_document(
-    file: UploadFile = File(...),
-) -> ExtractDocumentResponse:
-    try:
-        result = container.extract_document.execute(
-            ExtractDocumentCommand(
-                filename=file.filename or "document.pdf",
-                content_type=file.content_type or "",
-                content=await file.read(),
-            )
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error
-    except RuntimeError as error:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(error),
-        ) from error
-
-    return ExtractDocumentResponse(
-        document_id=result.document_id,
-        filename=result.filename,
-        extracted_text=result.extracted_text,
-        page_count=result.page_count,
-    )
 
 
 @app.post("/api/documents/extract-stream")

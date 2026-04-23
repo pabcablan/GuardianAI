@@ -11,7 +11,9 @@ interface ConversationPanelProps {
   isInteractionLocked: boolean;
   documentProcessingStatus: DocumentProcessingStatus | null;
   pendingFile: File | null;
+  shouldPreviewAnonymizedText: boolean;
   onDraftChange: (value: string) => void;
+  onPreviewAnonymizedTextChange: (value: boolean) => void;
   onFileSelect: (file: File | null) => void;
   onClearFile: () => void;
   onSubmit: () => void;
@@ -26,7 +28,9 @@ export function ConversationPanel({
   isInteractionLocked,
   documentProcessingStatus,
   pendingFile,
+  shouldPreviewAnonymizedText,
   onDraftChange,
+  onPreviewAnonymizedTextChange,
   onFileSelect,
   onClearFile,
   onSubmit,
@@ -146,11 +150,13 @@ export function ConversationPanel({
               <strong>{pendingFile.name}</strong>
             </div>
             <button
-              className="file-banner__clear"
+              className="file-banner__clear tooltip-target"
               type="button"
               onClick={onClearFile}
               disabled={isInteractionLocked}
               aria-label="Quitar documento seleccionado"
+              title="Quitar el PDF seleccionado antes de enviarlo"
+              data-tooltip="Quitar PDF"
             >
               x
             </button>
@@ -183,23 +189,54 @@ export function ConversationPanel({
               onChange={(event) => onFileSelect(event.target.files?.[0] ?? null)}
             />
             <button
-              className="composer__upload"
+              className="composer__upload tooltip-target"
               type="button"
               disabled={isInteractionLocked}
               onClick={() => fileInputRef.current?.click()}
               aria-label="Subir archivo PDF"
+              title="Adjuntar un documento PDF al chat"
+              data-tooltip="Adjuntar PDF"
             >
               <img className="icon-image" src="/icons/upload-document.svg" alt="" aria-hidden="true" />
             </button>
-            <button
-              className="composer__button"
-              type="button"
-              onClick={onSubmit}
-              disabled={(!draft.trim() && !pendingFile) || isInteractionLocked}
-              aria-label="Enviar mensaje"
-            >
-              <img className="icon-image" src="/icons/send-message.svg" alt="" aria-hidden="true" />
-            </button>
+            <div className="composer__actions">
+              <label
+                className="preview-switch tooltip-target"
+                title="Activar para revisar el texto anonimizado antes de enviarlo"
+                data-tooltip={
+                  shouldPreviewAnonymizedText
+                    ? "Previsualizacion activada"
+                    : "Enviar sin revisar"
+                }
+              >
+                <input
+                  className="preview-switch__input"
+                  type="checkbox"
+                  checked={shouldPreviewAnonymizedText}
+                  disabled={isInteractionLocked}
+                  onChange={(event) =>
+                    onPreviewAnonymizedTextChange(event.target.checked)
+                  }
+                />
+                <span className="preview-switch__track">
+                  <span className="preview-switch__thumb" />
+                </span>
+                <span className="preview-switch__text">
+                  {shouldPreviewAnonymizedText ? "Revisar" : "Sin revisar"}
+                </span>
+              </label>
+              <button
+                className="composer__button tooltip-target"
+                type="button"
+                onClick={onSubmit}
+                disabled={(!draft.trim() && !pendingFile) || isInteractionLocked}
+                aria-label="Enviar mensaje"
+                title="Enviar mensaje al asistente"
+                data-tooltip="Enviar mensaje"
+              >
+                <img className="icon-image" src="/icons/send-message.svg" alt="" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
         <span className="conversation__status">

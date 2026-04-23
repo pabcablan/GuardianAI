@@ -8,6 +8,7 @@ interface SidebarProps {
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
   onToggleSidebar: () => void;
+  onOpenSettings: () => void;
 }
 
 export function Sidebar({
@@ -17,6 +18,7 @@ export function Sidebar({
   onChatSelect,
   onCreateChat,
   onToggleSidebar,
+  onOpenSettings,
 }: SidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -79,12 +81,21 @@ export function Sidebar({
 
       <div className="sidebar__section">
         {isExpanded ? (
-          <button className="sidebar__add-chat" type="button" onClick={onCreateChat}>
+          <button
+            className="sidebar__add-chat"
+            type="button"
+            onClick={onCreateChat}
+          >
             <img className="sidebar__add-icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
             Anadir Chat
           </button>
         ) : (
-          <button className="sidebar__compact-action" type="button" onClick={onCreateChat} aria-label="Anadir chat">
+          <button
+            className="sidebar__compact-action"
+            type="button"
+            onClick={onCreateChat}
+            aria-label="Anadir chat"
+          >
             <img className="icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
           </button>
         )}
@@ -118,6 +129,28 @@ export function Sidebar({
           ) : null}
         </div>
       ) : null}
+
+      <div className="sidebar__footer">
+        {isExpanded ? (
+          <button
+            className="sidebar__settings"
+            type="button"
+            onClick={onOpenSettings}
+          >
+            <span className="icon icon--settings" aria-hidden="true" />
+            Configuracion
+          </button>
+        ) : (
+          <button
+            className="sidebar__compact-action"
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Abrir configuracion"
+          >
+            <span className="icon icon--settings" aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

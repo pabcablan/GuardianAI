@@ -6,7 +6,6 @@ from application.usecases.attach_document import (
     AttachDocumentCompleted,
     AttachDocumentFailed,
     AttachDocumentProgress,
-    AttachDocumentResult,
     AttachDocumentStreamEvent,
 )
 from infrastructure.ports.external.document_processing_port import (
@@ -28,28 +27,6 @@ class ConnectedDocumentService(DocumentServicePort):
     ) -> None:
         self._chat_repository = chat_repository
         self._document_processor = document_processor
-
-    def attach_document(
-        self,
-        chat_id: str,
-        filename: str,
-        content_type: str,
-        content: bytes,
-    ) -> AttachDocumentResult:
-        if self._chat_repository.load_chat(chat_id) is None:
-            raise KeyError(chat_id)
-
-        result = self._document_processor.extract_document(
-            ExtractDocumentRequest(
-                filename=filename,
-                content_type=content_type,
-                content=content,
-            )
-        )
-        return AttachDocumentResult(
-            document_id=result.document_id,
-            filename=result.filename,
-        )
 
     def stream_attach_document(
         self,

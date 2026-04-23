@@ -46,11 +46,6 @@ class RenameChatRequest(BaseModel):
     title: str = Field(min_length=1, max_length=120)
 
 
-class AttachDocumentResponse(BaseModel):
-    document_id: str
-    filename: str
-
-
 class AttachDocumentProgressResponse(BaseModel):
     event: str = "progress"
     stage: str

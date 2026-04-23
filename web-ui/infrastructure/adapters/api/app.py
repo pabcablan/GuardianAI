@@ -21,7 +21,6 @@ from infrastructure.adapters.api.schemas import (
     AttachDocumentCompletedResponse,
     AttachDocumentErrorResponse,
     AttachDocumentProgressResponse,
-    AttachDocumentResponse,
     ChatDetailResponse,
     ChatMessageResponse,
     ChatSummaryResponse,
@@ -123,41 +122,6 @@ def send_message(chat_id: str, payload: SendMessageRequest) -> SendMessageRespon
         user_message_id=result.user_message_id,
         assistant_message_id=result.assistant_message_id,
         assistant_content=result.assistant_content,
-    )
-
-
-@app.post(
-    "/api/chats/{chat_id}/documents",
-    response_model=AttachDocumentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def attach_document(
-    chat_id: str,
-    file: UploadFile = File(...),
-) -> AttachDocumentResponse:
-    try:
-        result = container.attach_document.execute(
-            AttachDocumentCommand(
-                chat_id=chat_id,
-                filename=file.filename or "document.pdf",
-                content_type=file.content_type or "",
-                content=await file.read(),
-            )
-        )
-    except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
-        ) from error
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error
-
-    return AttachDocumentResponse(
-        document_id=result.document_id,
-        filename=result.filename,
     )
 
 

@@ -16,7 +16,6 @@ from infrastructure.ports.external.document_processing_port import (
     ExtractDocumentErrorEvent,
     ExtractDocumentProgressEvent,
     ExtractDocumentRequest,
-    ExtractDocumentResponse,
 )
 
 
@@ -27,40 +26,6 @@ class DocumentProcessingError(RuntimeError):
 @dataclass(frozen=True)
 class HttpDocumentProcessingClient(DocumentProcessingPort):
     base_url: str = "http://127.0.0.1:8001"
-
-    def extract_document(
-        self,
-        request: ExtractDocumentRequest,
-    ) -> ExtractDocumentResponse:
-        boundary = f"boundary-{uuid.uuid4().hex}"
-        payload = self._build_multipart_payload(request, boundary)
-        http_request = Request(
-            url=f"{self.base_url}/api/documents/extract",
-            data=payload,
-            method="POST",
-            headers={
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "Content-Length": str(len(payload)),
-            },
-        )
-
-        try:
-            with urlopen(http_request, timeout=600) as response:
-                response_payload = json.loads(response.read().decode("utf-8"))
-        except HTTPError as error:
-            detail = self._read_error_detail(error)
-            raise DocumentProcessingError(detail) from error
-        except URLError as error:
-            raise DocumentProcessingError(
-                "Document processor service is unavailable."
-            ) from error
-
-        return ExtractDocumentResponse(
-            document_id=response_payload["document_id"],
-            filename=response_payload["filename"],
-            extracted_text=response_payload["extracted_text"],
-            page_count=response_payload["page_count"],
-        )
 
     def stream_extract_document(
         self,
