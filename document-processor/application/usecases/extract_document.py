@@ -1,26 +1,20 @@
-from __future__ import annotations
+from __future__ import annotations #TODO remove
 
 from dataclasses import dataclass
 
-from domain.document import (
-    ExtractedDocument,
-    ExtractionProgressCallback,
-    ProcessingDocument,
-)
-from infrastructure.ports.internal.document_extractor_port import (
-    DocumentExtractorPort,
-)
+from domain.document import ExtractedDocument, ExtractionProgressCallback,ProcessingDocument
+from infrastructure.ports.internal.document_extractor_port import DocumentExtractorPort
 
 
 @dataclass(frozen=True)
-class ExtractDocumentCommand:
+class ExtractDocumentCommand: #TODO should this go in domain?
     filename: str
     content_type: str
     content: bytes
 
 
 @dataclass(frozen=True)
-class ExtractDocumentResult:
+class ExtractDocumentResult: #TODO should also this go in domain?
     document_id: str
     filename: str
     extracted_text: str
@@ -30,28 +24,25 @@ class ExtractDocumentResult:
 class ExtractDocumentUseCase:
     def __init__(self, extractor: DocumentExtractorPort) -> None:
         self._extractor = extractor
-
-    def execute(
-        self,
-        command: ExtractDocumentCommand,
-        *,
-        progress_callback: ExtractionProgressCallback | None = None,
-    ) -> ExtractDocumentResult:
-        document = ProcessingDocument(
-            filename=command.filename,
-            content_type=command.content_type,
-            content=command.content,
-        )
+                                                                        #TODO add exception handling
+    def execute(self, command: ExtractDocumentCommand,                  #TODO should this me async? 
+                progress_callback: ExtractionProgressCallback \
+                | None = None) -> ExtractDocumentResult:
+        
+        document = ProcessingDocument(command.filename,
+                                      command.content_type,
+                                      command.content)
+        
         extracted = self._extractor.extract_document(
             document,
-            progress_callback=progress_callback,
-        )
+            progress_callback)
+        
         return self._to_result(extracted)
 
-    def _to_result(self, extracted: ExtractedDocument) -> ExtractDocumentResult:
-        return ExtractDocumentResult(
-            document_id=extracted.document_id,
-            filename=extracted.filename,
-            extracted_text=extracted.extracted_text,
-            page_count=extracted.page_count,
-        )
+    def _to_result(self, extracted: ExtractedDocument) \
+        -> ExtractDocumentResult:
+        
+        return ExtractDocumentResult(extracted.document_id,
+                                     extracted.filename,
+                                     extracted.extracted_text,
+                                     extracted.page_count)

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations #TODO remove 
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -7,6 +7,7 @@ from pathlib import Path
 
 PDF_CONTENT_TYPE = "application/pdf"
 
+#TODO: consider moving each dataclass to its own file
 
 @dataclass(frozen=True)
 class ProcessingDocument:
@@ -23,10 +24,8 @@ class ProcessingDocument:
             raise ValueError("Only PDF documents are supported.")
 
     def is_pdf(self) -> bool:
-        return (
-            self.content_type == PDF_CONTENT_TYPE
-            or self.filename.lower().endswith(".pdf")
-        )
+        return (self.content_type == PDF_CONTENT_TYPE 
+                or self.filename.lower().endswith(".pdf"))
 
 
 @dataclass(frozen=True)
