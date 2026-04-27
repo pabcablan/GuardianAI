@@ -6,5 +6,19 @@ requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115.0",
     "python-multipart>=0.0.9",
+    "torch>=2.10.0",
+    "torchaudio>=2.11.0",
+    "torchvision>=0.25.0",
+    "unsloth>=2026.4.8",
     "uvicorn>=0.32.0",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
