@@ -1,9 +1,9 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from application.usecases.extract_document import ExtractDocumentCommand
-from infrastructure.adapters.api.dependencies import build_container
-from infrastructure.adapters.api.schemas import ExtractDocumentResponse
+from application.usecases.extract_document import ExtractedDocumentCommand
+from infrastructure.adapters.api.dependencies import build_container #TODO this should be here
+from domain.extracted_document import ExtractedDocument
 
 
 container = build_container()
@@ -11,7 +11,7 @@ container = build_container()
 app = FastAPI(
     title="GuardianAI Document Processor",
     version="0.1.0",
-    description="API del modulo document-processor para extraer texto de PDFs.",
+    description="Text extraction API for PDF documents."
 )
 
 app.add_middleware(
@@ -27,20 +27,14 @@ app.add_middleware(
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
 
-
-@app.post(
-    "/api/documents/extract",
-    response_model=ExtractDocumentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def extract_document(
-    file: UploadFile = File(...),
-) -> ExtractDocumentResponse:
+@app.post("/api/documents/extract", response_model=ExtractedDocument,
+          status_code=status.HTTP_201_CREATED)
+async def extract_document(file: UploadFile = File(...)) -> ExtractedDocument:
     try:
         result = container.extract_document.execute(
-            ExtractDocumentCommand(
-                filename=file.filename or "document.pdf",
-                content_type=file.content_type or "",
+            ExtractedDocumentCommand(
+                filename=file.filename,
+                content_type=file.content_type,
                 content=await file.read(),
             )
         )
@@ -55,9 +49,9 @@ async def extract_document(
             detail=str(error),
         ) from error
 
-    return ExtractDocumentResponse(
+    return ExtractedDocument(
         document_id=result.document_id,
         filename=result.filename,
         extracted_text=result.extracted_text,
-        page_count=result.page_count,
+        num_pages=result.page_count,
     )

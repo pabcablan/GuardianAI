@@ -6,10 +6,10 @@ from domain.extraction_progress import ExtractionProgressCallback
 from domain.processing_document import ProcessingDocument
 from infrastructure.adapters.extract_vlm import save_extracted_text, save_uploaded_pdf
 from infrastructure.adapters.pdf_text_extractor import extract_pdf_text_with_fallback
-from infrastructure.ports.document_extractor_port import DocumentExtractorPort
+from infrastructure.ports.document_extractor import DocumentExtractor
 
 
-class LocalDocumentExtractor(DocumentExtractorPort):
+class LocalDocumentExtractor(DocumentExtractor):
     def __init__(self, storage_dir: Path) -> None:
         self._storage_dir = storage_dir
         self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -37,7 +37,7 @@ class LocalDocumentExtractor(DocumentExtractorPort):
             document_id=document_id,
             filename=safe_filename,
             extracted_text=extracted_text,
-            page_count=page_count,
+            num_pages=page_count,
             saved_path=pdf_path,
             extracted_text_path=text_path,
         )
