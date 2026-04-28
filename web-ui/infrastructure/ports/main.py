@@ -1,13 +1,5 @@
-"""
-Puertos del modulo Web IU.
+"""Ports for the web-ui module.
 
-Aqui se definen los contratos que necesita la capa de aplicacion para
-trabajar con el backend del chat sin depender de implementaciones
-concretas.
-
-Organizacion:
-- `internal/`: puertos propios del modulo para chats, mensajes,
-  documentos y streaming
-- `external/`: puertos de integracion con otros modulos o servicios
-  externos como LLM, procesamiento documental o privacidad
+This package defines the contracts required by the application layer to work
+with chat backends without depending on concrete implementations.
 """

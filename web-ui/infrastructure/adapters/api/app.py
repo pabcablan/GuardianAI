@@ -1,3 +1,4 @@
+"""FastAPI application that exposes the web-ui use cases."""
 from __future__ import annotations
 
 import json
@@ -52,11 +53,21 @@ app.add_middleware(
 
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
+    """Return the API health status.
+
+    Returns:
+        dict[str, str]: A simple status payload.
+    """
     return {"status": "ok"}
 
 
 @app.get("/api/chats", response_model=list[ChatSummaryResponse])
 def list_chats() -> list[ChatSummaryResponse]:
+    """List the chats available to the UI.
+
+    Returns:
+        list[ChatSummaryResponse]: The available chat summaries.
+    """
     chats = container.list_chats.execute()
     return [
         ChatSummaryResponse(
@@ -75,6 +86,14 @@ def list_chats() -> list[ChatSummaryResponse]:
     status_code=status.HTTP_201_CREATED,
 )
 def create_chat(payload: CreateChatRequest) -> CreateChatResponse:
+    """Create a new chat.
+
+    Args:
+        payload (CreateChatRequest): The chat creation request body.
+
+    Returns:
+        CreateChatResponse: The created chat data.
+    """
     result = container.create_chat.execute(
         CreateChatCommand(title=payload.title)
     )
@@ -83,6 +102,17 @@ def create_chat(payload: CreateChatRequest) -> CreateChatResponse:
 
 @app.get("/api/chats/{chat_id}", response_model=ChatDetailResponse)
 def load_chat(chat_id: str) -> ChatDetailResponse:
+    """Load a complete chat conversation.
+
+    Args:
+        chat_id (str): The identifier of the chat to load.
+
+    Returns:
+        ChatDetailResponse: The chat detail and message history.
+
+    Raises:
+        HTTPException: If the chat does not exist.
+    """
     chat = container.load_chat.execute(chat_id)
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -108,6 +138,18 @@ def load_chat(chat_id: str) -> ChatDetailResponse:
     status_code=status.HTTP_201_CREATED,
 )
 def send_message(chat_id: str, payload: SendMessageRequest) -> SendMessageResponse:
+    """Send a user message and return the assistant response.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        payload (SendMessageRequest): The message request body.
+
+    Returns:
+        SendMessageResponse: The created message identifiers and response.
+
+    Raises:
+        HTTPException: If the target chat does not exist.
+    """
     try:
         result = container.send_message.execute(
             SendMessageCommand(chat_id=chat_id, content=payload.content)
@@ -130,6 +172,18 @@ async def attach_document_stream(
     chat_id: str,
     file: UploadFile = File(...),
 ) -> StreamingResponse:
+    """Attach a PDF to a chat and stream progress as NDJSON.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        file (UploadFile): The uploaded PDF file.
+
+    Returns:
+        StreamingResponse: The NDJSON event stream.
+
+    Raises:
+        HTTPException: If the chat is missing or the document is invalid.
+    """
     filename = file.filename or "document.pdf"
     content_type = file.content_type or ""
     content = await file.read()
@@ -155,6 +209,11 @@ async def attach_document_stream(
         ) from error
 
     def event_stream():
+        """Serialize attachment events as JSON lines.
+
+        Yields:
+            str: One JSON-encoded event followed by a newline.
+        """
         try:
             for event in events:
                 if isinstance(event, AttachDocumentProgress):
@@ -191,6 +250,15 @@ async def attach_document_stream(
 
 @app.patch("/api/chats/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
+    """Rename an existing chat.
+
+    Args:
+        chat_id (str): The identifier of the chat to rename.
+        payload (RenameChatRequest): The rename request body.
+
+    Raises:
+        HTTPException: If the target chat does not exist.
+    """
     try:
         container.rename_chat.execute(
             RenameChatCommand(chat_id=chat_id, title=payload.title)
@@ -204,11 +272,27 @@ def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
 
 @app.delete("/api/chats/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chat(chat_id: str) -> None:
+    """Delete a chat by identifier.
+
+    Args:
+        chat_id (str): The identifier of the chat to delete.
+    """
     container.delete_chat.execute(chat_id)
 
 
 @app.get("/api/chats/{chat_id}/stream", response_model=StreamResponse)
 def stream_response(chat_id: str) -> StreamResponse:
+    """Return chunks from the latest assistant response.
+
+    Args:
+        chat_id (str): The identifier of the chat.
+
+    Returns:
+        StreamResponse: The response chunks.
+
+    Raises:
+        HTTPException: If the target chat does not exist.
+    """
     try:
         chunks = container.stream_response.execute(
             StreamResponseCommand(chat_id=chat_id)

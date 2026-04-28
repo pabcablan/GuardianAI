@@ -1,3 +1,4 @@
+"""Dependency composition for the web-ui API."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,6 +22,19 @@ from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 
 @dataclass(frozen=True)
 class WebUiContainer:
+    """Group the use cases exposed by the API.
+
+    Attributes:
+        create_chat (CreateChatUseCase): The create chat use case.
+        list_chats (ListChatsUseCase): The list chats use case.
+        load_chat (LoadChatUseCase): The load chat use case.
+        send_message (SendMessageUseCase): The send message use case.
+        attach_document (AttachDocumentUseCase): The attach document use case.
+        delete_chat (DeleteChatUseCase): The delete chat use case.
+        rename_chat (RenameChatUseCase): The rename chat use case.
+        stream_response (StreamResponseUseCase): The stream response use case.
+    """
+
     create_chat: CreateChatUseCase
     list_chats: ListChatsUseCase
     load_chat: LoadChatUseCase
@@ -32,6 +46,11 @@ class WebUiContainer:
 
 
 def build_container() -> WebUiContainer:
+    """Build the dependency graph for the web-ui backend.
+
+    Returns:
+        WebUiContainer: The configured use case container.
+    """
     gateway = InMemoryChatGateway()
     document_processor = HttpDocumentProcessingClient()
     document_service = ConnectedDocumentService(gateway, document_processor)

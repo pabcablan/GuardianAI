@@ -1,7 +1,5 @@
-"""
-Puerto para la integracion de web-ui con el modulo de control o escudo
-de privacidad.
+"""Port placeholder for integrating web-ui with the privacy shield module.
 
-Aqui deberian definirse los contratos para consultar verificaciones,
-alertas, politicas aplicadas o estados de cumplimiento.
+Contracts for checks, alerts, applied policies, or compliance states should be
+defined here when that integration is added.
 """

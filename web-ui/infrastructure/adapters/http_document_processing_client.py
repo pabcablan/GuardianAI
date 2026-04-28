@@ -1,3 +1,4 @@
+"""HTTP client for consuming the document processor service."""
 from __future__ import annotations
 
 import contextlib
@@ -20,17 +21,35 @@ from infrastructure.ports.external.document_processing_port import (
 
 
 class DocumentProcessingError(RuntimeError):
-    """Raised when the document-processor module cannot process a document."""
+    """Represent a document processor failure."""
 
 
 @dataclass(frozen=True)
 class HttpDocumentProcessingClient(DocumentProcessingPort):
+    """Implement the document processing port over HTTP.
+
+    Attributes:
+        base_url (str): The base URL of the document processor service.
+    """
+
     base_url: str = "http://127.0.0.1:8001"
 
     def stream_extract_document(
         self,
         request: ExtractDocumentRequest,
     ) -> Iterator[DocumentExtractionEvent]:
+        """Send a PDF to the processor and stream NDJSON events.
+
+        Args:
+            request (ExtractDocumentRequest): The document extraction request.
+
+        Returns:
+            Iterator[DocumentExtractionEvent]: The parsed extraction events.
+
+        Raises:
+            DocumentProcessingError: If the processor cannot be reached, returns
+            an HTTP error, or emits an unknown event.
+        """
         boundary = f"boundary-{uuid.uuid4().hex}"
         payload = self._build_multipart_payload(request, boundary)
         http_request = Request(
@@ -65,6 +84,15 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
         request: ExtractDocumentRequest,
         boundary: str,
     ) -> bytes:
+        """Build the multipart/form-data body used to upload the file.
+
+        Args:
+            request (ExtractDocumentRequest): The extraction request.
+            boundary (str): The multipart boundary.
+
+        Returns:
+            bytes: The encoded multipart request body.
+        """
         content_type = request.content_type or self._guess_content_type(request.filename)
         lines = [
             f"--{boundary}".encode("utf-8"),
@@ -81,10 +109,26 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
         return b"\r\n".join(lines)
 
     def _guess_content_type(self, filename: str) -> str:
+        """Infer the content type for a filename.
+
+        Args:
+            filename (str): The filename to inspect.
+
+        Returns:
+            str: The guessed MIME type, or a generic binary MIME type.
+        """
         guessed_type, _ = mimetypes.guess_type(filename)
         return guessed_type or "application/octet-stream"
 
     def _read_error_detail(self, error: HTTPError) -> str:
+        """Extract a readable error message from an HTTP response.
+
+        Args:
+            error (HTTPError): The HTTP error raised by urlopen.
+
+        Returns:
+            str: The processor error detail or a fallback message.
+        """
         fallback_message = f"Document processor request failed with status {error.code}."
 
         try:
@@ -95,6 +139,17 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
         return payload.get("detail", fallback_message)
 
     def _parse_stream_event(self, payload: str) -> DocumentExtractionEvent:
+        """Convert one NDJSON line from the processor into a typed event.
+
+        Args:
+            payload (str): The JSON event payload.
+
+        Returns:
+            DocumentExtractionEvent: The parsed extraction event.
+
+        Raises:
+            DocumentProcessingError: If the event type is unknown.
+        """
         parsed = json.loads(payload)
         event_type = parsed["event"]
 

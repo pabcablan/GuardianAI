@@ -1,7 +1,5 @@
-"""
-Puerto para la integracion de web-ui con el servicio conversacional o
-gateway de modelos.
+"""Port placeholder for integrating web-ui with a conversational service.
 
-Aqui deberian definirse los contratos para enviar prompts, recuperar
-respuestas del asistente y gestionar estados conversacionales.
+Contracts for sending prompts, retrieving assistant responses, and managing
+conversation state should be defined here when that integration is added.
 """

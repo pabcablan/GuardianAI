@@ -1,3 +1,4 @@
+"""Adapter that connects chats with the external document processor."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -20,11 +21,21 @@ from infrastructure.ports.internal.document_service_port import DocumentServiceP
 
 
 class ConnectedDocumentService(DocumentServicePort):
+    """Validate chats before delegating uploaded documents to the processor."""
+
     def __init__(
         self,
         chat_repository: ChatRepositoryPort,
         document_processor: DocumentProcessingPort,
     ) -> None:
+        """Initialize the document service.
+
+        Args:
+            chat_repository (ChatRepositoryPort): The repository used to check
+                whether the target chat exists.
+            document_processor (DocumentProcessingPort): The external document
+                processor client.
+        """
         self._chat_repository = chat_repository
         self._document_processor = document_processor
 
@@ -35,6 +46,21 @@ class ConnectedDocumentService(DocumentServicePort):
         content_type: str,
         content: bytes,
     ) -> Iterator[AttachDocumentStreamEvent]:
+        """Process an attachment and translate external processor events.
+
+        Args:
+            chat_id (str): The identifier of the chat that receives the document.
+            filename (str): The uploaded document filename.
+            content_type (str): The uploaded document MIME type.
+            content (bytes): The uploaded document bytes.
+
+        Returns:
+            Iterator[AttachDocumentStreamEvent]: The translated document
+            attachment events.
+
+        Raises:
+            KeyError: If the target chat does not exist.
+        """
         if self._chat_repository.load_chat(chat_id) is None:
             raise KeyError(chat_id)
 

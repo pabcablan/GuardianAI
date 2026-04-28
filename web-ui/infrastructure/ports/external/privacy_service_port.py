@@ -1,6 +1,5 @@
-"""
-Puerto para la integracion de web-ui con servicios de privacidad.
+"""Port placeholder for integrating web-ui with privacy services.
 
-Aqui deberian definirse los contratos para lanzar procesos de
-anonimizacion, validacion de privacidad o revision de contenido sensible.
+Contracts for anonymization, privacy validation, or sensitive content review
+should be defined here when that integration is added.
 """

@@ -1,6 +1,5 @@
-"""
-Entrypoint de la API FastAPI del modulo web-ui.
+"""FastAPI entrypoint for the web-ui module.
 
-Ejecutar desde la carpeta `web-ui` con algo como:
+Run it from the `web-ui` directory with:
 `uvicorn infrastructure.adapters.api.app:app --reload`
 """

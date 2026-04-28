@@ -1,3 +1,4 @@
+"""Internal port for attaching documents to chat conversations."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -8,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class DocumentServicePort(Protocol):
+    """Define the document operations required by document use cases."""
+
     def stream_attach_document(
         self,
         chat_id: str,
@@ -15,4 +18,14 @@ class DocumentServicePort(Protocol):
         content_type: str,
         content: bytes,
     ) -> Iterator["AttachDocumentStreamEvent"]:
-        """Attach a PDF document while streaming processing updates."""
+        """Attach a PDF document while streaming processing updates.
+
+        Args:
+            chat_id (str): The identifier of the chat that receives the document.
+            filename (str): The document filename.
+            content_type (str): The document MIME type.
+            content (bytes): The document bytes.
+
+        Returns:
+            Iterator[AttachDocumentStreamEvent]: The document attachment events.
+        """
