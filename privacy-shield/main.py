@@ -1,13 +1,27 @@
-from infrastructure.adapters.model_loader.transformers_provider import TransformersProvider
 from infrastructure.adapters.model_loader.unsloth_provider import UnslothProvider
-
+from infrastructure.adapters.evaluation.qwen_evaluator import QwenEvaluator
+from infrastructure.adapters.anonymization.llm_anonymizer import LlmAnonymizer
 
 def main():
-    trans_provider = TransformersProvider()
-    unsloth_provider = UnslothProvider()
-
-    model_eval, tok_eval = trans_provider.load(model_id="Qwen/Qwen3.5-0.8B-Base",  name="evaluator_model",  gpu_index=0)
-    model_anon, tok_anon = unsloth_provider.load(model_id="unsloth/Qwen3.5-0.8B-Base",  name="anonymizer_model")
+    text_to_process = "Hola, soy Juan Pérez y mi DNI es 12345678Z."
+    
+    provider = UnslothProvider()
+    model, tokenizer = provider.load(model_id="unsloth/Qwen3.5-0.8B", name="privacy_model", gpu_index=0)
+    
+    evaluator = QwenEvaluator(model, tokenizer)
+    anonymizer = LlmAnonymizer(model, tokenizer)
+    
+    print(f"Texto original: {text_to_process}")
+    
+    needs_anon = evaluator.evaluate(text_to_process)
+    
+    if needs_anon:
+        print("El texto contiene PII. Anonimizando...")
+        anonymized_text, mapping = anonymizer.anonymize_text(text_to_process)
+        print(f"Texto anonimizado: {anonymized_text}")
+        print(f"Mapping: {mapping}")
+    else:
+        print("El texto es seguro, no necesita anonimización.")
 
 if __name__ == "__main__":
     main()

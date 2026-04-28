@@ -9,7 +9,7 @@ import torch
 
 from infrastructure.ports.anonymizer import Anonymizer
 from resources.prompts import ANONYMIZATION_SYSTEM_PROMPT
-from utils.json_utils import extract_json_from_text
+from utils.json_utils import extract_json_safely
 
 
 class LlmAnonymizer(Anonymizer):
@@ -46,7 +46,7 @@ class LlmAnonymizer(Anonymizer):
         input_tokens = inputs["input_ids"].shape[1]
         generated_tokens = output_ids[0][input_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
-        extracted_entities = self.extract_json_from_text(generated_text)
+        extracted_entities = extract_json_safely(generated_text)
 
         return self._redact_text(text, extracted_entities)
 

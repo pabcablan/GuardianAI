@@ -45,4 +45,4 @@ class QwenEvaluator(AnonymizationEvaluator):
         decoded_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
         result_json = extract_json_safely(decoded_text)
 
-        return result_json
+        return result_json.get("necesita_anonimizacion", False)
