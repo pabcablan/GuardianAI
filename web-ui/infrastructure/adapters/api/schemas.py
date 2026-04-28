@@ -72,28 +72,14 @@ class ChatDetailResponse(BaseModel):
     messages: list[ChatMessageResponse]
 
 
-class SendMessageRequest(BaseModel):
-    """Represent the request body used to send a message.
+class StreamMessageRequest(BaseModel):
+    """Represent the request body used to stream a message response.
 
     Attributes:
         content (str): The user message content.
     """
 
     content: str = Field(min_length=1)
-
-
-class SendMessageResponse(BaseModel):
-    """Represent the response returned after sending a message.
-
-    Attributes:
-        user_message_id (str): The user message identifier.
-        assistant_message_id (str | None): The assistant message identifier.
-        assistant_content (str | None): The assistant response content.
-    """
-
-    user_message_id: str
-    assistant_message_id: str | None
-    assistant_content: str | None
 
 
 class RenameChatRequest(BaseModel):
@@ -150,11 +136,35 @@ class AttachDocumentErrorResponse(BaseModel):
     detail: str
 
 
-class StreamResponse(BaseModel):
-    """Represent response chunks used to simulate streaming.
+class SafeStreamChunkResponse(BaseModel):
+    """Represent one safe response chunk sent to the frontend.
 
     Attributes:
-        chunks (list[str]): The response chunks.
+        event (str): The stream event type.
+        content (str): The safe response chunk.
     """
 
-    chunks: list[str]
+    event: str = "chunk"
+    content: str
+
+
+class SafeStreamCompletedResponse(BaseModel):
+    """Represent a successful safe response stream completion.
+
+    Attributes:
+        event (str): The stream event type.
+    """
+
+    event: str = "completed"
+
+
+class SafeStreamErrorResponse(BaseModel):
+    """Represent a safe response stream error.
+
+    Attributes:
+        event (str): The stream event type.
+        detail (str): The error detail.
+    """
+
+    event: str = "error"
+    detail: str

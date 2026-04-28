@@ -3,36 +3,29 @@ from __future__ import annotations
 
 import json
 
+from application.usecases.attach_document import (AttachDocumentCommand,
+                                                  AttachDocumentCompleted,
+                                                  AttachDocumentFailed,
+                                                  AttachDocumentProgress)
+from application.usecases.create_chat import CreateChatCommand
+from application.usecases.rename_chat import RenameChatCommand
+from application.usecases.stream_message_response import (
+    StreamMessageResponseCommand,
+)
+from application.usecases.stream_safe_response import StreamSafeResponseCommand
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-
-from application.usecases.attach_document import AttachDocumentCommand
-from application.usecases.attach_document import (
-    AttachDocumentCompleted,
-    AttachDocumentFailed,
-    AttachDocumentProgress,
-)
-from application.usecases.create_chat import CreateChatCommand
-from application.usecases.rename_chat import RenameChatCommand
-from application.usecases.send_message import SendMessageCommand
-from application.usecases.stream_response import StreamResponseCommand
 from infrastructure.adapters.api.dependencies import build_container
 from infrastructure.adapters.api.schemas import (
-    AttachDocumentCompletedResponse,
-    AttachDocumentErrorResponse,
-    AttachDocumentProgressResponse,
-    ChatDetailResponse,
-    ChatMessageResponse,
-    ChatSummaryResponse,
-    CreateChatRequest,
-    CreateChatResponse,
-    RenameChatRequest,
-    SendMessageRequest,
-    SendMessageResponse,
-    StreamResponse,
-)
-
+    AttachDocumentCompletedResponse, AttachDocumentErrorResponse,
+    AttachDocumentProgressResponse, ChatDetailResponse, ChatMessageResponse,
+    ChatSummaryResponse, CreateChatRequest, CreateChatResponse,
+    RenameChatRequest, SafeStreamChunkResponse, SafeStreamCompletedResponse,
+    SafeStreamErrorResponse, StreamMessageRequest)
+from infrastructure.ports.external.privacy_shield_port import (
+    PrivacyShieldStreamChunk, PrivacyShieldStreamCompleted,
+    PrivacyShieldStreamFailed)
 
 container = build_container()
 
@@ -132,39 +125,34 @@ def load_chat(chat_id: str) -> ChatDetailResponse:
     )
 
 
-@app.post(
-    "/api/chats/{chat_id}/messages",
-    response_model=SendMessageResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def send_message(chat_id: str, payload: SendMessageRequest) -> SendMessageResponse:
-    """Send a user message and return the assistant response.
+@app.post("/api/chats/{chat_id}/messages/stream")
+def stream_message_response(
+    chat_id: str,
+    payload: StreamMessageRequest,
+) -> StreamingResponse:
+    """Stream a safe assistant response for a user message.
 
     Args:
         chat_id (str): The identifier of the target chat.
-        payload (SendMessageRequest): The message request body.
+        payload (StreamMessageRequest): The message request body.
 
     Returns:
-        SendMessageResponse: The created message identifiers and response.
-
-    Raises:
-        HTTPException: If the target chat does not exist.
+        StreamingResponse: The NDJSON safe response stream.
     """
     try:
-        result = container.send_message.execute(
-            SendMessageCommand(chat_id=chat_id, content=payload.content)
+        events = container.stream_message_response.execute(
+            StreamMessageResponseCommand(
+                chat_id=chat_id,
+                content=payload.content,
+            )
         )
-    except KeyError as error:
+    except ValueError as error:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
 
-    return SendMessageResponse(
-        user_message_id=result.user_message_id,
-        assistant_message_id=result.assistant_message_id,
-        assistant_content=result.assistant_content,
-    )
+    return _build_safe_streaming_response(events)
 
 
 @app.post("/api/chats/{chat_id}/documents/stream")
@@ -280,27 +268,75 @@ def delete_chat(chat_id: str) -> None:
     container.delete_chat.execute(chat_id)
 
 
-@app.get("/api/chats/{chat_id}/stream", response_model=StreamResponse)
-def stream_response(chat_id: str) -> StreamResponse:
-    """Return chunks from the latest assistant response.
+@app.get("/api/chats/{chat_id}/documents/{document_id}/safe-stream")
+def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
+    """Stream safe response chunks for a processed document.
 
     Args:
-        chat_id (str): The identifier of the chat.
+        chat_id (str): The identifier of the target chat.
+        document_id (str): The identifier of the processed document.
 
     Returns:
-        StreamResponse: The response chunks.
-
-    Raises:
-        HTTPException: If the target chat does not exist.
+        StreamingResponse: The NDJSON safe response stream.
     """
     try:
-        chunks = container.stream_response.execute(
-            StreamResponseCommand(chat_id=chat_id)
+        events = container.stream_safe_response.execute(
+            StreamSafeResponseCommand(
+                chat_id=chat_id,
+                document_id=document_id,
+            )
         )
-    except KeyError as error:
+    except ValueError as error:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
 
-    return StreamResponse(chunks=chunks)
+    return _build_safe_streaming_response(events)
+
+
+def _build_safe_streaming_response(events) -> StreamingResponse:
+    """Build an NDJSON response from privacy-shield stream events.
+
+    Args:
+        events: The privacy-shield stream events.
+
+    Returns:
+        StreamingResponse: The serialized safe stream.
+    """
+    def event_stream():
+        """Serialize privacy-shield stream events as JSON lines.
+
+        Yields:
+            str: One JSON-encoded event followed by a newline.
+        """
+        try:
+            for event in events:
+                if isinstance(event, PrivacyShieldStreamChunk):
+                    payload = SafeStreamChunkResponse(
+                        content=event.content,
+                    ).model_dump()
+                elif isinstance(event, PrivacyShieldStreamCompleted):
+                    payload = SafeStreamCompletedResponse().model_dump()
+                elif isinstance(event, PrivacyShieldStreamFailed):
+                    payload = SafeStreamErrorResponse(
+                        detail=event.detail,
+                    ).model_dump()
+                else:
+                    payload = SafeStreamErrorResponse(
+                        detail="Unknown privacy-shield stream event.",
+                    ).model_dump()
+
+                yield json.dumps(payload, ensure_ascii=True) + "\n"
+        except RuntimeError as error:
+            payload = SafeStreamErrorResponse(detail=str(error)).model_dump()
+            yield json.dumps(payload, ensure_ascii=True) + "\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

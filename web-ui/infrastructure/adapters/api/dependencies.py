@@ -9,10 +9,15 @@ from application.usecases.delete_chat import DeleteChatUseCase
 from application.usecases.list_chats import ListChatsUseCase
 from application.usecases.load_chat import LoadChatUseCase
 from application.usecases.rename_chat import RenameChatUseCase
-from application.usecases.send_message import SendMessageUseCase
-from application.usecases.stream_response import StreamResponseUseCase
+from application.usecases.stream_message_response import (
+    StreamMessageResponseUseCase,
+)
+from application.usecases.stream_safe_response import StreamSafeResponseUseCase
 from infrastructure.adapters.connected_document_service import (
     ConnectedDocumentService,
+)
+from infrastructure.adapters.fake_privacy_shield_client import (
+    FakePrivacyShieldClient,
 )
 from infrastructure.adapters.http_document_processing_client import (
     HttpDocumentProcessingClient,
@@ -28,21 +33,23 @@ class WebUiContainer:
         create_chat (CreateChatUseCase): The create chat use case.
         list_chats (ListChatsUseCase): The list chats use case.
         load_chat (LoadChatUseCase): The load chat use case.
-        send_message (SendMessageUseCase): The send message use case.
         attach_document (AttachDocumentUseCase): The attach document use case.
         delete_chat (DeleteChatUseCase): The delete chat use case.
         rename_chat (RenameChatUseCase): The rename chat use case.
-        stream_response (StreamResponseUseCase): The stream response use case.
+        stream_safe_response (StreamSafeResponseUseCase): The safe response
+            stream use case.
+        stream_message_response (StreamMessageResponseUseCase): The streamed
+            message response use case.
     """
 
     create_chat: CreateChatUseCase
     list_chats: ListChatsUseCase
     load_chat: LoadChatUseCase
-    send_message: SendMessageUseCase
     attach_document: AttachDocumentUseCase
     delete_chat: DeleteChatUseCase
     rename_chat: RenameChatUseCase
-    stream_response: StreamResponseUseCase
+    stream_safe_response: StreamSafeResponseUseCase
+    stream_message_response: StreamMessageResponseUseCase
 
 
 def build_container() -> WebUiContainer:
@@ -54,14 +61,15 @@ def build_container() -> WebUiContainer:
     gateway = InMemoryChatGateway()
     document_processor = HttpDocumentProcessingClient()
     document_service = ConnectedDocumentService(gateway, document_processor)
+    privacy_shield = FakePrivacyShieldClient()
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
         list_chats=ListChatsUseCase(gateway),
         load_chat=LoadChatUseCase(gateway),
-        send_message=SendMessageUseCase(gateway),
         attach_document=AttachDocumentUseCase(document_service),
         delete_chat=DeleteChatUseCase(gateway),
         rename_chat=RenameChatUseCase(gateway),
-        stream_response=StreamResponseUseCase(gateway),
+        stream_safe_response=StreamSafeResponseUseCase(privacy_shield),
+        stream_message_response=StreamMessageResponseUseCase(privacy_shield),
     )

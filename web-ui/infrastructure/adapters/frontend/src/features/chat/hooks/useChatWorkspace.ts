@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { createChatApplicationService } from "../application/chatApplicationService";
 import type {
+  ChatMessage,
   ChatSummary,
   ChatThread,
   DocumentProcessingStatus,
@@ -10,6 +11,37 @@ import type {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected error.";
+}
+
+
+function createAssistantMessage(): ChatMessage {
+  return {
+    id: `assistant-stream-${crypto.randomUUID()}`,
+    role: "assistant",
+    content: "",
+    createdAt: "Ahora",
+  };
+}
+
+
+function createUserMessage(content: string): ChatMessage {
+  return {
+    id: `user-stream-${crypto.randomUUID()}`,
+    role: "user",
+    content,
+    createdAt: "Ahora",
+  };
+}
+
+
+function createEmptyChat(chatId: string): ChatThread {
+  return {
+    id: chatId,
+    title: "Nuevo chat",
+    lastMessagePreview: "",
+    updatedAt: "Ahora",
+    messages: [],
+  };
 }
 
 
@@ -105,6 +137,111 @@ export function useChatWorkspace() {
     });
   }
 
+  function appendAssistantMessage(chatId: string, message: ChatMessage): void {
+    setChats((currentChats) =>
+      currentChats.map((chat) =>
+        chat.id === chatId
+          ? {
+              ...chat,
+              lastMessagePreview: message.content,
+              updatedAt: message.createdAt,
+            }
+          : chat,
+      ),
+    );
+
+    setSelectedChat((currentChat) => {
+      const targetChat = currentChat?.id === chatId
+        ? currentChat
+        : createEmptyChat(chatId);
+
+      if (targetChat.id !== chatId) {
+        return currentChat;
+      }
+
+      return {
+        ...targetChat,
+        lastMessagePreview: message.content,
+        updatedAt: message.createdAt,
+        messages: [...targetChat.messages, message],
+      };
+    });
+  }
+
+  function appendChatMessage(chatId: string, message: ChatMessage): void {
+    setChats((currentChats) =>
+      currentChats.map((chat) =>
+        chat.id === chatId
+          ? {
+              ...chat,
+              lastMessagePreview: message.content,
+              updatedAt: message.createdAt,
+            }
+          : chat,
+      ),
+    );
+
+    setSelectedChat((currentChat) => {
+      const targetChat = currentChat?.id === chatId
+        ? currentChat
+        : createEmptyChat(chatId);
+
+      return {
+        ...targetChat,
+        lastMessagePreview: message.content,
+        updatedAt: message.createdAt,
+        messages: [...targetChat.messages, message],
+      };
+    });
+  }
+
+  function appendAssistantChunk(
+    chatId: string,
+    messageId: string,
+    chunk: string,
+  ): void {
+    setChats((currentChats) =>
+      currentChats.map((chat) =>
+        chat.id === chatId
+          ? {
+              ...chat,
+              lastMessagePreview: `${chat.lastMessagePreview}${chunk}`,
+              updatedAt: "Ahora",
+            }
+          : chat,
+      ),
+    );
+
+    setSelectedChat((currentChat) => {
+      if (!currentChat || currentChat.id !== chatId) {
+        return currentChat;
+      }
+
+      const messages = currentChat.messages.map((message) => {
+        if (message.id !== messageId) {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: `${message.content}${chunk}`,
+        };
+      });
+      const streamedMessage = messages.find(
+        (message) => message.id === messageId,
+      );
+
+      const nextPreview = streamedMessage?.content ?? currentChat.lastMessagePreview;
+
+      return {
+        ...currentChat,
+        lastMessagePreview: nextPreview,
+        updatedAt: "Ahora",
+        messages,
+      };
+    });
+  }
+
   function selectChat(chatId: string): void {
     setSelectedChatId(chatId);
   }
@@ -156,7 +293,7 @@ export function useChatWorkspace() {
           progress: null,
         });
 
-        await serviceRef.current.attachDocumentWithProgress(
+        const documentId = await serviceRef.current.attachDocumentWithProgress(
           activeChatId,
           pendingFile,
           (status) => {
@@ -166,20 +303,40 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "completed",
-          message: "Documento procesado. Actualizando el chat...",
+          stage: "responding",
+          message: "Generando respuesta segura...",
           current: 1,
           total: 1,
           progress: 1,
         });
+
+        const assistantMessage = createAssistantMessage();
+        appendAssistantMessage(activeChatId, assistantMessage);
+
+        await serviceRef.current.streamSafeResponse(
+          activeChatId,
+          documentId,
+          (chunk) => {
+            appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
+          },
+        );
       }
 
-      if (normalizedContent) {
-        await serviceRef.current.sendMessage(activeChatId, normalizedContent);
-      }
+      if (!pendingFile) {
+        const userMessage = createUserMessage(normalizedContent);
+        appendChatMessage(activeChatId, userMessage);
 
-      await loadChats(activeChatId);
-      await loadChatDetail(activeChatId);
+        const assistantMessage = createAssistantMessage();
+        appendChatMessage(activeChatId, assistantMessage);
+
+        await serviceRef.current.streamMessage(
+          activeChatId,
+          normalizedContent,
+          (chunk) => {
+            appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
+          },
+        );
+      }
       setDocumentProcessingStatus(null);
       return true;
     } catch (error) {

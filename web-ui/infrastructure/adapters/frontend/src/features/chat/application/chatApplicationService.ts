@@ -5,6 +5,7 @@ import type {
 } from "../types";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const SAFE_STREAM_CHUNK_DELAY_MS = 180;
 
 interface CreateChatResponse {
   chat_id: string;
@@ -54,6 +55,25 @@ type AttachDocumentStreamResponse =
   | AttachDocumentProgressResponse
   | AttachDocumentCompletedResponse
   | AttachDocumentErrorResponse;
+
+interface SafeStreamChunkResponse {
+  event: "chunk";
+  content: string;
+}
+
+interface SafeStreamCompletedResponse {
+  event: "completed";
+}
+
+interface SafeStreamErrorResponse {
+  event: "error";
+  detail: string;
+}
+
+type SafeStreamResponse =
+  | SafeStreamChunkResponse
+  | SafeStreamCompletedResponse
+  | SafeStreamErrorResponse;
 
 export class ChatApplicationService {
   constructor(private readonly apiBaseUrl: string = DEFAULT_API_BASE_URL) {}
@@ -106,8 +126,12 @@ export class ChatApplicationService {
     };
   }
 
-  async sendMessage(chatId: string, content: string): Promise<void> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/messages`, {
+  async streamMessage(
+    chatId: string,
+    content: string,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/messages/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -115,13 +139,15 @@ export class ChatApplicationService {
       body: JSON.stringify({ content }),
     });
     await this.ensure_success(response);
+
+    await this.consumeSafeStream(response, onChunk);
   }
 
   async attachDocumentWithProgress(
     chatId: string,
     file: File,
     onProgress: (status: DocumentProcessingStatus) => void,
-  ): Promise<void> {
+  ): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -138,6 +164,7 @@ export class ChatApplicationService {
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
+    let completedDocumentId: string | null = null;
 
     while (true) {
       const { value, done } = await reader.read();
@@ -149,7 +176,14 @@ export class ChatApplicationService {
         buffer = buffer.slice(lineBreakIndex + 1);
 
         if (rawLine) {
-          this.handleDocumentStreamLine(rawLine, file.name, onProgress);
+          const documentId = this.handleDocumentStreamLine(
+            rawLine,
+            file.name,
+            onProgress,
+          );
+          if (documentId) {
+            completedDocumentId = documentId;
+          }
         }
 
         lineBreakIndex = buffer.indexOf("\n");
@@ -162,8 +196,38 @@ export class ChatApplicationService {
 
     const lastLine = buffer.trim();
     if (lastLine) {
-      this.handleDocumentStreamLine(lastLine, file.name, onProgress);
+      const documentId = this.handleDocumentStreamLine(
+        lastLine,
+        file.name,
+        onProgress,
+      );
+      if (documentId) {
+        completedDocumentId = documentId;
+      }
     }
+
+    if (completedDocumentId) {
+      return completedDocumentId;
+    }
+
+    throw new Error("Document processing completed without a document id.");
+  }
+
+  async streamSafeResponse(
+    chatId: string,
+    documentId: string,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream`,
+    );
+    await this.ensure_success(response);
+
+    if (!response.body) {
+      throw new Error("Safe response stream is unavailable.");
+    }
+
+    await this.consumeSafeStream(response, onChunk);
   }
 
   private async ensure_success(response: Response): Promise<void> {
@@ -188,7 +252,7 @@ export class ChatApplicationService {
     rawLine: string,
     filename: string,
     onProgress: (status: DocumentProcessingStatus) => void,
-  ): void {
+  ): string | null {
     const payload = JSON.parse(rawLine) as AttachDocumentStreamResponse;
 
     if (payload.event === "progress") {
@@ -205,11 +269,87 @@ export class ChatApplicationService {
         total: payload.total,
         progress,
       });
+      return null;
+    }
+
+    if (payload.event === "completed") {
+      onProgress({
+        filename,
+        stage: "completed",
+        message: "Documento procesado. Generando respuesta segura...",
+        current: 1,
+        total: 1,
+        progress: 1,
+      });
+      return payload.document_id;
+    }
+
+    if (payload.event === "error") {
+      throw new Error(payload.detail);
+    }
+
+    return null;
+  }
+
+  private async handleSafeStreamLine(
+    rawLine: string,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    const payload = JSON.parse(rawLine) as SafeStreamResponse;
+
+    if (payload.event === "chunk") {
+      onChunk(payload.content);
+      await this.wait(SAFE_STREAM_CHUNK_DELAY_MS);
       return;
     }
 
     if (payload.event === "error") {
       throw new Error(payload.detail);
+    }
+  }
+
+  private wait(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, milliseconds);
+    });
+  }
+
+  private async consumeSafeStream(
+    response: Response,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    if (!response.body) {
+      throw new Error("Safe response stream is unavailable.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+
+      let lineBreakIndex = buffer.indexOf("\n");
+      while (lineBreakIndex >= 0) {
+        const rawLine = buffer.slice(0, lineBreakIndex).trim();
+        buffer = buffer.slice(lineBreakIndex + 1);
+
+        if (rawLine) {
+          await this.handleSafeStreamLine(rawLine, onChunk);
+        }
+
+        lineBreakIndex = buffer.indexOf("\n");
+      }
+
+      if (done) {
+        break;
+      }
+    }
+
+    const lastLine = buffer.trim();
+    if (lastLine) {
+      await this.handleSafeStreamLine(lastLine, onChunk);
     }
   }
 }
