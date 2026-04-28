@@ -1,6 +1,5 @@
-"""
-Adapters de infraestructura del modulo Privacy Shield.
+"""Infrastructure adapters for the Privacy Shield module.
 
-Aqui irian las implementaciones concretas para auditoria, monitorizacion,
-registro de eventos o integraciones de cumplimiento.
+This package contains concrete implementations for audit, monitoring, event
+logging, compliance integrations, and test doubles.
 """

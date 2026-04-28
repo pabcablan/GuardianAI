@@ -1,6 +1,5 @@
-"""
-Casos de uso del modulo Privacy Shield.
+"""Application use cases for the Privacy Shield module.
 
-Aqui irian los flujos que revisan resultados, aplican controles y
-verifican que las politicas de privacidad se cumplan.
+This package contains flows that review results, apply controls, and verify
+that privacy policies are fulfilled.
 """

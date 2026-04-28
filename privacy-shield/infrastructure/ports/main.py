@@ -1,6 +1,5 @@
-"""
-Puertos del modulo Privacy Shield.
+"""Ports for the Privacy Shield module.
 
-Aqui irian las interfaces que conectan la logica de proteccion y control
-con sistemas externos de auditoria, alertas o persistencia.
+This package contains interfaces that connect protection and control logic with
+external audit, alerting, persistence, or assistant systems.
 """

@@ -1,6 +1,5 @@
-"""
-Dominio del modulo Privacy Shield.
+"""Domain layer for the Privacy Shield module.
 
-Aqui irian las reglas y modelos de negocio orientados a supervisar,
-validar y reforzar las garantias de privacidad del sistema.
+This package contains business rules and models used to supervise, validate,
+and reinforce the system privacy guarantees.
 """
