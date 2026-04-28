@@ -34,7 +34,7 @@ class QwenEvaluator(AnonymizationEvaluator):
         ]
 
         input_text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = self.tokenizer(input_text, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(text=input_text, return_tensors="pt").to(self.model.device)
 
         with torch.no_grad():
             output_ids = self.model.generate(**inputs, max_new_tokens=600, temperature=0.01, do_sample=False,
