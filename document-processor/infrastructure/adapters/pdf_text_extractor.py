@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import re
 from io import BytesIO
 
 from pypdf import PdfReader
 
-from domain.document import ExtractionProgress, ExtractionProgressCallback
+from domain.extraction_progress import ExtractionProgress, ExtractionProgressCallback
 from infrastructure.adapters.extract_vlm import extract_pdf_text
 
 

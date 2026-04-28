@@ -1,18 +1,12 @@
-from __future__ import annotations
-
 from pathlib import Path
 from uuid import uuid4
 
-from domain.document import (
-    ExtractedDocument,
-    ExtractionProgressCallback,
-    ProcessingDocument,
-)
+from domain.extracted_document import ExtractedDocument
+from domain.extraction_progress import ExtractionProgressCallback
+from domain.processing_document import ProcessingDocument
 from infrastructure.adapters.extract_vlm import save_extracted_text, save_uploaded_pdf
 from infrastructure.adapters.pdf_text_extractor import extract_pdf_text_with_fallback
-from infrastructure.ports.internal.document_extractor_port import (
-    DocumentExtractorPort,
-)
+from infrastructure.ports.document_extractor_port import DocumentExtractorPort
 
 
 class LocalDocumentExtractor(DocumentExtractorPort):
@@ -20,12 +14,9 @@ class LocalDocumentExtractor(DocumentExtractorPort):
         self._storage_dir = storage_dir
         self._storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def extract_document(
-        self,
-        document: ProcessingDocument,
-        *,
-        progress_callback: ExtractionProgressCallback | None = None,
-    ) -> ExtractedDocument:
+    def extract_document(self, document: ProcessingDocument,
+        progress_callback: ExtractionProgressCallback | None = None) -> ExtractedDocument:
+        
         document_id = f"doc-{uuid4().hex}"
         safe_filename = Path(document.filename).name
         pdf_path = save_uploaded_pdf(

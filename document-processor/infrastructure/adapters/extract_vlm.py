@@ -5,7 +5,7 @@ from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
-from domain.document import ExtractionProgress, ExtractionProgressCallback
+from domain.extraction_progress import ExtractionProgress, ExtractionProgressCallback
 
 MODEL_NAME = "unsloth/Qwen3.5-9B"
 GPU_INDEX = 1
