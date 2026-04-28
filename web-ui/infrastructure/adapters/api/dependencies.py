@@ -9,19 +9,17 @@ from application.usecases.delete_chat import DeleteChatUseCase
 from application.usecases.list_chats import ListChatsUseCase
 from application.usecases.load_chat import LoadChatUseCase
 from application.usecases.rename_chat import RenameChatUseCase
-from application.usecases.stream_message_response import (
-    StreamMessageResponseUseCase,
-)
+from application.usecases.stream_message_response import \
+    StreamMessageResponseUseCase
 from application.usecases.stream_safe_response import StreamSafeResponseUseCase
-from infrastructure.adapters.connected_document_service import (
-    ConnectedDocumentService,
-)
-from infrastructure.adapters.fake_privacy_shield_client import (
-    FakePrivacyShieldClient,
-)
-from infrastructure.adapters.http_document_processing_client import (
-    HttpDocumentProcessingClient,
-)
+from infrastructure.adapters.connected_document_service import \
+    ConnectedDocumentService
+from infrastructure.adapters.fake_privacy_shield_client import \
+    FakePrivacyShieldClient
+from infrastructure.adapters.http_document_processing_client import \
+    HttpDocumentProcessingClient
+from infrastructure.adapters.http_privacy_shield_client import \
+    HttpPrivacyShieldClient
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 
 
@@ -61,7 +59,7 @@ def build_container() -> WebUiContainer:
     gateway = InMemoryChatGateway()
     document_processor = HttpDocumentProcessingClient()
     document_service = ConnectedDocumentService(gateway, document_processor)
-    privacy_shield = FakePrivacyShieldClient()
+    privacy_shield = FakePrivacyShieldClient() # privacy_shield = HttpPrivacyShieldClient()
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
