@@ -3,8 +3,14 @@ Defines an adapter to load models using the Unsloth library.
 It is responsible for loading models optimized for Unsloth given their identifier, managing the registry of loaded models and tokenizers.
 """
 
+import os
 import threading
 from typing import List, Tuple, Any
+
+# Avoid Torch Dynamo/FX tracing conflicts when Unsloth patches the model for
+# inference. This must be set before importing Unsloth.
+os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
+os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
 
 from unsloth import FastLanguageModel
 

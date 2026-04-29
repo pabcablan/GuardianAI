@@ -23,24 +23,25 @@ class PrivacyShieldError(RuntimeError):
 class HttpPrivacyShieldClient(PrivacyShieldPort):
     """Implement the privacy-shield port over HTTP.
 
-    This adapter is responsible for sending user prompts and document-related
-    requests to the privacy-shield module and streaming back safe responses.
+    This adapter sends original user prompts to privacy-shield. Privacy-shield
+    owns anonymization, assistant API calls, deanonymization, and the safe
+    stream returned to web-ui.
 
     Attributes:
         base_url (str): The base URL of the privacy-shield service.
     """
 
-    base_url: str = "http://127.0.0.1:8002"
+    base_url: str = "http://127.0.0.1:7002"
 
     def stream_message_response(
         self,
         request: PrivacyShieldMessageStreamRequest,
     ) -> Iterator[PrivacyShieldStreamEvent]:
-        """Send a user message to privacy-shield and stream safe response events.
+        """Send a user prompt to privacy-shield and stream safe response events.
 
         Args:
             request (PrivacyShieldMessageStreamRequest): The message stream request
-                containing the chat identifier and user prompt.
+                containing the chat identifier and original user prompt.
 
         Returns:
             Iterator[PrivacyShieldStreamEvent]: The streamed safe response events.
@@ -52,12 +53,12 @@ class HttpPrivacyShieldClient(PrivacyShieldPort):
         payload = json.dumps(
             {
                 "chat_id": request.chat_id,
-                "content": request.content,
+                "text": request.content,
             }
         ).encode("utf-8")
 
         http_request = Request(
-            url=f"{self.base_url}/api/messages/stream",
+            url=f"{self.base_url}/anonymize",
             data=payload,
             method="POST",
             headers={

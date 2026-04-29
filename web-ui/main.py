@@ -51,11 +51,11 @@ from infrastructure.adapters.api.schemas import (
 from infrastructure.adapters.connected_document_service import (
     ConnectedDocumentService,
 )
-from infrastructure.adapters.fake_privacy_shield_client import (
-    FakePrivacyShieldClient,
-)
 from infrastructure.adapters.http_document_processing_client import (
     HttpDocumentProcessingClient,
+)
+from infrastructure.adapters.http_privacy_shield_client import (
+    HttpPrivacyShieldClient,
 )
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 from infrastructure.ports.external.privacy_shield_port import (
@@ -102,7 +102,7 @@ def build_container() -> WebUiContainer:
     gateway = InMemoryChatGateway()
     document_processor = HttpDocumentProcessingClient()
     document_service = ConnectedDocumentService(gateway, document_processor)
-    privacy_shield = FakePrivacyShieldClient()
+    privacy_shield = HttpPrivacyShieldClient()
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),

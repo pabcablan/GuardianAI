@@ -1,4 +1,4 @@
-"""Port for consuming safe response streams from privacy-shield."""
+"""Port for consuming privacy-shield safe response streams."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -25,11 +25,17 @@ class PrivacyShieldStreamRequest:
 
 @dataclass(frozen=True)
 class PrivacyShieldMessageStreamRequest:
-    """Represent the data needed to request a message response stream.
+    """Represent the data needed to request a safe message response stream.
+
+    Web-ui sends the original user prompt to privacy-shield. Privacy-shield is
+    responsible for anonymizing it, sending the anonymized prompt to the
+    assistant API, deanonymizing the streamed assistant response, and returning
+    only safe text chunks to web-ui.
 
     Attributes:
         chat_id (str): The chat that will display the response stream.
-        content (str): The user message that should be answered.
+        content (str): The original user prompt that must be protected by
+            privacy-shield before reaching the assistant API.
     """
 
     chat_id: str
@@ -42,7 +48,8 @@ class PrivacyShieldStreamChunk:
 
     Attributes:
         event (Literal["chunk"]): The stream event type.
-        content (str): The safe deanonymized text chunk.
+        content (str): The deanonymized assistant response chunk safe for UI
+            rendering.
     """
 
     event: Literal["chunk"]
@@ -81,7 +88,12 @@ PrivacyShieldStreamEvent = (
 
 
 class PrivacyShieldPort(Protocol):
-    """Define how web-ui consumes safe streams from privacy-shield."""
+    """Define how web-ui consumes safe streams from privacy-shield.
+
+    The port deliberately hides anonymization maps, anonymized prompts, and
+    assistant API details from web-ui. Those responsibilities belong to
+    privacy-shield.
+    """
 
     def stream_safe_response(
         self,
@@ -102,13 +114,13 @@ class PrivacyShieldPort(Protocol):
         self,
         request: PrivacyShieldMessageStreamRequest,
     ) -> Iterator[PrivacyShieldStreamEvent]:
-        """Stream safe response events for a user chat message.
+        """Stream a safe assistant response for a user chat message.
 
         Args:
             request (PrivacyShieldMessageStreamRequest): The chat identifier and
-            user message that should be answered.
+            original user prompt.
 
         Returns:
-            Iterator[PrivacyShieldStreamEvent]: Safe text chunks and terminal
-            stream events emitted by privacy-shield.
+            Iterator[PrivacyShieldStreamEvent]: Deanonymized safe text chunks
+            and terminal stream events emitted by privacy-shield.
         """
