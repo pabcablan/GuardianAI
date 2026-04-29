@@ -1,4 +1,4 @@
-"""Port definitions for integrating web-ui with the document processor."""
+"""Port for sending document uploads through orchestrator."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -7,8 +7,8 @@ from typing import Protocol
 
 
 @dataclass(frozen=True)
-class ExtractDocumentRequest:
-    """Represent a document extraction request.
+class ProcessDocumentRequest:
+    """Represent a document processing request.
 
     Attributes:
         filename (str): The document filename.
@@ -22,12 +22,12 @@ class ExtractDocumentRequest:
 
 
 @dataclass(frozen=True)
-class ExtractDocumentProgressEvent:
-    """Represent a progress event emitted during document extraction.
+class ProcessDocumentProgressEvent:
+    """Represent a progress event emitted during document processing.
 
     Attributes:
         event (str): The event type.
-        stage (str): The current extraction stage.
+        stage (str): The current processing stage.
         current (int): The current progress value.
         total (int): The total progress value.
         message (str): A human-readable progress message.
@@ -41,13 +41,13 @@ class ExtractDocumentProgressEvent:
 
 
 @dataclass(frozen=True)
-class ExtractDocumentCompletedEvent:
-    """Represent a successful document extraction event.
+class ProcessDocumentCompletedEvent:
+    """Represent a successful document processing event.
 
     Attributes:
         event (str): The event type.
-        document_id (str): The extracted document identifier.
-        filename (str): The extracted document filename.
+        document_id (str): The processed document identifier.
+        filename (str): The processed document filename.
         extracted_text (str): The text extracted from the document.
         page_count (int): The number of processed pages.
     """
@@ -60,8 +60,8 @@ class ExtractDocumentCompletedEvent:
 
 
 @dataclass(frozen=True)
-class ExtractDocumentErrorEvent:
-    """Represent a document extraction error event.
+class ProcessDocumentErrorEvent:
+    """Represent a document processing error event.
 
     Attributes:
         event (str): The event type.
@@ -72,26 +72,26 @@ class ExtractDocumentErrorEvent:
     detail: str
 
 
-DocumentExtractionEvent = (
-    ExtractDocumentProgressEvent
-    | ExtractDocumentCompletedEvent
-    | ExtractDocumentErrorEvent
+OrchestratorDocumentEvent = (
+    ProcessDocumentProgressEvent
+    | ProcessDocumentCompletedEvent
+    | ProcessDocumentErrorEvent
 )
 
 
-class DocumentProcessingPort(Protocol):
-    """Define the document processing operations required by web-ui."""
+class OrchestratorDocumentPort(Protocol):
+    """Define document processing operations exposed by orchestrator."""
 
-    def stream_extract_document(
+    def stream_process_document(
         self,
-        request: ExtractDocumentRequest,
-    ) -> Iterator[DocumentExtractionEvent]:
-        """Stream document extraction events.
+        request: ProcessDocumentRequest,
+    ) -> Iterator[OrchestratorDocumentEvent]:
+        """Stream document processing events.
 
         Args:
-            request (ExtractDocumentRequest): The document extraction request.
+            request (ProcessDocumentRequest): The document processing request.
 
         Returns:
-            Iterator[DocumentExtractionEvent]: The extraction progress,
-            completion, or error events.
+            Iterator[OrchestratorDocumentEvent]: Processing progress, completion,
+            or error events.
         """

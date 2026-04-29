@@ -1,4 +1,4 @@
-"""HTTP client for consuming the document processor service."""
+"""HTTP document client that routes uploads through orchestrator."""
 from __future__ import annotations
 
 import contextlib
@@ -10,45 +10,41 @@ from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from infrastructure.ports.external.document_processing_port import (
-    DocumentExtractionEvent,
-    DocumentProcessingPort,
-    ExtractDocumentCompletedEvent,
-    ExtractDocumentErrorEvent,
-    ExtractDocumentProgressEvent,
-    ExtractDocumentRequest,
+from infrastructure.ports.external.orchestrator_document_port import (
+    OrchestratorDocumentEvent,
+    OrchestratorDocumentPort,
+    ProcessDocumentCompletedEvent,
+    ProcessDocumentErrorEvent,
+    ProcessDocumentProgressEvent,
+    ProcessDocumentRequest,
 )
 
 
-class DocumentProcessingError(RuntimeError):
-    """Represent a document processor failure."""
+class OrchestratorDocumentError(RuntimeError):
+    """Represent a failure while processing documents through orchestrator."""
 
 
 @dataclass(frozen=True)
-class HttpDocumentProcessingClient(DocumentProcessingPort):
-    """Implement the document processing port over HTTP.
+class HttpOrchestratorDocumentClient(OrchestratorDocumentPort):
+    """Implement document processing through the orchestrator API.
 
     Attributes:
-        base_url (str): The base URL of the document processor service.
+        base_url (str): The orchestrator API base URL.
     """
 
-    base_url: str = "http://127.0.0.1:8001"
+    base_url: str = "http://127.0.0.1:7003"
 
-    def stream_extract_document(
+    def stream_process_document(
         self,
-        request: ExtractDocumentRequest,
-    ) -> Iterator[DocumentExtractionEvent]:
-        """Send a PDF to the processor and stream NDJSON events.
+        request: ProcessDocumentRequest,
+    ) -> Iterator[OrchestratorDocumentEvent]:
+        """Send a PDF to orchestrator and stream document processing events.
 
         Args:
-            request (ExtractDocumentRequest): The document extraction request.
+            request (ProcessDocumentRequest): The document processing request.
 
         Returns:
-            Iterator[DocumentExtractionEvent]: The parsed extraction events.
-
-        Raises:
-            DocumentProcessingError: If the processor cannot be reached, returns
-            an HTTP error, or emits an unknown event.
+            Iterator[OrchestratorDocumentEvent]: The parsed processing events.
         """
         boundary = f"boundary-{uuid.uuid4().hex}"
         payload = self._build_multipart_payload(request, boundary)
@@ -66,10 +62,10 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
             response = urlopen(http_request, timeout=600)
         except HTTPError as error:
             detail = self._read_error_detail(error)
-            raise DocumentProcessingError(detail) from error
+            raise OrchestratorDocumentError(detail) from error
         except URLError as error:
-            raise DocumentProcessingError(
-                "Document processor service is unavailable."
+            raise OrchestratorDocumentError(
+                "Orchestrator service is unavailable."
             ) from error
 
         with contextlib.closing(response) as stream:
@@ -81,19 +77,21 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
 
     def _build_multipart_payload(
         self,
-        request: ExtractDocumentRequest,
+        request: ProcessDocumentRequest,
         boundary: str,
     ) -> bytes:
         """Build the multipart/form-data body used to upload the file.
 
         Args:
-            request (ExtractDocumentRequest): The extraction request.
+            request (ProcessDocumentRequest): The processing request.
             boundary (str): The multipart boundary.
 
         Returns:
             bytes: The encoded multipart request body.
         """
-        content_type = request.content_type or self._guess_content_type(request.filename)
+        content_type = request.content_type or self._guess_content_type(
+            request.filename
+        )
         lines = [
             f"--{boundary}".encode("utf-8"),
             (
@@ -127,9 +125,12 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
             error (HTTPError): The HTTP error raised by urlopen.
 
         Returns:
-            str: The processor error detail or a fallback message.
+            str: The orchestrator error detail or a fallback message.
         """
-        fallback_message = f"Document processor request failed with status {error.code}."
+        fallback_message = (
+            "Orchestrator document request failed with status "
+            f"{error.code}."
+        )
 
         try:
             payload = json.loads(error.read().decode("utf-8"))
@@ -138,23 +139,20 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
 
         return payload.get("detail", fallback_message)
 
-    def _parse_stream_event(self, payload: str) -> DocumentExtractionEvent:
-        """Convert one NDJSON line from the processor into a typed event.
+    def _parse_stream_event(self, payload: str) -> OrchestratorDocumentEvent:
+        """Convert one NDJSON line from orchestrator into a typed event.
 
         Args:
             payload (str): The JSON event payload.
 
         Returns:
-            DocumentExtractionEvent: The parsed extraction event.
-
-        Raises:
-            DocumentProcessingError: If the event type is unknown.
+            OrchestratorDocumentEvent: The parsed processing event.
         """
         parsed = json.loads(payload)
         event_type = parsed["event"]
 
         if event_type == "progress":
-            return ExtractDocumentProgressEvent(
+            return ProcessDocumentProgressEvent(
                 event=event_type,
                 stage=parsed["stage"],
                 current=parsed["current"],
@@ -163,18 +161,18 @@ class HttpDocumentProcessingClient(DocumentProcessingPort):
             )
 
         if event_type == "completed":
-            return ExtractDocumentCompletedEvent(
+            return ProcessDocumentCompletedEvent(
                 event=event_type,
                 document_id=parsed["document_id"],
                 filename=parsed["filename"],
-                extracted_text=parsed["extracted_text"],
-                page_count=parsed["page_count"],
+                extracted_text=parsed.get("extracted_text", ""),
+                page_count=parsed.get("page_count", 0),
             )
 
         if event_type == "error":
-            return ExtractDocumentErrorEvent(
+            return ProcessDocumentErrorEvent(
                 event=event_type,
                 detail=parsed["detail"],
             )
 
-        raise DocumentProcessingError("Unknown document processor event received.")
+        raise OrchestratorDocumentError("Unknown orchestrator event received.")

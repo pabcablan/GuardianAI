@@ -1,13 +1,13 @@
-"""Use case for streaming safe responses from privacy-shield."""
+"""Use case for streaming safe responses from orchestrator."""
 from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from infrastructure.ports.external.privacy_shield_port import (
-    PrivacyShieldPort,
-    PrivacyShieldStreamEvent,
-    PrivacyShieldStreamRequest,
+from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorDocumentResponseRequest,
+    OrchestratorResponsePort,
+    OrchestratorStreamEvent,
 )
 
 
@@ -25,27 +25,27 @@ class StreamSafeResponseCommand:
 
 
 class StreamSafeResponseUseCase:
-    """Consume a safe response stream exposed by privacy-shield."""
+    """Consume a safe response stream exposed by orchestrator."""
 
-    def __init__(self, privacy_shield: PrivacyShieldPort) -> None:
+    def __init__(self, orchestrator: OrchestratorResponsePort) -> None:
         """Initialize the use case.
 
         Args:
-            privacy_shield (PrivacyShieldPort): The privacy-shield gateway.
+            orchestrator (OrchestratorResponsePort): The orchestrator gateway.
         """
-        self._privacy_shield = privacy_shield
+        self._orchestrator = orchestrator
 
     def execute(
         self,
         command: StreamSafeResponseCommand,
-    ) -> Iterator[PrivacyShieldStreamEvent]:
+    ) -> Iterator[OrchestratorStreamEvent]:
         """Stream safe response events for a processed document.
 
         Args:
             command (StreamSafeResponseCommand): The stream request data.
 
         Returns:
-            Iterator[PrivacyShieldStreamEvent]: Safe stream events.
+            Iterator[OrchestratorStreamEvent]: Safe stream events.
 
         Raises:
             ValueError: If the chat or document identifier is empty.
@@ -55,8 +55,8 @@ class StreamSafeResponseUseCase:
         if not command.document_id.strip():
             raise ValueError("Document id cannot be empty.")
 
-        return self._privacy_shield.stream_safe_response(
-            PrivacyShieldStreamRequest(
+        return self._orchestrator.stream_safe_response(
+            OrchestratorDocumentResponseRequest(
                 chat_id=command.chat_id,
                 document_id=command.document_id,
             )

@@ -51,18 +51,18 @@ from infrastructure.adapters.api.schemas import (
 from infrastructure.adapters.connected_document_service import (
     ConnectedDocumentService,
 )
-from infrastructure.adapters.http_document_processing_client import (
-    HttpDocumentProcessingClient,
+from infrastructure.adapters.http_orchestrator_client import (
+    HttpOrchestratorClient,
 )
-from infrastructure.adapters.http_privacy_shield_client import (
-    HttpPrivacyShieldClient,
+from infrastructure.adapters.http_orchestrator_document_client import (
+    HttpOrchestratorDocumentClient,
 )
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
-from infrastructure.ports.external.privacy_shield_port import (
-    PrivacyShieldStreamChunk,
-    PrivacyShieldStreamCompleted,
-    PrivacyShieldStreamEvent,
-    PrivacyShieldStreamFailed,
+from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorStreamChunk,
+    OrchestratorStreamCompleted,
+    OrchestratorStreamEvent,
+    OrchestratorStreamFailed,
 )
 
 
@@ -78,9 +78,9 @@ class WebUiContainer:
         delete_chat (DeleteChatUseCase): The delete chat use case.
         rename_chat (RenameChatUseCase): The rename chat use case.
         stream_safe_response (StreamSafeResponseUseCase): The document response
-            stream use case.
+            stream use case through orchestrator.
         stream_message_response (StreamMessageResponseUseCase): The message
-            response stream use case.
+            response stream use case through orchestrator.
     """
 
     create_chat: CreateChatUseCase
@@ -100,9 +100,9 @@ def build_container() -> WebUiContainer:
         WebUiContainer: The configured use case container.
     """
     gateway = InMemoryChatGateway()
-    document_processor = HttpDocumentProcessingClient()
+    document_processor = HttpOrchestratorDocumentClient()
     document_service = ConnectedDocumentService(gateway, document_processor)
-    privacy_shield = HttpPrivacyShieldClient()
+    orchestrator = HttpOrchestratorClient()
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
@@ -111,8 +111,8 @@ def build_container() -> WebUiContainer:
         attach_document=AttachDocumentUseCase(document_service),
         delete_chat=DeleteChatUseCase(gateway),
         rename_chat=RenameChatUseCase(gateway),
-        stream_safe_response=StreamSafeResponseUseCase(privacy_shield),
-        stream_message_response=StreamMessageResponseUseCase(privacy_shield),
+        stream_safe_response=StreamSafeResponseUseCase(orchestrator),
+        stream_message_response=StreamMessageResponseUseCase(orchestrator),
     )
 
 
@@ -385,12 +385,12 @@ def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
 
 
 def _build_safe_streaming_response(
-    events: Iterator[PrivacyShieldStreamEvent],
+    events: Iterator[OrchestratorStreamEvent],
 ) -> StreamingResponse:
-    """Build an NDJSON response from privacy-shield stream events.
+    """Build an NDJSON response from orchestrator stream events.
 
     Args:
-        events (Iterator[PrivacyShieldStreamEvent]): The stream events.
+        events (Iterator[OrchestratorStreamEvent]): The stream events.
 
     Returns:
         StreamingResponse: The serialized safe stream.
@@ -403,13 +403,13 @@ def _build_safe_streaming_response(
         """
         try:
             for event in events:
-                if isinstance(event, PrivacyShieldStreamChunk):
+                if isinstance(event, OrchestratorStreamChunk):
                     payload = SafeStreamChunkResponse(
                         content=event.content,
                     ).model_dump()
-                elif isinstance(event, PrivacyShieldStreamCompleted):
+                elif isinstance(event, OrchestratorStreamCompleted):
                     payload = SafeStreamCompletedResponse().model_dump()
-                elif isinstance(event, PrivacyShieldStreamFailed):
+                elif isinstance(event, OrchestratorStreamFailed):
                     payload = SafeStreamErrorResponse(
                         detail=event.detail,
                     ).model_dump()

@@ -4,10 +4,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from infrastructure.ports.external.privacy_shield_port import (
-    PrivacyShieldMessageStreamRequest,
-    PrivacyShieldPort,
-    PrivacyShieldStreamEvent,
+from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorMessageResponseRequest,
+    OrchestratorResponsePort,
+    OrchestratorStreamEvent,
 )
 
 
@@ -27,25 +27,25 @@ class StreamMessageResponseCommand:
 class StreamMessageResponseUseCase:
     """Consume a safe streamed answer for a user chat message."""
 
-    def __init__(self, privacy_shield: PrivacyShieldPort) -> None:
+    def __init__(self, orchestrator: OrchestratorResponsePort) -> None:
         """Initialize the use case.
 
         Args:
-            privacy_shield (PrivacyShieldPort): The privacy-shield gateway.
+            orchestrator (OrchestratorResponsePort): The orchestrator gateway.
         """
-        self._privacy_shield = privacy_shield
+        self._orchestrator = orchestrator
 
     def execute(
         self,
         command: StreamMessageResponseCommand,
-    ) -> Iterator[PrivacyShieldStreamEvent]:
+    ) -> Iterator[OrchestratorStreamEvent]:
         """Stream safe response events for a user message.
 
         Args:
             command (StreamMessageResponseCommand): The stream request data.
 
         Returns:
-            Iterator[PrivacyShieldStreamEvent]: Safe stream events.
+            Iterator[OrchestratorStreamEvent]: Safe stream events.
 
         Raises:
             ValueError: If the chat identifier or message content is empty.
@@ -56,8 +56,8 @@ class StreamMessageResponseUseCase:
         if not content:
             raise ValueError("Message content cannot be empty.")
 
-        return self._privacy_shield.stream_message_response(
-            PrivacyShieldMessageStreamRequest(
+        return self._orchestrator.stream_message_response(
+            OrchestratorMessageResponseRequest(
                 chat_id=command.chat_id,
                 content=content,
             )
