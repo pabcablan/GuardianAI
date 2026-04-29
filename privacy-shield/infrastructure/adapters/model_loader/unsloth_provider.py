@@ -48,7 +48,6 @@ class UnslothProvider(ModelProvider):
             max_seq_length = kwargs.get("max_seq_length", 4096)
             dtype = kwargs.get("dtype", None)
             load_in_4bit = kwargs.get("load_in_4bit", True)
-            token = kwargs.get("token", None)
 
             model, tokenizer = FastLanguageModel.from_pretrained(model_name=model_id, max_seq_length=max_seq_length, 
                                                                  dtype=dtype, load_in_4bit=load_in_4bit)

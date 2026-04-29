@@ -1,27 +1,29 @@
-from infrastructure.adapters.model_loader.unsloth_provider import UnslothProvider
+import uvicorn
+from fastapi import FastAPI
+
 from infrastructure.adapters.evaluation.qwen_evaluator import QwenEvaluator
 from infrastructure.adapters.anonymization.llm_anonymizer import LlmAnonymizer
+from infrastructure.adapters.model_loader.unsloth_provider import UnslothProvider
+
+from application.usecases.document_anonymizer.anonymize_document import AnonymizeDocument
 
 def main():
-    text_to_process = "Hola, soy Juan Pérez y mi DNI es 12345678Z."
+    unsloth_provider = UnslothProvider()
+
+    model_anonymizer, tokenizer_anonymizer = unsloth_provider.load(model_id="unsloth/Qwen3.5-0.8B",  name="anonymizer_model")
+
+    evaluator = QwenEvaluator(model=model_anonymizer, tokenizer=tokenizer_anonymizer)
+    anonymizer = LlmAnonymizer(model=model_anonymizer, tokenizer=tokenizer_anonymizer)
+
+    anonymize_usecase = AnonymizeDocument(evaluator=evaluator, anonymizer=anonymizer)
     
-    provider = UnslothProvider()
-    model, tokenizer = provider.load(model_id="unsloth/Qwen3.5-0.8B", name="privacy_model", gpu_index=0)
-    
-    evaluator = QwenEvaluator(model, tokenizer)
-    anonymizer = LlmAnonymizer(model, tokenizer)
-    
-    print(f"Texto original: {text_to_process}")
-    
-    needs_anon = evaluator.evaluate(text_to_process)
-    
-    if needs_anon:
-        print("El texto contiene PII. Anonimizando...")
-        anonymized_text, mapping = anonymizer.anonymize_text(text_to_process)
-        print(f"Texto anonimizado: {anonymized_text}")
-        print(f"Mapping: {mapping}")
-    else:
-        print("El texto es seguro, no necesita anonimización.")
+    app = FastAPI()
+
+    @app.post("/anonymize")
+    def anonymize_route(text: str):
+        return anonymize_usecase.execute(text)
+
+    uvicorn.run(app, host="0.0.0.0", port=7002)
 
 if __name__ == "__main__":
     main()

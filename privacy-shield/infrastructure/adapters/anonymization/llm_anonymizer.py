@@ -18,7 +18,7 @@ class LlmAnonymizer(Anonymizer):
         self.tokenizer = tokenizer
         self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
     
-    def anonymize_text(self, text:str) -> str:
+    def anonymize(self, text:str) -> str:
         """
         Anonymizes the input text by extracting sensitive information using a language model and replacing it with placeholders.
 
