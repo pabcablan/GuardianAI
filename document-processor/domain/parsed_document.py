@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
-class ProcessingDocument:
+class ParsedDocument:
+    document_id: str
     filename: str
     content: bytes
 
@@ -10,5 +11,3 @@ class ProcessingDocument:
             raise ValueError("Filename cannot be empty.")
         if not self.content:
             raise ValueError("Document content cannot be empty.")
-        
-    #TODO move checking of content type to the API layer

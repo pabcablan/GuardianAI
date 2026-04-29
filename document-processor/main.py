@@ -1,23 +1,28 @@
-from fastapi import FastAPI, status
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, UploadFile, File
 
-from application.usecases.extract_document import ExtractDocumentUseCase
+from infrastructure.adapters.fastapi_document_parser import FastAPIDocumentParser
+from infrastructure.adapters.markitdown_text_extractor import MarkitdownTextExtractor
+from infrastructure.adapters.llm_text_extractor import LLMTextExtractor
 
-controller = ExtractDocumentUseCase()
+from application.usecases.process_document import ProcessDocument
 
-app = FastAPI(
-    title="GuardianAI Document Processor",
-    version="0.1.0",
-    description="Text extraction API for PDF documents."
-)
+def main():
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    parser = FastAPIDocumentParser()
+    text_extractor = MarkitdownTextExtractor()
+    process_doc = ProcessDocument(parser, text_extractor)
 
-app.post("/api/documents/extract", response_model=None, status_code=status.HTTP_201_CREATED)
-(controller.execute)
+    # TODO make LLMTextExtractor a fallback implementation (own port)
+
+    app = FastAPI(
+        title="GuardianAI Document Processor",
+        version="0.1.0",
+        description="Text extraction API for PDF documents."
+    )
+
+    @app.post("/extract")
+    async def extract_document(file: UploadFile = File(...)) -> str:
+        return await process_doc.execute(file)
+
+if __name__ == "__main__":
+    main()

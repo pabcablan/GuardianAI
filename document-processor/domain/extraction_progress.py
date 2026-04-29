@@ -9,3 +9,5 @@ class ExtractionProgress:
     message: str
 
 ExtractionProgressCallback = Callable[[ExtractionProgress], None]
+
+# TODO SHOULD THIS BE ERASED
