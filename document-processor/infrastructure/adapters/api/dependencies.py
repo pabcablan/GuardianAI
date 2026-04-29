@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from application.usecases.extract_document import ExtractDocumentUseCase
-from infrastructure.adapters.local_document_extractor import LocalDocumentExtractor
+from infrastructure.adapters.local_document_extractor import \
+    LocalDocumentExtractor
 
 
 @dataclass(frozen=True)

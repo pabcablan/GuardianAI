@@ -258,6 +258,70 @@ export function useChatWorkspace() {
     }
   }
 
+  async function renameChat(chatId: string, title: string): Promise<boolean> {
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) {
+      setErrorMessage("El nombre del chat no puede estar vacio.");
+      return false;
+    }
+
+    setErrorMessage(null);
+
+    try {
+      await serviceRef.current.renameChat(chatId, normalizedTitle);
+
+      setChats((currentChats) =>
+        currentChats.map((chat) =>
+          chat.id === chatId
+            ? {
+                ...chat,
+                title: normalizedTitle,
+              }
+            : chat,
+        ),
+      );
+
+      setSelectedChat((currentChat) =>
+        currentChat?.id === chatId
+          ? {
+              ...currentChat,
+              title: normalizedTitle,
+            }
+          : currentChat,
+      );
+
+      return true;
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      return false;
+    }
+  }
+
+  async function deleteChat(chatId: string): Promise<boolean> {
+    setErrorMessage(null);
+
+    try {
+      await serviceRef.current.deleteChat(chatId);
+
+      const remainingChats = chats.filter((chat) => chat.id !== chatId);
+      setChats(remainingChats);
+
+      if (selectedChatId === chatId) {
+        const nextChatId = remainingChats[0]?.id ?? "";
+        setSelectedChatId(nextChatId);
+
+        if (!nextChatId) {
+          setSelectedChat(null);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      return false;
+    }
+  }
+
   async function sendMessage(
     content: string,
     pendingFile: File | null = null,
@@ -359,6 +423,8 @@ export function useChatWorkspace() {
     isInteractionLocked: isResponding || documentProcessingStatus !== null,
     selectChat,
     createChat,
+    renameChat,
+    deleteChat,
     sendMessage,
   };
 }

@@ -1,31 +1,120 @@
-"""FastAPI application that exposes the web-ui use cases."""
+"""FastAPI entrypoint and dependency composition for the web-ui module.
+
+Run it from the `web-ui` directory with:
+`uvicorn main:app --reload`
+"""
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from dataclasses import dataclass
 
-from application.usecases.attach_document import (AttachDocumentCommand,
-                                                  AttachDocumentCompleted,
-                                                  AttachDocumentFailed,
-                                                  AttachDocumentProgress)
-from application.usecases.create_chat import CreateChatCommand
-from application.usecases.rename_chat import RenameChatCommand
-from application.usecases.stream_message_response import (
-    StreamMessageResponseCommand,
-)
-from application.usecases.stream_safe_response import StreamSafeResponseCommand
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from infrastructure.adapters.api.dependencies import build_container
+
+from application.usecases.attach_document import (
+    AttachDocumentCommand,
+    AttachDocumentCompleted,
+    AttachDocumentFailed,
+    AttachDocumentProgress,
+    AttachDocumentUseCase,
+)
+from application.usecases.create_chat import CreateChatCommand, CreateChatUseCase
+from application.usecases.delete_chat import DeleteChatUseCase
+from application.usecases.list_chats import ListChatsUseCase
+from application.usecases.load_chat import LoadChatUseCase
+from application.usecases.rename_chat import RenameChatCommand, RenameChatUseCase
+from application.usecases.stream_message_response import (
+    StreamMessageResponseCommand,
+    StreamMessageResponseUseCase,
+)
+from application.usecases.stream_safe_response import (
+    StreamSafeResponseCommand,
+    StreamSafeResponseUseCase,
+)
 from infrastructure.adapters.api.schemas import (
-    AttachDocumentCompletedResponse, AttachDocumentErrorResponse,
-    AttachDocumentProgressResponse, ChatDetailResponse, ChatMessageResponse,
-    ChatSummaryResponse, CreateChatRequest, CreateChatResponse,
-    RenameChatRequest, SafeStreamChunkResponse, SafeStreamCompletedResponse,
-    SafeStreamErrorResponse, StreamMessageRequest)
+    AttachDocumentCompletedResponse,
+    AttachDocumentErrorResponse,
+    AttachDocumentProgressResponse,
+    ChatDetailResponse,
+    ChatMessageResponse,
+    ChatSummaryResponse,
+    CreateChatRequest,
+    CreateChatResponse,
+    RenameChatRequest,
+    SafeStreamChunkResponse,
+    SafeStreamCompletedResponse,
+    SafeStreamErrorResponse,
+    StreamMessageRequest,
+)
+from infrastructure.adapters.connected_document_service import (
+    ConnectedDocumentService,
+)
+from infrastructure.adapters.fake_privacy_shield_client import (
+    FakePrivacyShieldClient,
+)
+from infrastructure.adapters.http_document_processing_client import (
+    HttpDocumentProcessingClient,
+)
+from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 from infrastructure.ports.external.privacy_shield_port import (
-    PrivacyShieldStreamChunk, PrivacyShieldStreamCompleted,
-    PrivacyShieldStreamFailed)
+    PrivacyShieldStreamChunk,
+    PrivacyShieldStreamCompleted,
+    PrivacyShieldStreamEvent,
+    PrivacyShieldStreamFailed,
+)
+
+
+@dataclass(frozen=True)
+class WebUiContainer:
+    """Group the use cases exposed by the API.
+
+    Attributes:
+        create_chat (CreateChatUseCase): The create chat use case.
+        list_chats (ListChatsUseCase): The list chats use case.
+        load_chat (LoadChatUseCase): The load chat use case.
+        attach_document (AttachDocumentUseCase): The attach document use case.
+        delete_chat (DeleteChatUseCase): The delete chat use case.
+        rename_chat (RenameChatUseCase): The rename chat use case.
+        stream_safe_response (StreamSafeResponseUseCase): The document response
+            stream use case.
+        stream_message_response (StreamMessageResponseUseCase): The message
+            response stream use case.
+    """
+
+    create_chat: CreateChatUseCase
+    list_chats: ListChatsUseCase
+    load_chat: LoadChatUseCase
+    attach_document: AttachDocumentUseCase
+    delete_chat: DeleteChatUseCase
+    rename_chat: RenameChatUseCase
+    stream_safe_response: StreamSafeResponseUseCase
+    stream_message_response: StreamMessageResponseUseCase
+
+
+def build_container() -> WebUiContainer:
+    """Build the dependency graph for the web-ui backend.
+
+    Returns:
+        WebUiContainer: The configured use case container.
+    """
+    gateway = InMemoryChatGateway()
+    document_processor = HttpDocumentProcessingClient()
+    document_service = ConnectedDocumentService(gateway, document_processor)
+    privacy_shield = FakePrivacyShieldClient()
+
+    return WebUiContainer(
+        create_chat=CreateChatUseCase(gateway),
+        list_chats=ListChatsUseCase(gateway),
+        load_chat=LoadChatUseCase(gateway),
+        attach_document=AttachDocumentUseCase(document_service),
+        delete_chat=DeleteChatUseCase(gateway),
+        rename_chat=RenameChatUseCase(gateway),
+        stream_safe_response=StreamSafeResponseUseCase(privacy_shield),
+        stream_message_response=StreamMessageResponseUseCase(privacy_shield),
+    )
+
 
 container = build_container()
 
@@ -196,7 +285,7 @@ async def attach_document_stream(
             detail=str(error),
         ) from error
 
-    def event_stream():
+    def event_stream() -> Iterator[str]:
         """Serialize attachment events as JSON lines.
 
         Yields:
@@ -295,16 +384,18 @@ def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
     return _build_safe_streaming_response(events)
 
 
-def _build_safe_streaming_response(events) -> StreamingResponse:
+def _build_safe_streaming_response(
+    events: Iterator[PrivacyShieldStreamEvent],
+) -> StreamingResponse:
     """Build an NDJSON response from privacy-shield stream events.
 
     Args:
-        events: The privacy-shield stream events.
+        events (Iterator[PrivacyShieldStreamEvent]): The stream events.
 
     Returns:
         StreamingResponse: The serialized safe stream.
     """
-    def event_stream():
+    def event_stream() -> Iterator[str]:
         """Serialize privacy-shield stream events as JSON lines.
 
         Yields:

@@ -31,6 +31,8 @@ export function ChatWorkspace() {
     isInteractionLocked,
     selectChat,
     createChat,
+    renameChat,
+    deleteChat,
     sendMessage,
   } = useChatWorkspace();
   const [draft, setDraft] = useState("");
@@ -90,6 +92,8 @@ export function ChatWorkspace() {
           isExpanded={isSidebarOpen}
           onChatSelect={selectChat}
           onCreateChat={createChat}
+          onRenameChat={renameChat}
+          onDeleteChat={deleteChat}
           onToggleSidebar={() => setIsSidebarOpen((current) => !current)}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />

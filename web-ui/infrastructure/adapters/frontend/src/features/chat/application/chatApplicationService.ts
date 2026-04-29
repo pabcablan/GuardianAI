@@ -126,6 +126,24 @@ export class ChatApplicationService {
     };
   }
 
+  async renameChat(chatId: string, title: string): Promise<void> {
+    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title }),
+    });
+    await this.ensure_success(response);
+  }
+
+  async deleteChat(chatId: string): Promise<void> {
+    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}`, {
+      method: "DELETE",
+    });
+    await this.ensure_success(response);
+  }
+
   async streamMessage(
     chatId: string,
     content: string,

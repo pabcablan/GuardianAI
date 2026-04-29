@@ -7,6 +7,8 @@ interface SidebarProps {
   isExpanded: boolean;
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
+  onRenameChat: (chatId: string, title: string) => Promise<boolean>;
+  onDeleteChat: (chatId: string) => Promise<boolean>;
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
 }
@@ -17,10 +19,15 @@ export function Sidebar({
   isExpanded,
   onChatSelect,
   onCreateChat,
+  onRenameChat,
+  onDeleteChat,
   onToggleSidebar,
   onOpenSettings,
 }: SidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeChat, setActiveChat] = useState<ChatSummary | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [isApplyingAction, setIsApplyingAction] = useState(false);
 
   const filteredChats = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -33,6 +40,48 @@ export function Sidebar({
       `${chat.title} ${chat.lastMessagePreview}`.toLowerCase().includes(normalizedSearch),
     );
   }, [chats, searchTerm]);
+
+  function openChatActions(chat: ChatSummary): void {
+    setActiveChat(chat);
+    setDraftTitle(chat.title);
+  }
+
+  function closeChatActions(): void {
+    if (isApplyingAction) {
+      return;
+    }
+
+    setActiveChat(null);
+    setDraftTitle("");
+  }
+
+  async function handleRenameChat(): Promise<void> {
+    if (!activeChat) {
+      return;
+    }
+
+    setIsApplyingAction(true);
+    const didRename = await onRenameChat(activeChat.id, draftTitle);
+    setIsApplyingAction(false);
+
+    if (didRename) {
+      closeChatActions();
+    }
+  }
+
+  async function handleDeleteChat(): Promise<void> {
+    if (!activeChat) {
+      return;
+    }
+
+    setIsApplyingAction(true);
+    const didDelete = await onDeleteChat(activeChat.id);
+    setIsApplyingAction(false);
+
+    if (didDelete) {
+      closeChatActions();
+    }
+  }
 
   return (
     <aside className={`sidebar ${isExpanded ? "" : "sidebar--collapsed"}`.trim()}>
@@ -113,14 +162,26 @@ export function Sidebar({
             const isSelected = chat.id === selectedChatId;
 
             return (
-              <button
+              <div
                 key={chat.id}
                 className={`chat-list__item ${isSelected ? "chat-list__item--selected" : ""}`}
-                type="button"
-                onClick={() => onChatSelect(chat.id)}
               >
-                <span className="chat-list__title">{chat.title}</span>
-              </button>
+                <button
+                  className="chat-list__select"
+                  type="button"
+                  onClick={() => onChatSelect(chat.id)}
+                >
+                  <span className="chat-list__title">{chat.title}</span>
+                </button>
+                <button
+                  className="chat-list__menu-button"
+                  type="button"
+                  aria-label={`Abrir opciones de ${chat.title}`}
+                  onClick={() => openChatActions(chat)}
+                >
+                  <span className="chat-list__menu-dots" aria-hidden="true" />
+                </button>
+              </div>
             );
           })}
 
@@ -151,6 +212,72 @@ export function Sidebar({
           </button>
         )}
       </div>
+
+      {activeChat ? (
+        <div
+          className="chat-actions-modal"
+          role="presentation"
+          onClick={closeChatActions}
+        >
+          <div
+            className="chat-actions-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="chat-actions-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="chat-actions-modal__header">
+              <div>
+                <p className="chat-actions-modal__eyebrow">Chat</p>
+                <h2 id="chat-actions-title">Opciones</h2>
+              </div>
+              <button
+                className="chat-actions-modal__close"
+                type="button"
+                aria-label="Cerrar opciones"
+                onClick={closeChatActions}
+              >
+                x
+              </button>
+            </div>
+
+            <label className="chat-actions-modal__field" htmlFor="chat-title">
+              <span>Cambiar nombre</span>
+              <input
+                id="chat-title"
+                type="text"
+                maxLength={120}
+                value={draftTitle}
+                disabled={isApplyingAction}
+                onChange={(event) => setDraftTitle(event.target.value)}
+              />
+            </label>
+
+            <div className="chat-actions-modal__actions">
+              <button
+                className="chat-actions-modal__button"
+                type="button"
+                disabled={isApplyingAction}
+                onClick={() => {
+                  void handleRenameChat();
+                }}
+              >
+                Guardar nombre
+              </button>
+              <button
+                className="chat-actions-modal__button chat-actions-modal__button--danger"
+                type="button"
+                disabled={isApplyingAction}
+                onClick={() => {
+                  void handleDeleteChat();
+                }}
+              >
+                Borrar chat
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }
