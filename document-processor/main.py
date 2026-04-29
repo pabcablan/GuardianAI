@@ -3,16 +3,19 @@ from fastapi import FastAPI, UploadFile, File
 from infrastructure.adapters.fastapi_document_parser import FastAPIDocumentParser
 from infrastructure.adapters.markitdown_text_extractor import MarkitdownTextExtractor
 from infrastructure.adapters.llm_text_extractor import LLMTextExtractor
+from infrastructure.utils.text_extraction_fallback import FallbackTextExtractor
 
 from application.usecases.process_document import ProcessDocument
 
 def main():
 
     parser = FastAPIDocumentParser()
-    text_extractor = MarkitdownTextExtractor()
+    text_extractor = FallbackTextExtractor(
+        primary=MarkitdownTextExtractor(),
+        fallback=LLMTextExtractor(),
+        min_chars=25
+    )
     process_doc = ProcessDocument(parser, text_extractor)
-
-    # TODO make LLMTextExtractor a fallback implementation (own port)
 
     app = FastAPI(
         title="GuardianAI Document Processor",
