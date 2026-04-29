@@ -1,7 +1,6 @@
-"""
-Dominio del modulo Web IU.
+"""Domain layer for the web-ui module.
 
-Aqui irian los modelos y reglas de negocio propios de la interfaz web
-del chat, como conversaciones, mensajes, adjuntos PDF y validaciones
-de negocio independientes de React, FastAPI o almacenamiento.
+This package contains chat-specific models and business rules, such as
+conversations, messages, PDF attachments, and validations independent from
+React, FastAPI, or storage.
 """

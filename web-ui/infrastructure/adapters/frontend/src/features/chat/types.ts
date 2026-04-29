@@ -17,3 +17,28 @@ export interface ChatSummary {
 export interface ChatThread extends ChatSummary {
   messages: ChatMessage[];
 }
+
+export interface DocumentProcessingStatus {
+  filename: string;
+  stage: string;
+  message: string;
+  current: number;
+  total: number;
+  progress: number | null;
+}
+
+export type AnonymizationOption =
+  | "personNames"
+  | "identityDocuments"
+  | "emails"
+  | "addresses"
+  | "phones"
+  | "organizations"
+  | "relevantCodes";
+
+export type AnonymizationMode = "anonymize" | "keep";
+
+export type AnonymizationSettings = Record<
+  AnonymizationOption,
+  AnonymizationMode
+>;
