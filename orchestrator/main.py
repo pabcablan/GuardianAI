@@ -15,11 +15,11 @@ from pydantic import BaseModel, Field
 from infrastructure.adapters.fake_assistant_stream_gateway import (
     FakeAssistantStreamGateway,
 )
-from infrastructure.adapters.http_privacy_shield_client import (
+from infrastructure.adapters.http.privacy_shield_client import (
     HttpPrivacyShieldClient,
     PrivacyShieldClientError,
 )
-from infrastructure.adapters.http_document_processing_client import (
+from infrastructure.adapters.http.document_processor_client import (
     DocumentProcessorClientError,
     HttpDocumentProcessingClient,
 )
@@ -210,10 +210,20 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             detail="Processed document not found.",
         )
 
+    text = _build_document_prompt(document_context)
+    if not text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "Document processor returned empty text and no prompt was "
+                "provided."
+            ),
+        )
+
     try:
         events = _stream_safe_response_for_text(
             chat_id=chat_id,
-            text=_build_document_prompt(document_context),
+            text=text,
         )
     except PrivacyShieldClientError as error:
         raise HTTPException(

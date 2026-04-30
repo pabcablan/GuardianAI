@@ -582,6 +582,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "accelerate" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "ipykernel" },
     { name = "markitdown", extra = ["pdf"] },
     { name = "pillow" },
@@ -600,6 +601,7 @@ dependencies = [
 requires-dist = [
     { name = "accelerate", specifier = ">=1.13.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "markitdown", extras = ["pdf"], specifier = ">=0.1.5" },
     { name = "pillow", specifier = ">=11.0.0" },

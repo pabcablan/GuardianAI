@@ -51,8 +51,11 @@ from infrastructure.adapters.api.schemas import (
 from infrastructure.adapters.connected_document_service import (
     ConnectedDocumentService,
 )
-from infrastructure.adapters.http_orchestrator_client import (
-    HttpOrchestratorClient,
+from infrastructure.adapters.orchestrator.document_client import (
+    HttpOrchestratorDocumentClient,
+)
+from infrastructure.adapters.orchestrator.response_client import (
+    HttpOrchestratorResponseClient,
 )
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 from infrastructure.ports.external.orchestrator_response_port import (
@@ -97,9 +100,9 @@ def build_container() -> WebUiContainer:
         WebUiContainer: The configured use case container.
     """
     gateway = InMemoryChatGateway()
-    orchestrator = HttpOrchestratorClient()
-    document_processor = orchestrator
-    document_service = ConnectedDocumentService(gateway, document_processor)
+    orchestrator_response = HttpOrchestratorResponseClient()
+    orchestrator_document = HttpOrchestratorDocumentClient()
+    document_service = ConnectedDocumentService(gateway, orchestrator_document)
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
@@ -108,8 +111,10 @@ def build_container() -> WebUiContainer:
         attach_document=AttachDocumentUseCase(document_service),
         delete_chat=DeleteChatUseCase(gateway),
         rename_chat=RenameChatUseCase(gateway),
-        stream_safe_response=StreamSafeResponseUseCase(orchestrator),
-        stream_message_response=StreamMessageResponseUseCase(orchestrator),
+        stream_safe_response=StreamSafeResponseUseCase(orchestrator_response),
+        stream_message_response=StreamMessageResponseUseCase(
+            orchestrator_response
+        ),
     )
 
 
