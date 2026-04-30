@@ -2,7 +2,7 @@ import httpx
 
 
 class LLMClient:
-    def __init__(self, base_url: str) -> None:
+    def __init__(self, base_url) -> None:
         self._base_url = base_url                       #TODO put it in config or .env
 
     async def generate(self, prompt: str, content: bytes) -> str:

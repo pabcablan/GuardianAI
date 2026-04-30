@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import UploadFile, File
 
-from ports.document_parser import DocumentParser
+from infrastructure.ports.document_parser import DocumentParser
 from domain.parsed_document import ParsedDocument
 
 class FastAPIDocumentParser(DocumentParser):

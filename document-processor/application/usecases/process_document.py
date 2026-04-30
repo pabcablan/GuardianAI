@@ -12,6 +12,6 @@ class ProcessDocument:
     async def execute(self, document: Any) -> str:
 
         parsed_doc = self._parser.parse(document)
-        extracted_doc = self._text_extractor.extract_text(parsed_doc)
+        extracted_doc = await self._text_extractor.extract_text(parsed_doc)
                 
         return extracted_doc.extracted_text

@@ -1,7 +1,7 @@
 from infrastructure.utils.llm_client import LLMClient
 from domain.parsed_document import ParsedDocument
 from domain.extracted_document import ExtractedDocument
-from ports.text_extractor import TextExtractor
+from infrastructure.ports.text_extractor import TextExtractor
 
 class LLMTextExtractor(TextExtractor):
     def __init__(self, llm_client: LLMClient):

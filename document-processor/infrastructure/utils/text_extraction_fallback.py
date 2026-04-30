@@ -1,6 +1,6 @@
 import logging
 
-from ports.text_extractor import TextExtractor
+from infrastructure.ports.text_extractor import TextExtractor
 from domain.parsed_document import ParsedDocument
 from domain.extracted_document import ExtractedDocument
 
