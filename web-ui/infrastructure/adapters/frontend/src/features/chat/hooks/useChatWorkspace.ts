@@ -348,6 +348,11 @@ export function useChatWorkspace() {
       }
 
       if (pendingFile) {
+        if (normalizedContent) {
+          const userMessage = createUserMessage(normalizedContent);
+          appendChatMessage(activeChatId, userMessage);
+        }
+
         setDocumentProcessingStatus({
           filename: pendingFile.name,
           stage: "uploading",
@@ -360,6 +365,7 @@ export function useChatWorkspace() {
         const documentId = await serviceRef.current.attachDocumentWithProgress(
           activeChatId,
           pendingFile,
+          normalizedContent,
           (status) => {
             setDocumentProcessingStatus(status);
           },

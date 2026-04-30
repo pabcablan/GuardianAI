@@ -11,28 +11,18 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from infrastructure.ports.document_processor_port import (
+    DocumentProcessorPort,
+    DocumentUploadRequest,
+)
+
 
 class DocumentProcessorClientError(RuntimeError):
     """Represent a document-processor communication failure."""
 
 
 @dataclass(frozen=True)
-class DocumentUpload:
-    """Represent a document upload sent to document-processor.
-
-    Attributes:
-        filename (str): The uploaded filename.
-        content_type (str): The uploaded content type.
-        content (bytes): The uploaded file content.
-    """
-
-    filename: str
-    content_type: str
-    content: bytes
-
-
-@dataclass(frozen=True)
-class HttpDocumentProcessingClient:
+class HttpDocumentProcessingClient(DocumentProcessorPort):
     """Call document-processor HTTP endpoints from orchestrator.
 
     Attributes:
@@ -43,20 +33,29 @@ class HttpDocumentProcessingClient:
 
     def stream_extract_document(
         self,
-        upload: DocumentUpload,
+        request: DocumentUploadRequest,
     ) -> Iterator[dict[str, Any]]:
-        """Send a PDF to document-processor and stream extraction events.
+        """Send a PDF to document-processor and yield extraction events.
 
         Args:
-            upload (DocumentUpload): The document upload data.
+            request (DocumentUploadRequest): The document upload data.
 
         Returns:
-            Iterator[dict[str, Any]]: Parsed NDJSON events from the processor.
+            Iterator[dict[str, Any]]: Progress and completion events adapted
+            from the document-processor response.
         """
+        yield {
+            "event": "progress",
+            "stage": "uploading",
+            "current": 1,
+            "total": 3,
+            "message": "Sending document to document processor...",
+        }
+
         boundary = f"boundary-{uuid.uuid4().hex}"
-        payload = self._build_multipart_payload(upload, boundary)
-        request = Request(
-            url=f"{self.base_url}/api/documents/extract-stream",
+        payload = self._build_multipart_payload(request, boundary)
+        http_request = Request(
+            url=f"{self.base_url}/extract",
             data=payload,
             method="POST",
             headers={
@@ -66,7 +65,7 @@ class HttpDocumentProcessingClient:
         )
 
         try:
-            response = urlopen(request, timeout=600)
+            response = urlopen(http_request, timeout=600)
         except HTTPError as error:
             detail = self._read_error_detail(error)
             raise DocumentProcessorClientError(detail) from error
@@ -75,22 +74,35 @@ class HttpDocumentProcessingClient:
                 "Document processor service is unavailable."
             ) from error
 
+        yield {
+            "event": "progress",
+            "stage": "extracting",
+            "current": 2,
+            "total": 3,
+            "message": "Extracting document text...",
+        }
+
         with contextlib.closing(response) as stream:
-            for raw_line in stream:
-                line = raw_line.decode("utf-8").strip()
-                if not line:
-                    continue
-                yield json.loads(line)
+            raw_body = stream.read().decode("utf-8").strip()
+
+        extracted_text = self._parse_extract_response(raw_body)
+        yield {
+            "event": "completed",
+            "document_id": f"doc-{uuid.uuid4().hex}",
+            "filename": request.filename,
+            "extracted_text": extracted_text,
+            "page_count": 0,
+        }
 
     def _build_multipart_payload(
         self,
-        upload: DocumentUpload,
+        upload: DocumentUploadRequest,
         boundary: str,
     ) -> bytes:
         """Build the multipart/form-data body used to upload a file.
 
         Args:
-            upload (DocumentUpload): The upload data.
+            upload (DocumentUploadRequest): The upload data.
             boundary (str): The multipart boundary.
 
         Returns:
@@ -145,3 +157,30 @@ class HttpDocumentProcessingClient:
             return fallback
 
         return payload.get("detail", fallback)
+
+    def _parse_extract_response(self, raw_body: str) -> str:
+        """Parse the document-processor text extraction response.
+
+        Args:
+            raw_body (str): The raw HTTP response body.
+
+        Returns:
+            str: The extracted text returned by document-processor.
+        """
+        if not raw_body:
+            return ""
+
+        try:
+            payload = json.loads(raw_body)
+        except json.JSONDecodeError:
+            return raw_body
+
+        if isinstance(payload, str):
+            return payload
+
+        if isinstance(payload, dict):
+            value = payload.get("text") or payload.get("extracted_text")
+            if isinstance(value, str):
+                return value
+
+        return str(payload)

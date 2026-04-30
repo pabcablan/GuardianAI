@@ -4,9 +4,14 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from infrastructure.ports.ai_gateway_port import (
+    AiGatewayPort,
+    AssistantStreamRequest,
+)
+
 
 @dataclass(frozen=True)
-class FakeAssistantStreamGateway:
+class FakeAssistantStreamGateway(AiGatewayPort):
     """Return streamed fake assistant chunks for an anonymized prompt.
 
     Attributes:
@@ -15,18 +20,21 @@ class FakeAssistantStreamGateway:
 
     chunk_size: int = 18
 
-    def stream_response(self, prompt: str) -> Iterator[str]:
+    def stream_response(
+        self,
+        request: AssistantStreamRequest,
+    ) -> Iterator[str]:
         """Stream a fake assistant response for an anonymized prompt.
 
         Args:
-            prompt (str): The anonymized prompt sent to the assistant.
+            request (AssistantStreamRequest): The assistant stream request.
 
         Returns:
             Iterator[str]: The fake assistant response chunks.
         """
         response = (
             "Respuesta fake generada para el prompt anonimizado: "
-            f"{prompt}"
+            f"{request.prompt}"
         )
         for index in range(0, len(response), self.chunk_size):
             yield response[index:index + self.chunk_size]

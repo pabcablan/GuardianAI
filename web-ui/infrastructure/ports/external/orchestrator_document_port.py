@@ -14,11 +14,13 @@ class ProcessDocumentRequest:
         filename (str): The document filename.
         content_type (str): The document MIME type.
         content (bytes): The document bytes.
+        prompt (str): The optional prompt to combine with the extracted text.
     """
 
     filename: str
     content_type: str
     content: bytes
+    prompt: str = ""
 
 
 @dataclass(frozen=True)

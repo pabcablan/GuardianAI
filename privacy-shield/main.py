@@ -339,7 +339,7 @@ def _build_streaming_response(chunks: Iterator[str]) -> StreamingResponse:
 
 def main() -> None:
     """Run the privacy-shield API."""
-    uvicorn.run(app, host="0.0.0.0", port=7002)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
 
 
 if __name__ == "__main__":

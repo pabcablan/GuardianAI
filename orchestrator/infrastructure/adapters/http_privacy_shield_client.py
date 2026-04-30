@@ -9,33 +9,25 @@ from typing import Any, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from infrastructure.ports.privacy_shield_port import (
+    AnonymizedPrompt,
+    PrivacyShieldPort,
+)
+
 
 class PrivacyShieldClientError(RuntimeError):
     """Represent a privacy-shield communication failure."""
 
 
 @dataclass(frozen=True)
-class AnonymizedPrompt:
-    """Represent a prompt anonymized by privacy-shield.
-
-    Attributes:
-        text (str): The anonymized prompt.
-        replacements (Mapping[str, str]): The placeholder-to-original map.
-    """
-
-    text: str
-    replacements: Mapping[str, str]
-
-
-@dataclass(frozen=True)
-class HttpPrivacyShieldClient:
+class HttpPrivacyShieldClient(PrivacyShieldPort):
     """Call privacy-shield HTTP endpoints from the orchestrator.
 
     Attributes:
         base_url (str): The privacy-shield API base URL.
     """
 
-    base_url: str = "http://127.0.0.1:7002"
+    base_url: str = "http://127.0.0.1:8002"
 
     def anonymize(self, chat_id: str, text: str) -> AnonymizedPrompt:
         """Anonymize text through privacy-shield.

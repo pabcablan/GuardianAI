@@ -164,10 +164,12 @@ export class ChatApplicationService {
   async attachDocumentWithProgress(
     chatId: string,
     file: File,
+    prompt: string,
     onProgress: (status: DocumentProcessingStatus) => void,
   ): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("prompt", prompt);
 
     const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/documents/stream`, {
       method: "POST",

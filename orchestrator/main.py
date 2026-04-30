@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -21,9 +21,17 @@ from infrastructure.adapters.http_privacy_shield_client import (
 )
 from infrastructure.adapters.http_document_processing_client import (
     DocumentProcessorClientError,
-    DocumentUpload,
     HttpDocumentProcessingClient,
 )
+from infrastructure.ports.ai_gateway_port import (
+    AiGatewayPort,
+    AssistantStreamRequest,
+)
+from infrastructure.ports.document_processor_port import (
+    DocumentProcessorPort,
+    DocumentUploadRequest,
+)
+from infrastructure.ports.privacy_shield_port import PrivacyShieldPort
 
 
 class MessageStreamRequest(BaseModel):
@@ -43,15 +51,28 @@ class OrchestratorContainer:
     """Group the orchestrator dependencies.
 
     Attributes:
-        privacy_shield (HttpPrivacyShieldClient): The privacy-shield client.
-        document_processor (HttpDocumentProcessingClient): The document
-            processor client.
-        assistant_gateway (FakeAssistantStreamGateway): The temporary assistant.
+        privacy_shield (PrivacyShieldPort): The privacy-shield client.
+        document_processor (DocumentProcessorPort): The document processor
+            client.
+        ai_gateway (AiGatewayPort): The assistant stream gateway.
     """
 
-    privacy_shield: HttpPrivacyShieldClient
-    document_processor: HttpDocumentProcessingClient
-    assistant_gateway: FakeAssistantStreamGateway
+    privacy_shield: PrivacyShieldPort
+    document_processor: DocumentProcessorPort
+    ai_gateway: AiGatewayPort
+
+
+@dataclass(frozen=True)
+class ProcessedDocumentContext:
+    """Store the extracted document text and the optional user prompt.
+
+    Attributes:
+        extracted_text (str): The text returned by document-processor.
+        prompt (str): The optional prompt sent with the uploaded document.
+    """
+
+    extracted_text: str
+    prompt: str = ""
 
 
 def build_container() -> OrchestratorContainer:
@@ -63,11 +84,11 @@ def build_container() -> OrchestratorContainer:
     return OrchestratorContainer(
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
-        assistant_gateway=FakeAssistantStreamGateway(),
+        ai_gateway=FakeAssistantStreamGateway(),
     )
 
 
-processed_documents: dict[str, str] = {}
+processed_documents: dict[str, ProcessedDocumentContext] = {}
 container = build_container()
 app = FastAPI(
     title="GuardianAI Orchestrator",
@@ -109,10 +130,9 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
             chat_id=payload.chat_id,
             text=payload.text,
         )
-        assistant_chunks = list(
-            container.assistant_gateway.stream_response(
-                anonymized_prompt.text
-            )
+        assistant_chunks = _collect_ai_gateway_chunks(
+            chat_id=payload.chat_id,
+            anonymized_prompt=anonymized_prompt.text,
         )
         events = container.privacy_shield.deanonymize_stream(
             chunks=assistant_chunks,
@@ -130,11 +150,13 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
 @app.post("/api/documents/extract-stream")
 async def extract_document_stream(
     file: UploadFile = File(...),
+    prompt: str = Form(""),
 ) -> StreamingResponse:
     """Forward a document upload to document-processor.
 
     Args:
         file (UploadFile): The uploaded PDF file.
+        prompt (str): The optional prompt to combine with the extracted text.
 
     Returns:
         StreamingResponse: The document processing NDJSON stream.
@@ -145,7 +167,7 @@ async def extract_document_stream(
 
     try:
         events = container.document_processor.stream_extract_document(
-            DocumentUpload(
+            DocumentUploadRequest(
                 filename=filename,
                 content_type=content_type,
                 content=content,
@@ -157,7 +179,7 @@ async def extract_document_stream(
             detail=str(error),
         ) from error
 
-    return _build_document_streaming_response(events)
+    return _build_document_streaming_response(events, prompt=prompt)
 
 
 @app.post("/api/documents/safe-stream")
@@ -181,8 +203,8 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             detail="chat_id and document_id are required.",
         )
 
-    extracted_text = processed_documents.get(document_id)
-    if extracted_text is None:
+    document_context = processed_documents.get(document_id)
+    if document_context is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Processed document not found.",
@@ -191,7 +213,7 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
     try:
         events = _stream_safe_response_for_text(
             chat_id=chat_id,
-            text=extracted_text,
+            text=_build_document_prompt(document_context),
         )
     except PrivacyShieldClientError as error:
         raise HTTPException(
@@ -258,8 +280,9 @@ def _stream_safe_response_for_text(
         chat_id=chat_id,
         text=text,
     )
-    assistant_chunks = list(
-        container.assistant_gateway.stream_response(anonymized_prompt.text)
+    assistant_chunks = _collect_ai_gateway_chunks(
+        chat_id=chat_id,
+        anonymized_prompt=anonymized_prompt.text,
     )
     return container.privacy_shield.deanonymize_stream(
         chunks=assistant_chunks,
@@ -267,13 +290,40 @@ def _stream_safe_response_for_text(
     )
 
 
+def _collect_ai_gateway_chunks(
+    chat_id: str,
+    anonymized_prompt: str,
+) -> list[str]:
+    """Collect assistant chunks from the configured ai-gateway.
+
+    Args:
+        chat_id (str): The chat that owns the request.
+        anonymized_prompt (str): The anonymized prompt sent to the assistant.
+
+    Returns:
+        list[str]: The anonymized assistant response chunks.
+    """
+    return [
+        chunk
+        for chunk in container.ai_gateway.stream_response(
+            AssistantStreamRequest(
+                chat_id=chat_id,
+                prompt=anonymized_prompt,
+            )
+        )
+        if chunk
+    ]
+
+
 def _build_document_streaming_response(
     events: Iterator[dict[str, Any]],
+    prompt: str,
 ) -> StreamingResponse:
     """Serialize document processor events as NDJSON.
 
     Args:
         events (Iterator[dict[str, Any]]): Document processor events.
+        prompt (str): The optional prompt sent with the document.
 
     Returns:
         StreamingResponse: The serialized NDJSON response.
@@ -290,7 +340,12 @@ def _build_document_streaming_response(
                     document_id = str(event.get("document_id", ""))
                     extracted_text = str(event.get("extracted_text", ""))
                     if document_id:
-                        processed_documents[document_id] = extracted_text
+                        processed_documents[document_id] = (
+                            ProcessedDocumentContext(
+                                extracted_text=extracted_text,
+                                prompt=prompt.strip(),
+                            )
+                        )
 
                 yield json.dumps(event, ensure_ascii=True) + "\n"
         except RuntimeError as error:
@@ -312,5 +367,28 @@ def _build_document_streaming_response(
     )
 
 
+def _build_document_prompt(document_context: ProcessedDocumentContext) -> str:
+    """Build the text that enters the safe response pipeline.
+
+    Args:
+        document_context (ProcessedDocumentContext): The stored document data.
+
+    Returns:
+        str: The prompt-only, document-only, or combined prompt text.
+    """
+    prompt = document_context.prompt.strip()
+    extracted_text = document_context.extracted_text.strip()
+
+    if prompt and extracted_text:
+        return (
+            "User prompt:\n"
+            f"{prompt}\n\n"
+            "Document text:\n"
+            f"{extracted_text}"
+        )
+
+    return prompt or extracted_text
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7003)
+    uvicorn.run(app, host="0.0.0.0", port=8003)

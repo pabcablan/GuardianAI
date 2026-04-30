@@ -17,6 +17,7 @@ class DocumentServicePort(Protocol):
         filename: str,
         content_type: str,
         content: bytes,
+        prompt: str = "",
     ) -> Iterator["AttachDocumentStreamEvent"]:
         """Attach a PDF document while streaming processing updates.
 
@@ -25,6 +26,7 @@ class DocumentServicePort(Protocol):
             filename (str): The document filename.
             content_type (str): The document MIME type.
             content (bytes): The document bytes.
+            prompt (str): The optional prompt to combine with the document text.
 
         Returns:
             Iterator[AttachDocumentStreamEvent]: The document attachment events.

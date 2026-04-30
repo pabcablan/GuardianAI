@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import re
 from io import BytesIO
 
 from pypdf import PdfReader
 
-from domain.document import ExtractionProgress, ExtractionProgressCallback
+from domain.extraction_progress import ExtractionProgress, ExtractionProgressCallback
 from infrastructure.adapters.extract_vlm import extract_pdf_text
 
 
@@ -19,10 +17,9 @@ def extract_pdf_text_with_fallback(
     *,
     progress_callback: ExtractionProgressCallback | None = None,
 ) -> tuple[str, int]:
-    _notify_direct_extraction_started(progress_callback=progress_callback)
     extracted_text, page_count = try_extract_pdf_text(pdf_bytes)
     if extracted_text is not None:
-        _notify_direct_extraction_completed(º
+        _notify_direct_extraction_completed(
             page_count,
             progress_callback=progress_callback,
         )
@@ -113,23 +110,6 @@ def _notify_direct_extraction_completed(
             message=(
                 "Extraccion directa completada usando la capa de texto del PDF."
             ),
-        )
-    )
-
-
-def _notify_direct_extraction_started(
-    *,
-    progress_callback: ExtractionProgressCallback | None,
-) -> None:
-    if progress_callback is None:
-        return
-
-    progress_callback(
-        ExtractionProgress(
-            stage="starting",
-            current=0,
-            total=1,
-            message="Extrayendo texto usando la capa interna del PDF.",
         )
     )
 

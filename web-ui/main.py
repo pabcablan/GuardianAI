@@ -9,7 +9,7 @@ import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -54,9 +54,6 @@ from infrastructure.adapters.connected_document_service import (
 from infrastructure.adapters.http_orchestrator_client import (
     HttpOrchestratorClient,
 )
-from infrastructure.adapters.http_orchestrator_document_client import (
-    HttpOrchestratorDocumentClient,
-)
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorStreamChunk,
@@ -100,9 +97,9 @@ def build_container() -> WebUiContainer:
         WebUiContainer: The configured use case container.
     """
     gateway = InMemoryChatGateway()
-    document_processor = HttpOrchestratorDocumentClient()
-    document_service = ConnectedDocumentService(gateway, document_processor)
     orchestrator = HttpOrchestratorClient()
+    document_processor = orchestrator
+    document_service = ConnectedDocumentService(gateway, document_processor)
 
     return WebUiContainer(
         create_chat=CreateChatUseCase(gateway),
@@ -248,12 +245,14 @@ def stream_message_response(
 async def attach_document_stream(
     chat_id: str,
     file: UploadFile = File(...),
+    prompt: str = Form(""),
 ) -> StreamingResponse:
     """Attach a PDF to a chat and stream progress as NDJSON.
 
     Args:
         chat_id (str): The identifier of the target chat.
         file (UploadFile): The uploaded PDF file.
+        prompt (str): The optional prompt to combine with the document text.
 
     Returns:
         StreamingResponse: The NDJSON event stream.
@@ -272,6 +271,7 @@ async def attach_document_stream(
                 filename=filename,
                 content_type=content_type,
                 content=content,
+                prompt=prompt,
             )
         )
     except KeyError as error:

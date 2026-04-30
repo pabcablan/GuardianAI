@@ -17,12 +17,14 @@ class AttachDocumentCommand:
         filename (str): The original document filename.
         content_type (str): The MIME type reported by the upload client.
         content (bytes): The binary document content.
+        prompt (str): The optional user prompt attached to the document.
     """
 
     chat_id: str
     filename: str
     content_type: str
     content: bytes
+    prompt: str = ""
 
 
 @dataclass(frozen=True)
@@ -109,4 +111,5 @@ class AttachDocumentUseCase:
             filename=document.filename,
             content_type=document.content_type,
             content=document.content,
+            prompt=command.prompt,
         )

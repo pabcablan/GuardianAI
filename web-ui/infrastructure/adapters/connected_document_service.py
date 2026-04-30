@@ -45,6 +45,7 @@ class ConnectedDocumentService(DocumentServicePort):
         filename: str,
         content_type: str,
         content: bytes,
+        prompt: str = "",
     ) -> Iterator[AttachDocumentStreamEvent]:
         """Process an attachment and translate orchestrator document events.
 
@@ -53,6 +54,7 @@ class ConnectedDocumentService(DocumentServicePort):
             filename (str): The uploaded document filename.
             content_type (str): The uploaded document MIME type.
             content (bytes): The uploaded document bytes.
+            prompt (str): The optional prompt to combine with the document text.
 
         Returns:
             Iterator[AttachDocumentStreamEvent]: The translated document
@@ -69,6 +71,7 @@ class ConnectedDocumentService(DocumentServicePort):
                 filename=filename,
                 content_type=content_type,
                 content=content,
+                prompt=prompt,
             )
         ):
             if isinstance(event, ProcessDocumentProgressEvent):
