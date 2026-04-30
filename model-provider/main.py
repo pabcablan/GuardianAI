@@ -1,0 +1,60 @@
+import base64
+
+import uvicorn
+from fastapi import FastAPI
+
+from infrastructure.adapters.model_loader.unsloth_repository import UnslothLoader
+from infrastructure.adapters.inference.model_inference_engine import ModelInferenceEngine
+from application.usecases.model_controller.controller import Controller
+from application.body_params_schemas.load_model_request import LoadModelRequest
+from application.body_params_schemas.generate_response_request import GenerateRequest
+
+def main():
+    unsloth_provider = UnslothLoader()
+    inference_engine = ModelInferenceEngine()
+
+    controller = Controller(unsloth_provider, inference_engine)
+
+    app = FastAPI()
+
+    @app.post("/load_model/")
+    def load_model(request: LoadModelRequest):
+        return controller.load_model(request)
+
+    @app.post("/unload_model/")
+    def unload_model(name: str):
+        return controller.unload_model(name)
+    
+    @app.get("/model_status/")
+    def model_status(name: str):
+        return controller.get_model_status(name)
+    
+    @app.get("/list_models/")
+    def list_models():
+        return controller.list_all_models()
+    
+    @app.post("/generate_response/")
+    def generate_response(request: GenerateRequest):
+        print("MODEL:", request.model_name)
+        print("PROMPT LEN:", len(request.prompt))
+        
+        if request.document_base64:
+            print("DOCUMENT RECEIVED: YES")
+            print("BASE64 SIZE:", len(request.document_base64))
+
+            image_bytes = base64.b64decode(request.document_base64)
+
+            with open("debug_received.pdf", "wb") as f:
+                f.write(image_bytes)
+
+            print("PDF GUARDADO COMO debug_received.pdf")
+        else:
+            print("DOCUMENT RECEIVED: NO")
+
+        
+        return controller.generate_response(request.model_name, request.prompt, request.document_base64)
+    
+    uvicorn.run(app, host="0.0.0.0", port=7003)
+
+if __name__ == "__main__":
+    main()
