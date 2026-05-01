@@ -28,6 +28,8 @@ export function ChatWorkspace() {
     isLoadingChats,
     isResponding,
     documentProcessingStatus,
+    responseProcessingStatus,
+    modelReadiness,
     isInteractionLocked,
     selectChat,
     createChat,
@@ -90,6 +92,7 @@ export function ChatWorkspace() {
           chats={chats}
           selectedChatId={selectedChatId}
           isExpanded={isSidebarOpen}
+          isInteractionLocked={isInteractionLocked}
           onChatSelect={selectChat}
           onCreateChat={createChat}
           onRenameChat={renameChat}
@@ -104,7 +107,9 @@ export function ChatWorkspace() {
           isLoadingChats={isLoadingChats}
           isResponding={isResponding}
           isInteractionLocked={isInteractionLocked}
+          modelReadiness={modelReadiness}
           documentProcessingStatus={documentProcessingStatus}
+          responseProcessingStatus={responseProcessingStatus}
           pendingFile={pendingFile}
           shouldPreviewAnonymizedText={shouldPreviewAnonymizedText}
           onDraftChange={setDraft}

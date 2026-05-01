@@ -1,6 +1,11 @@
 import { useRef, useState } from "react";
 
-import type { ChatThread, DocumentProcessingStatus } from "../types";
+import type {
+  ChatThread,
+  DocumentProcessingStatus,
+  ModelReadinessStatus,
+  ResponseProcessingStatus,
+} from "../types";
 
 interface ConversationPanelProps {
   chat: ChatThread | null;
@@ -9,7 +14,9 @@ interface ConversationPanelProps {
   isLoadingChats: boolean;
   isResponding: boolean;
   isInteractionLocked: boolean;
+  modelReadiness: ModelReadinessStatus;
   documentProcessingStatus: DocumentProcessingStatus | null;
+  responseProcessingStatus: ResponseProcessingStatus | null;
   pendingFile: File | null;
   shouldPreviewAnonymizedText: boolean;
   onDraftChange: (value: string) => void;
@@ -26,7 +33,9 @@ export function ConversationPanel({
   isLoadingChats,
   isResponding,
   isInteractionLocked,
+  modelReadiness,
   documentProcessingStatus,
+  responseProcessingStatus,
   pendingFile,
   shouldPreviewAnonymizedText,
   onDraftChange,
@@ -40,6 +49,9 @@ export function ConversationPanel({
 
   function handleDragOver(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
+    if (isInteractionLocked) {
+      return;
+    }
     setIsDragOver(true);
   }
 
@@ -51,6 +63,9 @@ export function ConversationPanel({
   function handleDrop(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     setIsDragOver(false);
+    if (isInteractionLocked) {
+      return;
+    }
     onFileSelect(event.dataTransfer.files[0] ?? null);
   }
 
@@ -62,6 +77,17 @@ export function ConversationPanel({
       onDrop={handleDrop}
     >
       <div className="conversation__canvas">
+        {!modelReadiness.ready ? (
+          <section className="model-readiness-card" aria-live="polite" aria-atomic="true">
+            <p className="model-readiness-card__eyebrow">Inicializando modelos</p>
+            <h2 className="model-readiness-card__title">GuardianAI se esta preparando</h2>
+            <p className="model-readiness-card__copy">{modelReadiness.message}</p>
+            <div className="model-readiness-card__bar" role="progressbar">
+              <span />
+            </div>
+          </section>
+        ) : null}
+
         {documentProcessingStatus ? (
           <section className="processing-card" aria-live="polite" aria-atomic="true">
             <div className="processing-card__header">
@@ -96,6 +122,28 @@ export function ConversationPanel({
               {documentProcessingStatus.progress === null
                 ? "Esperando actualizaciones del backend..."
                 : `${documentProcessingStatus.current} de ${documentProcessingStatus.total}`}
+            </p>
+          </section>
+        ) : null}
+
+        {responseProcessingStatus ? (
+          <section className="processing-card" aria-live="polite" aria-atomic="true">
+            <div className="processing-card__header">
+              <div>
+                <p className="processing-card__eyebrow">Protegiendo contenido</p>
+                <h2 className="processing-card__title">{responseProcessingStatus.title}</h2>
+              </div>
+              <span className="processing-card__stage">{responseProcessingStatus.stage}</span>
+            </div>
+            <p className="processing-card__message">{responseProcessingStatus.message}</p>
+            <div
+              className="processing-card__bar processing-card__bar--indeterminate"
+              role="progressbar"
+            >
+              <span className="processing-card__bar-fill" />
+            </div>
+            <p className="processing-card__meta">
+              Esperando los primeros fragmentos de la respuesta segura...
             </p>
           </section>
         ) : null}
@@ -241,7 +289,12 @@ export function ConversationPanel({
         </div>
         <span className="conversation__status">
           {documentProcessingStatus?.message
-            ?? (isResponding ? "Generando respuesta..." : chat?.title || "Listo para empezar")}
+            ?? responseProcessingStatus?.message
+            ?? (!modelReadiness.ready
+              ? modelReadiness.message
+              : isResponding
+                ? "Generando respuesta..."
+                : chat?.title || "Listo para empezar")}
         </span>
       </footer>
     </section>

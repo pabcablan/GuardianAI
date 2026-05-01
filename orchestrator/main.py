@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -125,18 +126,45 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
     Returns:
         StreamingResponse: The safe NDJSON stream consumed by web-ui.
     """
+    started_at = time.perf_counter()
+    print(
+        "ORCHESTRATOR /api/messages/stream "
+        f"chat_id={payload.chat_id} text_len={len(payload.text)}",
+        flush=True,
+    )
     try:
+        step_started_at = time.perf_counter()
         anonymized_prompt = container.privacy_shield.anonymize(
             chat_id=payload.chat_id,
             text=payload.text,
         )
+        print(
+            "ORCHESTRATOR anonymize done "
+            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
+            f"replacement_count={len(anonymized_prompt.replacements)}",
+            flush=True,
+        )
+        step_started_at = time.perf_counter()
         assistant_chunks = _collect_ai_gateway_chunks(
             chat_id=payload.chat_id,
             anonymized_prompt=anonymized_prompt.text,
         )
+        print(
+            "ORCHESTRATOR ai-gateway done "
+            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
+            f"chunk_count={len(assistant_chunks)}",
+            flush=True,
+        )
+        step_started_at = time.perf_counter()
         events = container.privacy_shield.deanonymize_stream(
             chunks=assistant_chunks,
             replacements=anonymized_prompt.replacements,
+        )
+        print(
+            "ORCHESTRATOR deanonymize requested "
+            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
+            f"total_before_stream={time.perf_counter() - started_at:.3f}s",
+            flush=True,
         )
     except PrivacyShieldClientError as error:
         raise HTTPException(
@@ -286,13 +314,27 @@ def _stream_safe_response_for_text(
     Returns:
         Iterator[dict[str, Any]]: Safe response stream events.
     """
+    started_at = time.perf_counter()
     anonymized_prompt = container.privacy_shield.anonymize(
         chat_id=chat_id,
         text=text,
     )
+    print(
+        "ORCHESTRATOR document anonymize done "
+        f"elapsed={time.perf_counter() - started_at:.3f}s "
+        f"replacement_count={len(anonymized_prompt.replacements)}",
+        flush=True,
+    )
+    started_at = time.perf_counter()
     assistant_chunks = _collect_ai_gateway_chunks(
         chat_id=chat_id,
         anonymized_prompt=anonymized_prompt.text,
+    )
+    print(
+        "ORCHESTRATOR document ai-gateway done "
+        f"elapsed={time.perf_counter() - started_at:.3f}s "
+        f"chunk_count={len(assistant_chunks)}",
+        flush=True,
     )
     return container.privacy_shield.deanonymize_stream(
         chunks=assistant_chunks,

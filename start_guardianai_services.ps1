@@ -46,8 +46,18 @@ function Start-GuardianService {
             "-NoProfile",
             "-NoExit",
             "-Command",
-            "Write-Host '$Title'; $Command"
+            $Command
         )
+}
+
+if (Test-Path (Join-Path $Root "model-provider\main.py")) {
+    Start-GuardianService `
+        -Title "GuardianAI model-provider - http://127.0.0.1:8006" `
+        -WorkingDirectory "model-provider" `
+        -Executable $Uvicorn `
+        -ExecutableArguments @("main:app", "--host", "127.0.0.1", "--port", "8006")
+} else {
+    Write-Host "GuardianAI model-provider skipped: model-provider\main.py not found."
 }
 
 Start-GuardianService `

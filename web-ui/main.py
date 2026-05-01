@@ -6,9 +6,11 @@ Run it from the `web-ui` directory with:
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -64,6 +66,15 @@ from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorStreamEvent,
     OrchestratorStreamFailed,
 )
+
+
+MODEL_PROVIDER_BASE_URL = os.getenv(
+    "MODEL_PROVIDER_BASE_URL",
+    "http://127.0.0.1:8006",
+)
+PRIVACY_MODEL_NAME = os.getenv("PRIVACY_MODEL_NAME", "privacy_anonymizer")
+DOCUMENT_MODEL_NAME = os.getenv("DOCUMENT_MODEL_NAME", "document_extractor")
+MODEL_STATUS_TIMEOUT_SECONDS = 2.0
 
 
 @dataclass(frozen=True)
@@ -143,6 +154,58 @@ def healthcheck() -> dict[str, str]:
         dict[str, str]: A simple status payload.
     """
     return {"status": "ok"}
+
+
+@app.get("/api/system/model-readiness")
+def model_readiness() -> dict[str, object]:
+    """Return whether the required backend models are loaded.
+
+    Returns:
+        dict[str, object]: The model readiness state consumed by the UI.
+    """
+    model_names = [PRIVACY_MODEL_NAME]
+    if DOCUMENT_MODEL_NAME != PRIVACY_MODEL_NAME:
+        model_names.append(DOCUMENT_MODEL_NAME)
+
+    statuses: dict[str, str] = {}
+    try:
+        with httpx.Client(
+            base_url=MODEL_PROVIDER_BASE_URL,
+            timeout=MODEL_STATUS_TIMEOUT_SECONDS,
+        ) as client:
+            for model_name in model_names:
+                response = client.get(
+                    "/model_status/",
+                    params={"name": model_name},
+                )
+                response.raise_for_status()
+                status_text = str(response.json())
+                statuses[model_name] = status_text
+    except httpx.HTTPError as error:
+        return {
+            "ready": False,
+            "message": "El proveedor de modelos aun no esta disponible.",
+            "detail": str(error),
+            "models": statuses,
+        }
+
+    missing_models = [
+        name
+        for name, status_text in statuses.items()
+        if " is loaded." not in status_text
+    ]
+    if missing_models:
+        return {
+            "ready": False,
+            "message": "Cargando modelos de GuardianAI...",
+            "models": statuses,
+        }
+
+    return {
+        "ready": True,
+        "message": "Modelos listos.",
+        "models": statuses,
+    }
 
 
 @app.get("/api/chats", response_model=list[ChatSummaryResponse])

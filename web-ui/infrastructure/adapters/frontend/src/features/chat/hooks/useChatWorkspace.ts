@@ -6,6 +6,8 @@ import type {
   ChatSummary,
   ChatThread,
   DocumentProcessingStatus,
+  ModelReadinessStatus,
+  ResponseProcessingStatus,
 } from "../types";
 
 
@@ -45,6 +47,9 @@ function createEmptyChat(chatId: string): ChatThread {
 }
 
 
+const MODEL_READINESS_POLL_INTERVAL_MS = 3000;
+
+
 export function useChatWorkspace() {
   const serviceRef = useRef(createChatApplicationService());
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -55,9 +60,60 @@ export function useChatWorkspace() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [documentProcessingStatus, setDocumentProcessingStatus] =
     useState<DocumentProcessingStatus | null>(null);
+  const [responseProcessingStatus, setResponseProcessingStatus] =
+    useState<ResponseProcessingStatus | null>(null);
+  const [modelReadiness, setModelReadiness] = useState<ModelReadinessStatus>({
+    ready: false,
+    message: "Comprobando si el modelo esta cargado...",
+  });
 
   useEffect(() => {
     void loadChats();
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    let timeoutId: number | null = null;
+
+    async function refreshModelReadiness(): Promise<void> {
+      try {
+        const readiness = await serviceRef.current.getModelReadiness();
+        if (!isActive) {
+          return;
+        }
+
+        setModelReadiness(readiness);
+
+        if (!readiness.ready) {
+          timeoutId = window.setTimeout(
+            refreshModelReadiness,
+            MODEL_READINESS_POLL_INTERVAL_MS,
+          );
+        }
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setModelReadiness({
+          ready: false,
+          message: "Esperando a que arranque el proveedor de modelos...",
+        });
+        timeoutId = window.setTimeout(
+          refreshModelReadiness,
+          MODEL_READINESS_POLL_INTERVAL_MS,
+        );
+      }
+    }
+
+    void refreshModelReadiness();
+
+    return () => {
+      isActive = false;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -82,9 +138,7 @@ export function useChatWorkspace() {
       }
 
       const nextSelectedChatId =
-        preferredChatId
-        ?? selectedChatId
-        ?? summaries[0].id;
+        (preferredChatId ?? selectedChatId) || summaries[0].id;
 
       if (nextSelectedChatId !== selectedChatId) {
         setSelectedChatId(nextSelectedChatId);
@@ -339,8 +393,10 @@ export function useChatWorkspace() {
 
       if (!activeChatId) {
         activeChatId = await serviceRef.current.createChat();
-        await loadChats(activeChatId);
         setSelectedChatId(activeChatId);
+        setSelectedChat(createEmptyChat(activeChatId));
+        syncChatSummary(createEmptyChat(activeChatId));
+        void loadChats(activeChatId);
       }
 
       if (!activeChatId) {
@@ -373,20 +429,25 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "responding",
-          message: "Generando respuesta segura...",
+          stage: "anonymizing",
+          message: "Anonimizando el contenido antes de consultar al asistente...",
           current: 1,
           total: 1,
-          progress: 1,
+          progress: null,
         });
 
         const assistantMessage = createAssistantMessage();
         appendAssistantMessage(activeChatId, assistantMessage);
 
+        let didReceiveFirstChunk = false;
         await serviceRef.current.streamSafeResponse(
           activeChatId,
           documentId,
           (chunk) => {
+            if (!didReceiveFirstChunk) {
+              didReceiveFirstChunk = true;
+              setDocumentProcessingStatus(null);
+            }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
           },
         );
@@ -399,18 +460,31 @@ export function useChatWorkspace() {
         const assistantMessage = createAssistantMessage();
         appendChatMessage(activeChatId, assistantMessage);
 
+        setResponseProcessingStatus({
+          title: "Mensaje del chat",
+          stage: "anonymizing",
+          message: "Anonimizando el mensaje antes de consultar al asistente...",
+        });
+
+        let didReceiveFirstChunk = false;
         await serviceRef.current.streamMessage(
           activeChatId,
           normalizedContent,
           (chunk) => {
+            if (!didReceiveFirstChunk) {
+              didReceiveFirstChunk = true;
+              setResponseProcessingStatus(null);
+            }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
           },
         );
       }
       setDocumentProcessingStatus(null);
+      setResponseProcessingStatus(null);
       return true;
     } catch (error) {
       setDocumentProcessingStatus(null);
+      setResponseProcessingStatus(null);
       setErrorMessage(getErrorMessage(error));
       return false;
     } finally {
@@ -426,7 +500,10 @@ export function useChatWorkspace() {
     isLoadingChats,
     isResponding,
     documentProcessingStatus,
-    isInteractionLocked: isResponding || documentProcessingStatus !== null,
+    responseProcessingStatus,
+    modelReadiness,
+    isInteractionLocked:
+      !modelReadiness.ready || isResponding || documentProcessingStatus !== null,
     selectChat,
     createChat,
     renameChat,

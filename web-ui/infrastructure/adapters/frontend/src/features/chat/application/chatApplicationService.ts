@@ -2,6 +2,7 @@ import type {
   ChatSummary,
   ChatThread,
   DocumentProcessingStatus,
+  ModelReadinessStatus,
 } from "../types";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
@@ -75,8 +76,24 @@ type SafeStreamResponse =
   | SafeStreamCompletedResponse
   | SafeStreamErrorResponse;
 
+interface ModelReadinessResponse {
+  ready: boolean;
+  message: string;
+}
+
 export class ChatApplicationService {
   constructor(private readonly apiBaseUrl: string = DEFAULT_API_BASE_URL) {}
+
+  async getModelReadiness(): Promise<ModelReadinessStatus> {
+    const response = await fetch(`${this.apiBaseUrl}/api/system/model-readiness`);
+    await this.ensure_success(response);
+
+    const payload = (await response.json()) as ModelReadinessResponse;
+    return {
+      ready: payload.ready,
+      message: payload.message,
+    };
+  }
 
   async listChats(): Promise<ChatSummary[]> {
     const response = await fetch(`${this.apiBaseUrl}/api/chats`);

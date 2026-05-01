@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -13,6 +14,14 @@ from pydantic import BaseModel, Field
 
 ANONYMIZATION_DEBUG_PATH = (
     Path(__file__).resolve().parent / "storage" / "anonymization_debug.jsonl"
+)
+MODEL_PROVIDER_BASE_URL = os.getenv(
+    "MODEL_PROVIDER_BASE_URL",
+    "http://127.0.0.1:8006",
+)
+PRIVACY_MODEL_NAME = os.getenv(
+    "PRIVACY_MODEL_NAME",
+    "privacy_anonymizer",
 )
 
 
@@ -49,6 +58,8 @@ class PrivacyShieldContainer:
     """
 
     anonymize_document: object
+    evaluator: object | None = None
+    anonymizer: object | None = None
 
 
 class FallbackPromptAnonymizer:
@@ -181,29 +192,25 @@ def build_container() -> PrivacyShieldContainer:
         from application.usecases.document_anonymizer.anonymize_document import (
             AnonymizeDocument,
         )
-        from infrastructure.adapters.anonymization.llm_anonymizer import (
-            LlmAnonymizer,
+        from infrastructure.adapters.model_provider.anonymizer import (
+            ModelProviderAnonymizer,
         )
-        from infrastructure.adapters.evaluation.qwen_evaluator import (
-            QwenEvaluator,
+        from infrastructure.adapters.model_provider.client import (
+            ModelProviderClient,
         )
-        from infrastructure.adapters.model_loader.unsloth_provider import (
-            UnslothProvider,
-        )
-
-        unsloth_provider = UnslothProvider()
-        model_anonymizer, tokenizer_anonymizer = unsloth_provider.load(
-            model_id="unsloth/Qwen3.5-0.8B",
-            name="anonymizer_model",
+        from infrastructure.adapters.model_provider.evaluator import (
+            ModelProviderEvaluator,
         )
 
-        evaluator = QwenEvaluator(
-            model=model_anonymizer,
-            tokenizer=tokenizer_anonymizer,
+        model_provider = ModelProviderClient(base_url=MODEL_PROVIDER_BASE_URL)
+
+        evaluator = ModelProviderEvaluator(
+            client=model_provider,
+            model_name=PRIVACY_MODEL_NAME,
         )
-        anonymizer = LlmAnonymizer(
-            model=model_anonymizer,
-            tokenizer=tokenizer_anonymizer,
+        anonymizer = ModelProviderAnonymizer(
+            client=model_provider,
+            model_name=PRIVACY_MODEL_NAME,
         )
 
         return PrivacyShieldContainer(
@@ -211,6 +218,8 @@ def build_container() -> PrivacyShieldContainer:
                 evaluator=evaluator,
                 anonymizer=anonymizer,
             ),
+            evaluator=evaluator,
+            anonymizer=anonymizer,
         )
     except Exception as error:
         return PrivacyShieldContainer(
@@ -282,6 +291,41 @@ def _save_anonymization_debug(
         "replacement_keys": list(replacements.keys()),
         "replacement_count": len(replacements),
     }
+    container = get_container()
+    evaluator = container.evaluator
+    anonymizer = container.anonymizer
+    if evaluator is not None:
+        payload["evaluator_decision"] = getattr(
+            evaluator,
+            "last_decision",
+            None,
+        )
+        payload["evaluator_raw_response"] = getattr(
+            evaluator,
+            "last_raw_response",
+            "",
+        )
+        payload["evaluator_parsed_response"] = getattr(
+            evaluator,
+            "last_parsed_response",
+            None,
+        )
+    if anonymizer is not None:
+        payload["anonymizer_raw_response"] = getattr(
+            anonymizer,
+            "last_raw_response",
+            "",
+        )
+        payload["anonymizer_parsed_response"] = getattr(
+            anonymizer,
+            "last_parsed_response",
+            None,
+        )
+        payload["anonymizer_entities"] = getattr(
+            anonymizer,
+            "last_entities",
+            None,
+        )
 
     with ANONYMIZATION_DEBUG_PATH.open("a", encoding="utf-8") as debug_file:
         debug_file.write(json.dumps(payload, ensure_ascii=False) + "\n")

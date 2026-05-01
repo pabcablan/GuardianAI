@@ -725,6 +725,51 @@ input {
   color: rgba(255, 255, 255, 0.68);
 }
 
+.model-readiness-card {
+  display: grid;
+  gap: 10px;
+  max-width: min(620px, 100%);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 12px;
+  background: #342d31;
+}
+
+.model-readiness-card__eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.64);
+  text-transform: uppercase;
+}
+
+.model-readiness-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.model-readiness-card__copy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.model-readiness-card__bar {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.model-readiness-card__bar span {
+  position: absolute;
+  inset-block: 0;
+  width: 36%;
+  border-radius: inherit;
+  background: #f8f2f2;
+  animation: processing-indeterminate 1.2s ease-in-out infinite;
+}
+
 .settings-panel {
   position: absolute;
   top: 28px;
@@ -1042,6 +1087,17 @@ input {
 .composer__upload:disabled,
 .file-banner__clear:disabled,
 .composer__input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-button:disabled,
+.sidebar__compact-action:disabled,
+.sidebar__add-chat:disabled,
+.sidebar__settings:disabled,
+.chat-list__select:disabled,
+.chat-list__menu-button:disabled,
+.search-box input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

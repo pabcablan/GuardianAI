@@ -6,6 +6,13 @@ It is responsible for loading models optimized for Unsloth given their identifie
 import threading
 from typing import Any
 
+# Avoid Torch Dynamo/FX tracing conflicts when Unsloth patches the model for
+# inference. This must be set before importing Unsloth.
+import os
+
+os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
+os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
+
 from unsloth import FastLanguageModel
 
 from infrastructure.ports.model_repository import ModelRepository
@@ -44,6 +51,16 @@ class UnslothLoader(ModelRepository):
             tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
         """
         if name not in self._models and model_id.startswith("unsloth/"):
+            existing_name = self._find_loaded_model_name(model_id)
+            if existing_name is not None:
+                self._tokenizers[name] = self._tokenizers[existing_name]
+                self._models[name] = self._models[existing_name]
+                self._model_ids[name] = model_id
+                print(
+                    f"'{name}' now reuses loaded model '{existing_name}'."
+                )
+                return self._models[name], self._tokenizers[name]
+
             print(f"Downloading/loading '{model_id}' ...")
 
             max_seq_length = kwargs.get("max_seq_length", 4096)
@@ -64,6 +81,22 @@ class UnslothLoader(ModelRepository):
             print(f"'{name}' already loaded, skipping.")
 
         return self._models[name], self._tokenizers[name]
+
+    def _find_loaded_model_name(self, model_id: str) -> str | None:
+        """
+        Find an already loaded model by identifier.
+
+        Args:
+            model_id (str): The model identifier to search for.
+
+        Returns:
+            str | None: The existing model name, if present.
+        """
+        for loaded_name, loaded_model_id in self._model_ids.items():
+            if loaded_model_id == model_id:
+                return loaded_name
+
+        return None
 
     def get(self, name: str) -> tuple[Any, Any]:
         """

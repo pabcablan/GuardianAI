@@ -8,7 +8,14 @@ class AnonymizeDocument:
         self.anonymizer = anonymizer
     
     def execute(self, text: str) -> str:
-        if self.evaluator.evaluate(text):
+        should_anonymize = self.evaluator.evaluate(text)
+        print(
+            "PRIVACY-SHIELD evaluator "
+            f"should_anonymize={should_anonymize} "
+            f"text_len={len(text)}",
+            flush=True,
+        )
+        if should_anonymize:
             return self.anonymizer.anonymize(text)
         else:
             return text

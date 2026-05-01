@@ -5,6 +5,7 @@ interface SidebarProps {
   chats: ChatSummary[];
   selectedChatId: string;
   isExpanded: boolean;
+  isInteractionLocked: boolean;
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
   onRenameChat: (chatId: string, title: string) => Promise<boolean>;
@@ -17,6 +18,7 @@ export function Sidebar({
   chats,
   selectedChatId,
   isExpanded,
+  isInteractionLocked,
   onChatSelect,
   onCreateChat,
   onRenameChat,
@@ -91,6 +93,7 @@ export function Sidebar({
             className="icon-button"
             type="button"
             aria-label={isExpanded ? "Comprimir panel lateral" : "Expandir panel lateral"}
+            disabled={isInteractionLocked}
             onClick={onToggleSidebar}
           >
             <img className="icon-image" src="/icons/brand-mark.svg" alt="" aria-hidden="true" />
@@ -105,6 +108,7 @@ export function Sidebar({
           aria-label="Comprimir panel lateral"
           aria-hidden={!isExpanded}
           tabIndex={isExpanded ? 0 : -1}
+          disabled={isInteractionLocked}
           onClick={onToggleSidebar}
         >
           <img className="icon-image" src="/icons/sidebar-toggle.svg" alt="" aria-hidden="true" />
@@ -118,12 +122,18 @@ export function Sidebar({
             type="search"
             placeholder="Search"
             value={searchTerm}
+            disabled={isInteractionLocked}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
           <span className="icon icon--search" aria-hidden="true" />
         </label>
       ) : (
-        <button className="sidebar__compact-action" type="button" aria-label="Buscar chats">
+        <button
+          className="sidebar__compact-action"
+          type="button"
+          aria-label="Buscar chats"
+          disabled={isInteractionLocked}
+        >
           <span className="icon icon--search" aria-hidden="true" />
         </button>
       )}
@@ -133,6 +143,7 @@ export function Sidebar({
           <button
             className="sidebar__add-chat"
             type="button"
+            disabled={isInteractionLocked}
             onClick={onCreateChat}
           >
             <img className="sidebar__add-icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
@@ -142,6 +153,7 @@ export function Sidebar({
           <button
             className="sidebar__compact-action"
             type="button"
+            disabled={isInteractionLocked}
             onClick={onCreateChat}
             aria-label="Anadir chat"
           >
@@ -169,6 +181,7 @@ export function Sidebar({
                 <button
                   className="chat-list__select"
                   type="button"
+                  disabled={isInteractionLocked}
                   onClick={() => onChatSelect(chat.id)}
                 >
                   <span className="chat-list__title">{chat.title}</span>
@@ -177,6 +190,7 @@ export function Sidebar({
                   className="chat-list__menu-button"
                   type="button"
                   aria-label={`Abrir opciones de ${chat.title}`}
+                  disabled={isInteractionLocked}
                   onClick={() => openChatActions(chat)}
                 >
                   <span className="chat-list__menu-dots" aria-hidden="true" />
@@ -196,6 +210,7 @@ export function Sidebar({
           <button
             className="sidebar__settings"
             type="button"
+            disabled={isInteractionLocked}
             onClick={onOpenSettings}
           >
             <span className="icon icon--settings" aria-hidden="true" />
@@ -205,6 +220,7 @@ export function Sidebar({
           <button
             className="sidebar__compact-action"
             type="button"
+            disabled={isInteractionLocked}
             onClick={onOpenSettings}
             aria-label="Abrir configuracion"
           >

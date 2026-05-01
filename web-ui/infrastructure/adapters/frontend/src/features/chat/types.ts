@@ -27,6 +27,17 @@ export interface DocumentProcessingStatus {
   progress: number | null;
 }
 
+export interface ModelReadinessStatus {
+  ready: boolean;
+  message: string;
+}
+
+export interface ResponseProcessingStatus {
+  title: string;
+  stage: string;
+  message: string;
+}
+
 export type AnonymizationOption =
   | "personNames"
   | "identityDocuments"
