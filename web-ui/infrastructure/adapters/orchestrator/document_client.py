@@ -6,8 +6,6 @@ import mimetypes
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-import httpx
-
 from infrastructure.adapters.orchestrator.base import (
     OrchestratorClientError,
     OrchestratorHttpClientBase,
@@ -67,23 +65,12 @@ class HttpOrchestratorDocumentClient(
         Returns:
             Iterator[OrchestratorDocumentEvent]: Parsed document events.
         """
-        try:
-            with httpx.stream(
-                "POST",
-                f"{self.base_url}/api/documents/extract-stream",
-                data=data,
-                files=files,
-                timeout=self.timeout_seconds,
-            ) as response:
-                self._raise_for_status(response)
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-                    yield self._parse_document_event(line)
-        except httpx.RequestError as error:
-            raise OrchestratorClientError(
-                "Orchestrator service is unavailable."
-            ) from error
+        for line in self._stream_form_lines(
+            path="/api/documents/extract-stream",
+            data=data,
+            files=files,
+        ):
+            yield self._parse_document_event(line)
 
     def _parse_document_event(
         self,
