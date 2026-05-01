@@ -73,6 +73,12 @@ Start-GuardianService `
     -ExecutableArguments @("main:app", "--host", "127.0.0.1", "--port", "8001", "--reload")
 
 Start-GuardianService `
+    -Title "GuardianAI ai-gateway - http://127.0.0.1:8005" `
+    -WorkingDirectory "ai-gateway" `
+    -Executable $Uvicorn `
+    -ExecutableArguments @("main:app", "--host", "127.0.0.1", "--port", "8005", "--reload")
+
+Start-GuardianService `
     -Title "GuardianAI orchestrator - http://127.0.0.1:8003" `
     -WorkingDirectory "orchestrator" `
     -Executable $Uvicorn `

@@ -13,8 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from infrastructure.adapters.fake_assistant_stream_gateway import (
-    FakeAssistantStreamGateway,
+from infrastructure.adapters.http.ai_gateway_client import (
+    AiGatewayClientError,
+    HttpAiGatewayClient,
 )
 from infrastructure.adapters.http.privacy_shield_client import (
     HttpPrivacyShieldClient,
@@ -85,7 +86,7 @@ def build_container() -> OrchestratorContainer:
     return OrchestratorContainer(
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
-        ai_gateway=FakeAssistantStreamGateway(),
+        ai_gateway=HttpAiGatewayClient(),
     )
 
 
@@ -166,7 +167,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
             f"total_before_stream={time.perf_counter() - started_at:.3f}s",
             flush=True,
         )
-    except PrivacyShieldClientError as error:
+    except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(error),
@@ -253,7 +254,7 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             chat_id=chat_id,
             text=text,
         )
-    except PrivacyShieldClientError as error:
+    except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(error),

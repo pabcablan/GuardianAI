@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -8,12 +9,18 @@ from infrastructure.adapters.memory_session_manager import MemorySessionManager
 from infrastructure.adapters.fastapi_completion import FastAPICompletion
 from application.usecases.complete import Complete
 from application.usecases.create_session import CreateSession
-import os
 
+load_dotenv(Path(__file__).parent / ".env")
 load_dotenv(Path(__file__).parent.parent / ".env")
 app = FastAPI()
 
-language_model = OpenAILanguageModel(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY is required to start the ai-gateway service."
+    )
+
+language_model = OpenAILanguageModel(api_key=api_key)
 audit_log = FileAuditLog(file_path="audit.log")
 session_manager = MemorySessionManager(session_ttl_minutes=60)
 

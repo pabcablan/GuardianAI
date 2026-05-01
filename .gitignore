@@ -298,3 +298,6 @@ pyrightconfig.json
 # Custom ignores for the GuardianAI project
 .vscode/
 unsloth_compiled_cache/
+**/unsloth_compiled_cache/
+audit.log
+**/audit.log
