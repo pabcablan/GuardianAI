@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
 
@@ -11,7 +12,7 @@ from application.usecases.process_document import ProcessDocument
 
 def main():
 
-    llm_client = LLMClient(base_url="http://localhost:8000")  # Change to real LLM API URL
+    llm_client = LLMClient(base_url=os.getenv("LLM_BASE_URL"))  # Change to real LLM API URL
 
     parser = FastAPIDocumentParser()
     text_extractor = FallbackTextExtractor(
