@@ -1,3 +1,12 @@
+"""
+Represents a parsed document with its metadata and content.
+    
+Attributes:
+    document_id: A unique identifier for the document.
+    filename: The name of the document file.
+    content: The raw content of the document in bytes.
+"""
+
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
