@@ -1,5 +1,3 @@
-import base64
-
 import uvicorn
 from fastapi import FastAPI
 
@@ -17,42 +15,34 @@ def main():
 
     app = FastAPI()
 
-    @app.post("/load_model/")
-    def load_model(request: LoadModelRequest):
-        return controller.load_model(request)
+    @app.post("/load_model")
+    async def load_model(request: LoadModelRequest):
+        return await controller.load_model(request)
 
-    @app.post("/unload_model/")
-    def unload_model(name: str):
-        return controller.unload_model(name)
+    @app.post("/unload_model")
+    async def unload_model(name: str):
+        return await controller.unload_model(name)
     
-    @app.get("/model_status/")
-    def model_status(name: str):
-        return controller.get_model_status(name)
+    @app.get("/model_status")
+    async def model_status(name: str):
+        return await controller.get_model_status(name)
     
-    @app.get("/list_models/")
-    def list_models():
-        return controller.list_all_models()
+    @app.get("/list_models")
+    async def list_models():
+        return await controller.list_all_models()
     
-    @app.post("/generate_response/")
-    def generate_response(request: GenerateRequest):
+    @app.post("/generate_response")
+    async def generate_response(request: GenerateRequest):
         print("MODEL:", request.model_name)
         print("PROMPT LEN:", len(request.prompt))
         
         if request.document_base64:
             print("DOCUMENT RECEIVED: YES")
-            print("BASE64 SIZE:", len(request.document_base64))
-
-            image_bytes = base64.b64decode(request.document_base64)
-
-            with open("debug_received.pdf", "wb") as f:
-                f.write(image_bytes)
-
-            print("PDF GUARDADO COMO debug_received.pdf")
         else:
             print("DOCUMENT RECEIVED: NO")
 
         
-        return controller.generate_response(request.model_name, request.prompt, request.document_base64)
+        return await controller.generate_response(request.model_name, request.prompt, request.document_base64)
     
     uvicorn.run(app, host="0.0.0.0", port=7003)
 

@@ -8,7 +8,7 @@ from typing import Any
 
 class ModelRepository(ABC):
     @abstractmethod
-    def load(self, model_id: str, name:str, **kwargs) -> tuple[Any, Any]:
+    async def load(self, model_id: str, name:str, **kwargs) -> tuple[Any, Any]:
         """
         Load a model given its identifier and optional parameters.
 
@@ -23,7 +23,7 @@ class ModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get(self, name: str) -> tuple[Any, Any]:
+    async def get(self, name: str) -> tuple[Any, Any]:
         """
         Get a loaded model and its tokenizer by name.
 
@@ -36,7 +36,7 @@ class ModelRepository(ABC):
         pass
 
     @abstractmethod
-    def unload(self, name: str):
+    async def unload(self, name: str):
         """
         Unload a model and its tokenizer by name.
 
@@ -46,7 +46,7 @@ class ModelRepository(ABC):
         pass
 
     @abstractmethod
-    def list_loaded_models(self) -> list[dict[str, str]]:
+    async def list_loaded_models(self) -> list[dict[str, str]]:
         """
         List all currently loaded models.
 

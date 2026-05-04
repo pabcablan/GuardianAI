@@ -28,7 +28,7 @@ class TransformersLoader(ModelRepository):
                     cls._instance._model_ids = {}
         return cls._instance
 
-    def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
+    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
         """
         Load a model given its identifier and optional parameters.
         
@@ -64,7 +64,7 @@ class TransformersLoader(ModelRepository):
 
         return self._models[name], self._tokenizers[name]
 
-    def get(self, name: str) -> tuple[Any, Any]:
+    async def get(self, name: str) -> tuple[Any, Any]:
         """
         Retrieve a loaded model and its tokenizer by name.
             
@@ -78,7 +78,7 @@ class TransformersLoader(ModelRepository):
             raise ValueError(f"'{name}' not loaded. Call load() first.")
         return self._models[name], self._tokenizers[name]
 
-    def unload(self, name: str):
+    async def unload(self, name: str):
         """
         Unload a model and its tokenizer by name.
 
@@ -91,7 +91,7 @@ class TransformersLoader(ModelRepository):
             del self._model_ids[name]
             print(f"'{name}' unloaded.")
 
-    def list_loaded_models(self) -> list[dict[str, str]]:
+    async def list_loaded_models(self) -> list[dict[str, str]]:
          """
          List all currently loaded models.
 

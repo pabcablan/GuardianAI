@@ -14,7 +14,7 @@ class ModelInferenceEngine(TextGenerator):
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text=input_text, return_tensors="pt").to(model.device)
         
-        with torch.no_grad():
+        with torch.inference_mode():
             output_ids = model.generate(**inputs, max_new_tokens=600, temperature=0.01, do_sample=False, repetition_penalty=1.1)
 
         input_tokens = inputs["input_ids"].shape[1]
