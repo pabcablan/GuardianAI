@@ -15,14 +15,14 @@ class LLMClient:
         self._timeout_seconds = timeout_seconds
 
     async def generate(self, prompt: str, content: bytes) -> str:
-        document_base64 = base64.b64encode(content).decode("ascii")
+        content_64 = self.bytes_to_64(content)
         async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
             response = await client.post(
                 f"{self._base_url}/generate_response/",
                 json={
                     "model_name": self._model_name,
                     "prompt": prompt,
-                    "document_base64": document_base64,
+                    "document_base64": content_64,
                 }
             )
             response.raise_for_status()
@@ -31,3 +31,8 @@ class LLMClient:
                 return payload
 
             return str(payload)
+    
+    def bytes_to_64(self, content: bytes) -> str:
+        return base64.b64encode(content).decode()
+
+
