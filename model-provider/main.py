@@ -165,7 +165,10 @@ def build_app() -> FastAPI:
             model_name=DEFAULT_PRIVACY_MODEL_NAME,
             label="privacy",
         )
-        if DEFAULT_DOCUMENT_MODEL_NAME != DEFAULT_PRIVACY_MODEL_NAME:
+        if (
+            DEFAULT_DOCUMENT_MODEL_NAME != DEFAULT_PRIVACY_MODEL_NAME
+            and DEFAULT_DOCUMENT_MODEL_ID != DEFAULT_PRIVACY_MODEL_ID
+        ):
             _load_startup_model(
                 controller=controller,
                 model_id=DEFAULT_DOCUMENT_MODEL_ID,

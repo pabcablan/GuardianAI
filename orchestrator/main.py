@@ -7,6 +7,9 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from infrastructure.adapters.fake_assistant_stream_gateway import (
+    FakeAssistantStreamGateway,
+)
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -86,7 +89,7 @@ def build_container() -> OrchestratorContainer:
     return OrchestratorContainer(
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
-        ai_gateway=HttpAiGatewayClient(),
+        ai_gateway=FakeAssistantStreamGateway(),
     )
 
 

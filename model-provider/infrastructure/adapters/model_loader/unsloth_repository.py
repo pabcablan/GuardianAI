@@ -13,9 +13,13 @@ import os
 os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
 os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
 
-from unsloth import FastLanguageModel
-
 from infrastructure.ports.model_repository import ModelRepository
+
+
+SHARED_MODEL_ALIASES = {
+    "privacy_anonymizer": "document_extractor",
+    "document_extractor": "privacy_anonymizer",
+}
 
 
 class UnslothLoader(ModelRepository):
@@ -33,6 +37,7 @@ class UnslothLoader(ModelRepository):
                     cls._instance._models = {}
                     cls._instance._tokenizers = {}
                     cls._instance._model_ids = {}
+                    cls._instance._model_kinds = {}
         return cls._instance
 
     def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
@@ -50,12 +55,14 @@ class UnslothLoader(ModelRepository):
         Returns:
             tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
         """
+        model_kind = self._resolve_model_kind(model_id, name, kwargs)
         if name not in self._models and model_id.startswith("unsloth/"):
             existing_name = self._find_loaded_model_name(model_id)
             if existing_name is not None:
                 self._tokenizers[name] = self._tokenizers[existing_name]
                 self._models[name] = self._models[existing_name]
                 self._model_ids[name] = model_id
+                self._model_kinds[name] = self._model_kinds[existing_name]
                 print(
                     f"'{name}' now reuses loaded model '{existing_name}'."
                 )
@@ -63,26 +70,150 @@ class UnslothLoader(ModelRepository):
 
             print(f"Downloading/loading '{model_id}' ...")
 
-            max_seq_length = kwargs.get("max_seq_length", 4096)
-            dtype = kwargs.get("dtype", None)
-            load_in_4bit = kwargs.get("load_in_4bit", True)
-
-            model, tokenizer = FastLanguageModel.from_pretrained(model_name=model_id, max_seq_length=max_seq_length, 
-                                                                 dtype=dtype, load_in_4bit=load_in_4bit)
-            
-            FastLanguageModel.for_inference(model)
-            model.eval()
+            if model_kind == "vision":
+                model, tokenizer = self._load_vision_model(model_id, **kwargs)
+            else:
+                model, tokenizer = self._load_language_model(model_id, **kwargs)
 
             self._tokenizers[name] = tokenizer
             self._models[name] = model
             self._model_ids[name] = model_id
-            print(f"'{name}' ready on (Unsloth).")
+            self._model_kinds[name] = model_kind
+            self._register_shared_alias(
+                model_id=model_id,
+                source_name=name,
+                model_kind=model_kind,
+            )
+            print(f"'{name}' ready on ({model_kind}).")
         else:
             print(f"'{name}' already loaded, skipping.")
 
         return self._models[name], self._tokenizers[name]
 
-    def _find_loaded_model_name(self, model_id: str) -> str | None:
+    def _resolve_model_kind(
+        self,
+        model_id: str,
+        name: str,
+        kwargs: dict[str, Any],
+    ) -> str:
+        """
+        Resolve whether a model should be loaded as text or vision.
+
+        Args:
+            model_id (str): The model identifier.
+            name (str): The registered model name.
+            kwargs (dict[str, Any]): Loading options.
+
+        Returns:
+            str: The resolved model kind.
+        """
+        if kwargs.pop("is_vision_model", False):
+            return "vision"
+
+        lowered_model_id = model_id.lower()
+        if "-vl" in lowered_model_id or "vision" in lowered_model_id:
+            return "vision"
+
+        return "text"
+
+    def _register_shared_alias(
+        self,
+        model_id: str,
+        source_name: str,
+        model_kind: str,
+    ) -> None:
+        """
+        Register the counterpart model name as an alias to avoid double loads.
+
+        Args:
+            model_id (str): The model identifier.
+            source_name (str): The already loaded model name.
+            model_kind (str): The loaded model kind.
+        """
+        alias_name = SHARED_MODEL_ALIASES.get(source_name)
+        if not alias_name or alias_name in self._models:
+            return
+
+        self._tokenizers[alias_name] = self._tokenizers[source_name]
+        self._models[alias_name] = self._models[source_name]
+        self._model_ids[alias_name] = model_id
+        self._model_kinds[alias_name] = model_kind
+        print(f"'{alias_name}' now aliases loaded model '{source_name}'.")
+
+    def _load_language_model(self, model_id: str, **kwargs) -> tuple[Any, Any]:
+        """
+        Load a text model using Unsloth.
+
+        Args:
+            model_id (str): The model identifier.
+            **kwargs: Additional loading options.
+
+        Returns:
+            tuple[Any, Any]: The loaded model and tokenizer.
+        """
+        from unsloth import FastLanguageModel
+
+        max_seq_length = kwargs.get("max_seq_length", 4096)
+        dtype = kwargs.get("dtype", None)
+        load_in_4bit = kwargs.get("load_in_4bit", True)
+
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_id,
+            max_seq_length=max_seq_length,
+            dtype=dtype,
+            load_in_4bit=load_in_4bit,
+        )
+
+        FastLanguageModel.for_inference(model)
+        model.eval()
+        return model, tokenizer
+
+    def _load_vision_model(self, model_id: str, **kwargs) -> tuple[Any, Any]:
+        """
+        Load a vision-language model using Transformers.
+
+        Args:
+            model_id (str): The model identifier.
+            **kwargs: Additional loading options.
+
+        Returns:
+            tuple[Any, Any]: The loaded model and processor.
+        """
+        import torch
+        from transformers import AutoModelForImageTextToText, AutoProcessor
+
+        load_kwargs: dict[str, Any] = {
+            "device_map": kwargs.get("device_map", "auto"),
+            "torch_dtype": kwargs.get("torch_dtype", "auto"),
+            "trust_remote_code": kwargs.get("trust_remote_code", True),
+        }
+
+        if kwargs.get("load_in_4bit", True):
+            try:
+                from transformers import BitsAndBytesConfig
+
+                load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                )
+            except Exception:
+                load_kwargs["load_in_4bit"] = True
+
+        processor = AutoProcessor.from_pretrained(
+            model_id,
+            trust_remote_code=load_kwargs["trust_remote_code"],
+        )
+        model = AutoModelForImageTextToText.from_pretrained(
+            model_id,
+            **load_kwargs,
+        )
+        model.eval()
+        return model, processor
+
+    def _find_loaded_model_name(
+        self,
+        model_id: str,
+    ) -> str | None:
         """
         Find an already loaded model by identifier.
 
@@ -122,6 +253,7 @@ class UnslothLoader(ModelRepository):
             del self._models[name]
             del self._tokenizers[name]
             del self._model_ids[name]
+            del self._model_kinds[name]
             print(f"'{name}' unloaded.")
 
     def list_loaded_models(self) -> list[dict[str, str]]:
@@ -131,4 +263,11 @@ class UnslothLoader(ModelRepository):
          Returns:
              list[dict[str, str]]: A list of dictionaries containing information about each loaded model (e.g., name, identifier).
          """
-         return [{"name": name, "model_id": self._model_ids[name]} for name in self._models.keys()]
+         return [
+             {
+                 "name": name,
+                 "model_id": self._model_ids[name],
+                 "kind": self._model_kinds[name],
+             }
+             for name in self._models.keys()
+         ]
