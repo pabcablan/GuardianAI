@@ -60,9 +60,12 @@ class UnslothLoader(ModelRepository):
 
         return self._models[name], self._tokenizers[name]
 
-    async def get(self, name: str) -> tuple[Any, Any]:
-        """
-        Retrieve a loaded model and its tokenizer by name.
+    def _load_language_model(
+        self,
+        model_id: str,
+        **kwargs,
+    ) -> tuple[Any, Any]:
+        """Load a language model from Unsloth.
 
         Args:
             model_id (str): The Unsloth model identifier.
@@ -83,7 +86,7 @@ class UnslothLoader(ModelRepository):
         model.eval()
         return model, tokenizer
 
-    def get(self, name: str) -> tuple[Any, Any]:
+    async def get(self, name: str) -> tuple[Any, Any]:
         """Retrieve a loaded model and tokenizer by name.
 
         Args:

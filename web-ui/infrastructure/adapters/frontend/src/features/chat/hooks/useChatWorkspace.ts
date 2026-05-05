@@ -429,7 +429,7 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "anonymizing",
+          stage: "Anonimizando",
           message: "Anonimizando el contenido antes de consultar al asistente...",
           current: 1,
           total: 1,
@@ -462,7 +462,7 @@ export function useChatWorkspace() {
 
         setResponseProcessingStatus({
           title: "Mensaje del chat",
-          stage: "anonymizing",
+          stage: "Anonimizando",
           message: "Anonimizando el mensaje antes de consultar al asistente...",
         });
 

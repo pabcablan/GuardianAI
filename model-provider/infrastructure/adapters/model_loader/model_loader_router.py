@@ -30,7 +30,7 @@ class ModelLoaderRouter(ModelRepository):
                     cls._instance._aliases = {}
         return cls._instance
 
-    def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
+    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
         """Load a model through the appropriate concrete loader.
 
         Args:
@@ -47,10 +47,10 @@ class ModelLoaderRouter(ModelRepository):
             self._model_ids[name] = model_id
             self._loader_by_name[name] = self._loader_by_name[existing_name]
             print(f"'{name}' now reuses loaded model '{existing_name}'.")
-            return self.get(name)
+            return await self.get(name)
 
         loader = self._select_loader(model_id, kwargs)
-        model, tokenizer = loader.load(model_id, name, **kwargs)
+        model, tokenizer = await loader.load(model_id, name, **kwargs)
         self._loader_by_name[name] = loader
         self._model_ids[name] = model_id
         self._register_shared_alias(
@@ -146,7 +146,7 @@ class ModelLoaderRouter(ModelRepository):
 
         return None
 
-    def get(self, name: str) -> tuple[Any, Any]:
+    async def get(self, name: str) -> tuple[Any, Any]:
         """Retrieve a loaded model and tokenizer or processor by name.
 
         Args:
@@ -160,9 +160,9 @@ class ModelLoaderRouter(ModelRepository):
         if loader is None:
             raise ValueError(f"'{name}' not loaded. Call load() first.")
 
-        return loader.get(source_name)
+        return await loader.get(source_name)
 
-    def unload(self, name: str) -> None:
+    async def unload(self, name: str) -> None:
         """Unload a model or remove one alias by name.
 
         Args:
@@ -186,11 +186,11 @@ class ModelLoaderRouter(ModelRepository):
             del self._loader_by_name[alias]
             del self._model_ids[alias]
 
-        loader.unload(name)
+        await loader.unload(name)
         del self._loader_by_name[name]
         del self._model_ids[name]
 
-    def list_loaded_models(self) -> list[dict[str, str]]:
+    async def list_loaded_models(self) -> list[dict[str, str]]:
         """List loaded models and registered aliases.
 
         Returns:
@@ -203,7 +203,7 @@ class ModelLoaderRouter(ModelRepository):
             if loader_id in seen_loader_ids:
                 continue
             seen_loader_ids.add(loader_id)
-            loaded_models.extend(loader.list_loaded_models())
+            loaded_models.extend(await loader.list_loaded_models())
 
         for alias_name, source_name in self._aliases.items():
             loaded_models.append(

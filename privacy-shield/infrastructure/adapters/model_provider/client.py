@@ -48,7 +48,7 @@ class ModelProviderClient:
             "prompt": prompt,
             "document_base64": document_base64,
         }
-        return self._post_json_text("/generate_response/", payload)
+        return self._post_json_text("/generate_response", payload)
 
     def _post_json_text(self, path: str, payload: dict[str, Any]) -> str:
         """Send JSON to model-provider and return its textual response.

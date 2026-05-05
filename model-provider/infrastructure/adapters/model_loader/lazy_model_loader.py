@@ -26,7 +26,7 @@ class LazyModelLoader(ModelRepository):
 
         return self._loader
 
-    def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
+    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
         """Load a model through the concrete loader.
 
         Args:
@@ -37,9 +37,9 @@ class LazyModelLoader(ModelRepository):
         Returns:
             tuple[Any, Any]: The loaded model and tokenizer or processor.
         """
-        return self._get_loader().load(model_id, name, **kwargs)
+        return await self._get_loader().load(model_id, name, **kwargs)
 
-    def get(self, name: str) -> tuple[Any, Any]:
+    async def get(self, name: str) -> tuple[Any, Any]:
         """Get a loaded model through the concrete loader.
 
         Args:
@@ -48,23 +48,23 @@ class LazyModelLoader(ModelRepository):
         Returns:
             tuple[Any, Any]: The loaded model and tokenizer or processor.
         """
-        return self._get_loader().get(name)
+        return await self._get_loader().get(name)
 
-    def unload(self, name: str) -> None:
+    async def unload(self, name: str) -> None:
         """Unload a model through the concrete loader.
 
         Args:
             name (str): The model registry name.
         """
-        return self._get_loader().unload(name)
+        return await self._get_loader().unload(name)
 
-    def list_loaded_models(self) -> list[dict[str, str]]:
+    async def list_loaded_models(self) -> list[dict[str, str]]:
         """List loaded models through the concrete loader.
 
         Returns:
             list[dict[str, str]]: The loaded model metadata.
         """
-        return self._get_loader().list_loaded_models()
+        return await self._get_loader().list_loaded_models()
 
 
 LazyUnslothLoader = LazyModelLoader

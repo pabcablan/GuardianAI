@@ -175,7 +175,7 @@ def model_readiness() -> dict[str, object]:
         ) as client:
             for model_name in model_names:
                 response = client.get(
-                    "/model_status/",
+                    "/model_status",
                     params={"name": model_name},
                 )
                 response.raise_for_status()

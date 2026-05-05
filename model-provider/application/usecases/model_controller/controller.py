@@ -1,5 +1,6 @@
 from fastapi.concurrency import run_in_threadpool
 
+from application.body_params_schemas.load_model_request import LoadModelRequest
 from infrastructure.ports.model_repository import ModelRepository
 from infrastructure.ports.text_generator import TextGenerator
 
@@ -28,16 +29,19 @@ class Controller:
             else:
                 kwargs = request.transformers.model_dump() if request.transformers else {}
 
-            await self.model_loader.load(request.model_id, request.name, **kwargs)
+            await self.model_loader.load(
+                request.model_id,
+                request.name,
+                **kwargs,
+            )
 
             return f"Model '{request.name}' loaded successfully."
         except Exception as error:
             return f"Error loading model: {error}"
 
+      
     async def unload_model(self, name: str) -> str:
-        """Unload a model without blocking the FastAPI event loop.
-
-    async def unload_model(self, name: str) -> str:
+        """Unload a model without blocking the FastAPI event loop."""
         try:
             await self.model_loader.unload(name)
             return f"Model '{name}' unloaded successfully."
@@ -57,6 +61,12 @@ class Controller:
     async def generate_response(self, model_name: str, prompt: str, document_base64: str | None) -> str:
         try:
             model, tokenizer = await self.model_loader.get(model_name)
-            return await run_in_threadpool(self.inference_engine.generate, prompt, model, tokenizer, document_base64)
+            return await run_in_threadpool(
+                self.inference_engine.generate,
+                prompt,
+                model,
+                tokenizer,
+                document_base64,
+            )
         except Exception as e:
             return f"Error generating response: {str(e)}"

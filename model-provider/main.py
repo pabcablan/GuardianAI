@@ -1,19 +1,21 @@
 import uvicorn
 from fastapi import FastAPI
 
-from infrastructure.adapters.model_loader.unsloth_repository import UnslothLoader
-from infrastructure.adapters.inference.model_inference_engine import ModelInferenceEngine
-from application.usecases.model_controller.controller import Controller
 from application.body_params_schemas.load_model_request import LoadModelRequest
 from application.body_params_schemas.generate_response_request import GenerateRequest
+from infrastructure.dependency_container import (
+    build_controller,
+    load_startup_models,
+)
 
 def main():
-    unsloth_provider = UnslothLoader()
-    inference_engine = ModelInferenceEngine()
-
-    controller = Controller(unsloth_provider, inference_engine)
+    controller = build_controller()
 
     app = FastAPI()
+
+    @app.on_event("startup")
+    async def startup():
+        await load_startup_models(controller)
 
     @app.post("/load_model")
     async def load_model(request: LoadModelRequest):
