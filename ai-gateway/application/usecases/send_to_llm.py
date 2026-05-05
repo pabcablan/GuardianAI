@@ -10,7 +10,7 @@ from datetime import datetime, UTC
 import uuid
 
 
-SYSTEM_PROMPT = "You are a helpful assistant"
+SYSTEM_PROMPT = "You are a helpful assistant. Always respond in the same language as the user. You may encounter references like [PERSON_1], [DOC_1], or similar labels. Treat them as you would any named entity and respond naturally."
 
 class SendToLLM:
 
