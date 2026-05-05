@@ -1,0 +1,57 @@
+"""
+Defines an adapter for anonymizing text using a language model.
+It purpose is to use a language model to identify and redact sensitive information from text, replacing it with category-based placeholders.
+"""
+
+import re
+
+from fastapi.concurrency import run_in_threadpool
+import torch
+
+from infrastructure.ports.anonymizer import Anonymizer
+from resources.prompts import ANONYMIZATION_SYSTEM_PROMPT
+from utils.json_utils import extract_json_safely
+from utils.anonymization_utils import redact_text
+
+class LlmAnonymizer(Anonymizer):
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
+    
+    async def anonymize(self, text: str) -> str:
+        """
+        Anonymizes the input text by extracting sensitive information using a language model and replacing it with placeholders.
+
+        Args:
+            text (str): The input text to be anonymized.
+        
+        Returns:
+            str: The anonymized text with sensitive information replaced by placeholders.
+        """
+
+
+        return await run_in_threadpool(None, self._run_anonymization, text)
+    
+    def _run_anonymization(self, text: str) -> str:
+        message = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": self.system_prompt + "\n\nExtrae los datos sensibles del siguiente texto:\n\n" + text}
+                ]
+            }
+        ]
+
+        input_text = self.tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+        inputs = self.tokenizer(text=input_text, return_tensors="pt").to(self.model.device)
+        
+        with torch.no_grad():
+            output_ids = self.model.generate(**inputs, max_new_tokens=600,  temperature=0.01, do_sample=False, repetition_penalty=1.1)
+
+        input_tokens = inputs["input_ids"].shape[1]
+        generated_tokens = output_ids[0][input_tokens:]
+        generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+        extracted_entities = extract_json_safely(generated_text)
+
+        return redact_text(text, extracted_entities)
