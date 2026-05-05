@@ -6,5 +6,5 @@ from domain.entities.llm_response import LLMResponse
 class AuditLog(ABC):
 
     @abstractmethod
-    def log(self, request: LLMRequest, response: LLMResponse) -> None:
+    async def log(self, request: LLMRequest, response: LLMResponse) -> None:
         ...

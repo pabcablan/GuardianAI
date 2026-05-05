@@ -3,7 +3,6 @@ from datetime import datetime
 from enum import Enum
 from typing import List
 from ..value_objects.message import Message
-from ..value_objects.session_id import SessionId
 
 
 class RequestStatus(Enum):
@@ -16,7 +15,6 @@ class RequestStatus(Enum):
 @dataclass
 class LLMRequest:
     id: str
-    session_id: SessionId
     org_id: str
     messages: List[Message]
     model: str

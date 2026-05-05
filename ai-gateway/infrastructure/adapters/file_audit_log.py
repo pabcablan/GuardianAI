@@ -1,6 +1,7 @@
 import json
-import aiofiles
 from datetime import datetime, UTC
+
+import aiofiles
 from application.ports.audit_log import AuditLog
 from domain.entities.llm_request import LLMRequest
 from domain.entities.llm_response import LLMResponse
@@ -11,12 +12,11 @@ class FileAuditLog(AuditLog):
     def __init__(self, file_path: str):
         self._file_path = file_path
 
-    def log(self, request: LLMRequest, response: LLMResponse) -> None:
+    async def log(self, request: LLMRequest, response: LLMResponse) -> None:
         entry = {
             "timestamp": datetime.now(UTC).isoformat(),
             "request": {
                 "id": request.id,
-                "session_id": str(request.session_id),
                 "org_id": request.org_id,
                 "model": request.model,
                 "status": request.status.value,
@@ -34,5 +34,5 @@ class FileAuditLog(AuditLog):
             }
         }
 
-        with open(self._file_path, mode="a") as f:
-            f.write(json.dumps(entry) + "\n")
+        async with aiofiles.open(self._file_path, mode="a") as f:
+            await f.write(json.dumps(entry) + "\n")
