@@ -25,9 +25,10 @@ class TransformersLoader(ModelRepository):
                     cls._instance._model_kinds = {}
         return cls._instance
 
-    def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
-        """Load a model using Transformers.
-
+    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
+        """
+        Load a model given its identifier and optional parameters.
+        
         Args:
             model_id (str): The HuggingFace model identifier.
             name (str): The model registry name.
@@ -57,13 +58,10 @@ class TransformersLoader(ModelRepository):
 
         return self._models[name], self._tokenizers[name]
 
-    def _resolve_model_kind(
-        self,
-        model_id: str,
-        kwargs: dict[str, Any],
-    ) -> str:
-        """Resolve whether the model should be loaded as text or vision.
-
+    async def get(self, name: str) -> tuple[Any, Any]:
+        """
+        Retrieve a loaded model and its tokenizer by name.
+            
         Args:
             model_id (str): The model identifier.
             kwargs (dict[str, Any]): Loading options.
@@ -183,8 +181,9 @@ class TransformersLoader(ModelRepository):
             raise ValueError(f"'{name}' not loaded. Call load() first.")
         return self._models[name], self._tokenizers[name]
 
-    def unload(self, name: str) -> None:
-        """Unload a model and tokenizer or processor by name.
+    async def unload(self, name: str):
+        """
+        Unload a model and its tokenizer by name.
 
         Args:
             name (str): The model registry name.
@@ -196,8 +195,9 @@ class TransformersLoader(ModelRepository):
             del self._model_kinds[name]
             print(f"'{name}' unloaded.")
 
-    def list_loaded_models(self) -> list[dict[str, str]]:
-        """List all models loaded by this loader.
+    async def list_loaded_models(self) -> list[dict[str, str]]:
+         """
+         List all currently loaded models.
 
         Returns:
             list[dict[str, str]]: The loaded model metadata.

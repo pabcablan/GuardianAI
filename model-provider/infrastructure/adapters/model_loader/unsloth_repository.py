@@ -30,8 +30,9 @@ class UnslothLoader(ModelRepository):
                     cls._instance._model_ids = {}
         return cls._instance
 
-    def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
-        """Load a text model using Unsloth.
+    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
+        """
+        Load a model given its identifier and optional parameters using Unsloth.
 
         Args:
             model_id (str): The Unsloth model identifier.
@@ -59,8 +60,9 @@ class UnslothLoader(ModelRepository):
 
         return self._models[name], self._tokenizers[name]
 
-    def _load_language_model(self, model_id: str, **kwargs) -> tuple[Any, Any]:
-        """Load the concrete Unsloth language model.
+    async def get(self, name: str) -> tuple[Any, Any]:
+        """
+        Retrieve a loaded model and its tokenizer by name.
 
         Args:
             model_id (str): The Unsloth model identifier.
@@ -94,8 +96,9 @@ class UnslothLoader(ModelRepository):
             raise ValueError(f"'{name}' not loaded. Call load() first.")
         return self._models[name], self._tokenizers[name]
 
-    def unload(self, name: str) -> None:
-        """Unload a model and tokenizer by name.
+    async def unload(self, name: str):
+        """
+        Unload a model and its tokenizer by name.
 
         Args:
             name (str): The model registry name.
@@ -106,8 +109,9 @@ class UnslothLoader(ModelRepository):
             del self._model_ids[name]
             print(f"'{name}' unloaded.")
 
-    def list_loaded_models(self) -> list[dict[str, str]]:
-        """List all models loaded by this loader.
+    async def list_loaded_models(self) -> list[dict[str, str]]:
+         """
+         List all currently loaded models.
 
         Returns:
             list[dict[str, str]]: The loaded model metadata.

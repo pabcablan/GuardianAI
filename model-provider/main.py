@@ -1,8 +1,3 @@
-"""FastAPI entrypoint for the GuardianAI model-provider service."""
-from __future__ import annotations
-
-import traceback
-
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
 
@@ -43,110 +38,36 @@ def build_app() -> FastAPI:
         """
         return {"status": "ok"}
 
-    @app.post("/load_model/")
-    async def load_model(request: LoadModelRequest) -> str:
-        """Load a model.
+    @app.post("/load_model")
+    async def load_model(request: LoadModelRequest):
+        return await controller.load_model(request)
 
-        Args:
-            request (LoadModelRequest): The model loading request.
-
-        Returns:
-            str: The loading result.
-        """
-        result = await controller.load_model(request)
-        if result.startswith("Error "):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result,
-            )
-        return result
-
-    @app.post("/unload_model/")
-    async def unload_model(name: str) -> str:
-        """Unload a model.
-
-        Args:
-            name (str): The registered model name.
-
-        Returns:
-            str: The unload result.
-        """
-        result = await controller.unload_model(name)
-        if result.startswith("Error "):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result,
-            )
-        return result
-
-    @app.get("/model_status/")
-    async def model_status(name: str) -> str:
-        """Return model loading status.
-
-        Args:
-            name (str): The registered model name.
-
-        Returns:
-            str: The model status.
-        """
+    @app.post("/unload_model")
+    async def unload_model(name: str):
+        return await controller.unload_model(name)
+    
+    @app.get("/model_status")
+    async def model_status(name: str):
         return await controller.get_model_status(name)
-
-    @app.get("/list_models/")
-    async def list_models() -> list[dict[str, str]]:
-        """List loaded models.
-
-        Returns:
-            list[dict[str, str]]: Loaded models.
-        """
+    
+    @app.get("/list_models")
+    async def list_models():
         return await controller.list_all_models()
+    
+    @app.post("/generate_response")
+    async def generate_response(request: GenerateRequest):
+        print("MODEL:", request.model_name)
+        print("PROMPT LEN:", len(request.prompt))
+        
+        if request.document_base64:
+            print("DOCUMENT RECEIVED: YES")
+        else:
+            print("DOCUMENT RECEIVED: NO")
 
-    @app.post("/generate_response/")
-    async def generate_response(request: GenerateRequest) -> str:
-        """Generate text with a loaded model.
-
-        Args:
-            request (GenerateRequest): The inference request.
-
-        Returns:
-            str: The generated text.
-        """
-        print(
-            "MODEL-PROVIDER /generate_response "
-            f"model={request.model_name} "
-            f"prompt_len={len(request.prompt)} "
-            f"has_document={request.document_base64 is not None}",
-            flush=True,
-        )
-        try:
-            result = await controller.generate_response(
-                model_name=request.model_name,
-                prompt=request.prompt,
-                document_base64=request.document_base64,
-            )
-        except Exception as error:
-            traceback.print_exc()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"{type(error).__name__}: {error}",
-            ) from error
-
-        if result.startswith("Error "):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result,
-            )
-        return result
-
-    return app
-
-
-app = build_app()
-
-
-def main() -> None:
-    """Run the model-provider API."""
-    uvicorn.run(app, host="0.0.0.0", port=8006)
-
+        
+        return await controller.generate_response(request.model_name, request.prompt, request.document_base64)
+    
+    uvicorn.run(app, host="0.0.0.0", port=7003)
 
 if __name__ == "__main__":
     main()
