@@ -24,7 +24,9 @@ function Start-GuardianService {
         [string] $Executable,
 
         [Parameter(Mandatory = $true)]
-        [string[]] $ExecutableArguments
+        [string[]] $ExecutableArguments,
+
+        [string[]] $EnvironmentVariables = @()
     )
 
     $FullWorkingDirectory = Join-Path $Root $WorkingDirectory
@@ -37,7 +39,17 @@ function Start-GuardianService {
     $SafeArguments = ($ExecutableArguments | ForEach-Object {
         "'$($_.Replace("'", "''"))'"
     }) -join " "
-    $Command = "Write-Host '$SafeTitle'; & '$SafeExecutable' $SafeArguments"
+    $SafeEnvironment = ($EnvironmentVariables | ForEach-Object {
+        $Parts = $_ -split "=", 2
+        if ($Parts.Length -ne 2) {
+            throw "Invalid environment variable assignment: $_"
+        }
+
+        $Name = $Parts[0]
+        $Value = $Parts[1].Replace("'", "''")
+        "`$env:$Name='$Value';"
+    }) -join " "
+    $Command = "Write-Host '$SafeTitle'; $SafeEnvironment & '$SafeExecutable' $SafeArguments"
 
     Start-Process `
         -FilePath "powershell.exe" `
@@ -54,8 +66,8 @@ if (Test-Path (Join-Path $Root "model-provider\main.py")) {
     Start-GuardianService `
         -Title "GuardianAI model-provider - http://127.0.0.1:8006" `
         -WorkingDirectory "model-provider" `
-        -Executable $Uvicorn `
-        -ExecutableArguments @("main:app", "--host", "127.0.0.1", "--port", "8006")
+        -Executable $Python `
+        -ExecutableArguments @("main.py")
 } else {
     Write-Host "GuardianAI model-provider skipped: model-provider\main.py not found."
 }
@@ -69,8 +81,12 @@ Start-GuardianService `
 Start-GuardianService `
     -Title "GuardianAI document-processor - http://127.0.0.1:8001" `
     -WorkingDirectory "document-processor" `
-    -Executable $Uvicorn `
-    -ExecutableArguments @("main:app", "--host", "127.0.0.1", "--port", "8001", "--reload")
+    -Executable $Python `
+    -ExecutableArguments @("main.py") `
+    -EnvironmentVariables @(
+        "LLM_BASE_URL=http://127.0.0.1:8006",
+        "DOCUMENT_MODEL_NAME=document_extractor"
+    )
 
 Start-GuardianService `
     -Title "GuardianAI ai-gateway - http://127.0.0.1:8005" `

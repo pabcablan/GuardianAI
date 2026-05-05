@@ -110,7 +110,7 @@ class UnslothLoader(ModelRepository):
             print(f"'{name}' unloaded.")
 
     async def list_loaded_models(self) -> list[dict[str, str]]:
-         """
+        """
          List all currently loaded models.
 
         Returns:

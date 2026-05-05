@@ -1,42 +1,19 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 
-from application.body_params_schemas.generate_response_request import (
-    GenerateRequest,
-)
+from infrastructure.adapters.model_loader.unsloth_repository import UnslothLoader
+from infrastructure.adapters.inference.model_inference_engine import ModelInferenceEngine
+from application.usecases.model_controller.controller import Controller
 from application.body_params_schemas.load_model_request import LoadModelRequest
-from infrastructure.dependency_container import (
-    build_controller,
-    load_startup_models,
-)
+from application.body_params_schemas.generate_response_request import GenerateRequest
 
+def main():
+    unsloth_provider = UnslothLoader()
+    inference_engine = ModelInferenceEngine()
 
-def build_app() -> FastAPI:
-    """Build the model-provider API.
+    controller = Controller(unsloth_provider, inference_engine)
 
-    Returns:
-        FastAPI: The configured API application.
-    """
-    controller = build_controller()
-    app = FastAPI(
-        title="GuardianAI Model Provider",
-        version="0.1.0",
-        description="Centralized model loading and inference API.",
-    )
-
-    @app.on_event("startup")
-    async def load_default_models() -> None:
-        """Load default models when the service starts."""
-        await load_startup_models(controller)
-
-    @app.get("/health")
-    async def healthcheck() -> dict[str, str]:
-        """Return the API health status.
-
-        Returns:
-            dict[str, str]: A simple health payload.
-        """
-        return {"status": "ok"}
+    app = FastAPI()
 
     @app.post("/load_model")
     async def load_model(request: LoadModelRequest):
@@ -67,7 +44,7 @@ def build_app() -> FastAPI:
         
         return await controller.generate_response(request.model_name, request.prompt, request.document_base64)
     
-    uvicorn.run(app, host="0.0.0.0", port=7003)
+    uvicorn.run(app, host="0.0.0.0", port=8006)
 
 if __name__ == "__main__":
     main()

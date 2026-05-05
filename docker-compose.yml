@@ -20,11 +20,11 @@ services:
       context: .
       dockerfile: Dockerfile.api
     working_dir: /app/document-processor
-    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    command: python main.py
     ports:
       - "8001:8001"
     environment:
-      MODEL_PROVIDER_BASE_URL: http://host.docker.internal:8006
+      LLM_BASE_URL: http://host.docker.internal:8006
       DOCUMENT_MODEL_NAME: document_extractor
     extra_hosts:
       - "host.docker.internal:host-gateway"

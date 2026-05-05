@@ -49,13 +49,8 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
                 base_url=self.base_url,
                 timeout=self.timeout_seconds,
             ) as client:
-                session_id = self._create_session(
-                    client=client,
-                    chat_id=request.chat_id,
-                )
                 yield from self._stream_completion(
                     client=client,
-                    session_id=session_id,
                     prompt=request.prompt,
                 )
         except httpx.RequestError as error:
@@ -63,56 +58,21 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
                 "Ai-gateway service is unavailable."
             ) from error
 
-    def _create_session(self, client: httpx.Client, chat_id: str) -> str:
-        """Create an ai-gateway session for a chat.
-
-        Args:
-            client (httpx.Client): The configured HTTP client.
-            chat_id (str): The chat identifier used as user identifier.
-
-        Returns:
-            str: The created ai-gateway session identifier.
-        """
-        response = client.post(
-            "/session",
-            json={
-                "user_id": chat_id,
-                "org_id": self.org_id,
-            },
-        )
-        self._raise_for_status(
-            response=response,
-            service_name="Ai-gateway",
-            error_type=AiGatewayClientError,
-        )
-
-        payload = response.json()
-        session_id = str(payload.get("session_id", "")).strip()
-        if not session_id:
-            raise AiGatewayClientError(
-                "Ai-gateway did not return a session_id."
-            )
-
-        return session_id
-
     def _stream_completion(
         self,
         client: httpx.Client,
-        session_id: str,
         prompt: str,
     ) -> Iterator[str]:
         """Stream a completion from ai-gateway.
 
         Args:
             client (httpx.Client): The configured HTTP client.
-            session_id (str): The ai-gateway session identifier.
             prompt (str): The anonymized prompt sent to the model.
 
         Yields:
             str: Assistant response chunks.
         """
         payload = {
-            "session_id": session_id,
             "messages": [
                 {
                     "role": "user",
@@ -124,7 +84,7 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
 
         with client.stream(
             "POST",
-            "/complete",
+            "/handle",
             json=payload,
             timeout=self.timeout_seconds,
         ) as response:
