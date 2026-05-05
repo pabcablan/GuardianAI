@@ -10,7 +10,7 @@ class MarkitdownTextExtractor(TextExtractor):
     def __init__(self):
         self.mitd = MarkItDown()
 
-    def extract_text(self, document: ParsedDocument) -> ExtractedDocument:
+    async def extract_text(self, document: ParsedDocument) -> ExtractedDocument:
         content_bytesio = self.bytes_to_bytesio(document.content)
         mitd_result = self.mitd.convert(content_bytesio)
         mitd_text = mitd_result.text_content
