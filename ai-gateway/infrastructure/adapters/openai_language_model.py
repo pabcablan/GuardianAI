@@ -9,7 +9,7 @@ from domain.exceptions import ProviderAPIError, ProviderConnectionError, Provide
 
 class OpenAILanguageModel(LanguageModel):
     def __init__(self, api_key: str):
-        self.client = OpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key)
 
     async def stream(self, messages: List[Message], model: str) -> AsyncGenerator[str, None]:
         input_messages: List[EasyInputMessageParam] = [

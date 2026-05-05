@@ -11,7 +11,7 @@ class PyMuPDFTextExtractor(TextExtractor):
         
         md = pymupdf4llm.to_markdown(pdf_content, ocr_language='spa')
 
-        return await ExtractedDocument(
+        return ExtractedDocument(
             extracted_text=md,
             filename=document.filename,
             document_id=document.document_id

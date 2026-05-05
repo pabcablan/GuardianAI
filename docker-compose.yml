@@ -32,8 +32,6 @@ services:
       - .:/app
 
   ai-gateway:
-    profiles:
-      - real-ai
     build:
       context: .
       dockerfile: Dockerfile.api
