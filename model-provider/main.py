@@ -35,6 +35,7 @@ def main():
     async def generate_response(request: GenerateRequest):
         print("MODEL:", request.model_name)
         print("PROMPT LEN:", len(request.prompt))
+        print("SYSTEM PROMPT LEN:", len(request.system_prompt) if request.system_prompt else 0)
         
         if request.document_base64:
             print("DOCUMENT RECEIVED: YES")
@@ -42,7 +43,8 @@ def main():
             print("DOCUMENT RECEIVED: NO")
 
         
-        return await controller.generate_response(request.model_name, request.prompt, request.document_base64)
+        return await controller.generate_response(request.model_name, request.system_prompt,
+                                                   request.prompt, request.document_base64)
     
     uvicorn.run(app, host="0.0.0.0", port=7003)
 

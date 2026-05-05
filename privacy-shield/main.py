@@ -13,7 +13,7 @@ async def main():
 
     client = httpx.AsyncClient(timeout=None)
 
-    MODEL_PROVIDER_URL = "https://localhost:7003/generate_response"
+    MODEL_PROVIDER_URL = "http://localhost:7003/generate_response"
     MODEL_NAME = "anonymizer_model"
 
     evaluator_provider = EvaluatorProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
