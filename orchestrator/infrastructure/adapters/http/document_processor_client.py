@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -31,7 +32,10 @@ class HttpDocumentProcessingClient(
 ):
     """Call document-processor HTTP endpoints from orchestrator."""
 
-    base_url: str = "http://127.0.0.1:8001"
+    base_url: str = os.getenv(
+        "DOCUMENT_PROCESSOR_BASE_URL",
+        "http://127.0.0.1:8001",
+    )
 
     def stream_extract_document(
         self,

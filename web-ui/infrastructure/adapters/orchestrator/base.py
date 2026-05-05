@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -21,7 +22,12 @@ class OrchestratorHttpClientBase:
         timeout_seconds (float): The request timeout in seconds.
     """
 
-    base_url: str = "http://127.0.0.1:8003"
+    base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "ORCHESTRATOR_BASE_URL",
+            "http://127.0.0.1:8003",
+        )
+    )
     timeout_seconds: float = 600.0
 
     def _stream_json_lines(

@@ -25,7 +25,10 @@ class AiGatewayClientError(ExternalServiceClientError):
 class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
     """Call ai-gateway session and completion endpoints."""
 
-    base_url: str = "http://127.0.0.1:8005"
+    base_url: str = os.getenv(
+        "AI_GATEWAY_BASE_URL",
+        "http://127.0.0.1:8005",
+    )
     model: str = os.getenv("AI_GATEWAY_MODEL", "gpt-4.1-mini")
     org_id: str = os.getenv("AI_GATEWAY_ORG_ID", "guardianai")
 

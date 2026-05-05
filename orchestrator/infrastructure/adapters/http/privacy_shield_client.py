@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -26,7 +27,10 @@ class PrivacyShieldClientError(ExternalServiceClientError):
 class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
     """Call privacy-shield HTTP endpoints from orchestrator."""
 
-    base_url: str = "http://127.0.0.1:8002"
+    base_url: str = os.getenv(
+        "PRIVACY_SHIELD_BASE_URL",
+        "http://127.0.0.1:8002",
+    )
 
     def anonymize(self, chat_id: str, text: str) -> AnonymizedPrompt:
         """Anonymize text through privacy-shield.

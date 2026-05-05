@@ -1,0 +1,100 @@
+services:
+  privacy-shield:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app/privacy-shield
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+    environment:
+      MODEL_PROVIDER_BASE_URL: http://host.docker.internal:8006
+      PRIVACY_MODEL_NAME: privacy_anonymizer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+
+  document-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app/document-processor
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    environment:
+      MODEL_PROVIDER_BASE_URL: http://host.docker.internal:8006
+      DOCUMENT_MODEL_NAME: document_extractor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+
+  ai-gateway:
+    profiles:
+      - real-ai
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app/ai-gateway
+    command: uvicorn main:app --host 0.0.0.0 --port 8005 --reload
+    ports:
+      - "8005:8005"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app/orchestrator
+    command: uvicorn main:app --host 0.0.0.0 --port 8003 --reload
+    ports:
+      - "8003:8003"
+    environment:
+      PRIVACY_SHIELD_BASE_URL: http://privacy-shield:8002
+      DOCUMENT_PROCESSOR_BASE_URL: http://document-processor:8001
+      AI_GATEWAY_BASE_URL: http://ai-gateway:8005
+      ORCHESTRATOR_ASSISTANT_MODE: ${ORCHESTRATOR_ASSISTANT_MODE:-fake}
+    depends_on:
+      - privacy-shield
+      - document-processor
+    volumes:
+      - .:/app
+
+  web-ui-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app/web-ui
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      ORCHESTRATOR_BASE_URL: http://orchestrator:8003
+      MODEL_PROVIDER_BASE_URL: http://host.docker.internal:8006
+      PRIVACY_MODEL_NAME: privacy_anonymizer
+      DOCUMENT_MODEL_NAME: document_extractor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - orchestrator
+    volumes:
+      - .:/app
+
+  web-ui-frontend:
+    build:
+      context: .
+      dockerfile: web-ui/infrastructure/adapters/frontend/Dockerfile
+    working_dir: /app
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    depends_on:
+      - web-ui-backend
+    volumes:
+      - ./web-ui/infrastructure/adapters/frontend:/app
+      - /app/node_modules

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -86,10 +87,17 @@ def build_container() -> OrchestratorContainer:
     Returns:
         OrchestratorContainer: The configured dependency container.
     """
+    assistant_mode = os.getenv("ORCHESTRATOR_ASSISTANT_MODE", "fake").lower()
+    ai_gateway: AiGatewayPort
+    if assistant_mode == "real":
+        ai_gateway = HttpAiGatewayClient()
+    else:
+        ai_gateway = FakeAssistantStreamGateway()
+
     return OrchestratorContainer(
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
-        ai_gateway=FakeAssistantStreamGateway(),
+        ai_gateway=ai_gateway,
     )
 
 
