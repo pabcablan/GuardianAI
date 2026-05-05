@@ -49,12 +49,14 @@ class ChatMessageResponse(BaseModel):
         message_id (str): The message identifier.
         role (str): The sender role.
         content (str): The message content.
+        anonymized_content (str | None): The anonymized user message content.
         created_at (str): The message timestamp.
     """
 
     message_id: str
     role: str
     content: str
+    anonymized_content: str | None = None
     created_at: str
 
 

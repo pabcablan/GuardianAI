@@ -1,4 +1,11 @@
 services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - guardianai-mongodb-data:/data/db
+
   privacy-shield:
     build:
       context: .
@@ -77,10 +84,13 @@ services:
       MODEL_PROVIDER_BASE_URL: http://host.docker.internal:8006
       PRIVACY_MODEL_NAME: privacy_anonymizer
       DOCUMENT_MODEL_NAME: document_extractor
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: guardian_web_ui
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - orchestrator
+      - mongodb
     volumes:
       - .:/app
 
@@ -97,3 +107,6 @@ services:
     volumes:
       - ./web-ui/infrastructure/adapters/frontend:/app
       - /app/node_modules
+
+volumes:
+  guardianai-mongodb-data:

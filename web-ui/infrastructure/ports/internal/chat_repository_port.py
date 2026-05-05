@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 from domain.chat import Chat
+from domain.message import Message
 
 if TYPE_CHECKING:
     from application.usecases.create_chat import CreateChatResult
@@ -53,4 +54,20 @@ class ChatRepositoryPort(Protocol):
         Args:
             chat_id (str): The identifier of the chat to rename.
             title (str): The normalized chat title.
+        """
+
+
+    def append_message(self, chat_id: str, message: Message) -> None:
+        """Append one message to a chat."""
+
+    def update_message_anonymized_content(
+        self,
+        message_id: str,
+        anonymized_content: str,
+    ) -> None:
+        """Store the anonymized version of a user message.
+
+        Args:
+            message_id (str): The message identifier.
+            anonymized_content (str): The anonymized message content.
         """

@@ -16,14 +16,16 @@ class Message:
     Attributes:
         message_id (str): The message identifier.
         role (MessageRole): The sender role.
-        content (str): The message text.
-        created_at (str): The message timestamp.
+    content (str): The message text.
+    anonymized_content (str | None): The anonymized user text, when available.
+    created_at (str): The message timestamp.
     """
 
     message_id: str
     role: MessageRole
     content: str
     created_at: str
+    anonymized_content: str | None = None
 
     def __post_init__(self) -> None:
         """Validate the message fields.

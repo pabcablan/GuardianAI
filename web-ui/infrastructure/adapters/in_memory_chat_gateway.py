@@ -7,6 +7,7 @@ from application.usecases.create_chat import CreateChatResult
 from application.usecases.list_chats import ChatSummary
 from application.usecases.load_chat import ChatDetail
 from domain.chat import Chat
+from domain.message import Message
 from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
 
 
@@ -83,6 +84,41 @@ class InMemoryChatGateway(ChatRepositoryPort):
         """
         chat = self._require_chat(chat_id)
         chat.rename(title)
+
+    def append_message(self, chat_id: str, message: Message) -> None:
+        """Append one message to an existing chat.
+
+        Args:
+            chat_id (str): The identifier of the chat to update.
+            message (Message): The message to append.
+        """
+        chat = self._require_chat(chat_id)
+        chat.add_message(message)
+
+    def update_message_anonymized_content(
+        self,
+        message_id: str,
+        anonymized_content: str,
+    ) -> None:
+        """Store the anonymized content in an existing user message.
+
+        Args:
+            message_id (str): The message identifier.
+            anonymized_content (str): The anonymized message content.
+
+        Raises:
+            KeyError: If the message does not exist.
+        """
+        for chat in self._chats.values():
+            for index, message in enumerate(chat.messages):
+                if message.message_id == message_id:
+                    chat.messages[index] = replace(
+                        message,
+                        anonymized_content=anonymized_content,
+                    )
+                    return
+
+        raise KeyError(message_id)
 
     def _require_chat(self, chat_id: str) -> Chat:
         """Return a chat or raise when it is not registered.

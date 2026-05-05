@@ -21,6 +21,7 @@ RUN pip install \
     "markitdown[pdf]>=0.1.5" \
     "openai>=2.33.0" \
     "pillow>=11.0.0" \
+    "pymongo>=4.17.0" \
     "pymupdf>=1.26.0" \
     "pymupdf4llm[layout,ocr]>=1.27.2.2" \
     "pypdf>=6.10.0" \

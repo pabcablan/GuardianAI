@@ -24,6 +24,7 @@ interface ChatMessageResponse {
   message_id: string;
   role: "user" | "assistant";
   content: string;
+  anonymized_content?: string | null;
   created_at: string;
 }
 
@@ -144,6 +145,7 @@ export class ChatApplicationService {
         id: message.message_id,
         role: message.role,
         content: message.content,
+        anonymizedContent: message.anonymized_content ?? undefined,
         createdAt: message.created_at,
       })),
     };
