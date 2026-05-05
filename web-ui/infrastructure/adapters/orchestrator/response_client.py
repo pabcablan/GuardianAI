@@ -10,6 +10,7 @@ from infrastructure.adapters.orchestrator.base import (
     OrchestratorHttpClientBase,
 )
 from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorAnonymizedPrompt,
     OrchestratorDocumentResponseRequest,
     OrchestratorMessageResponseRequest,
     OrchestratorResponsePort,
@@ -101,6 +102,12 @@ class HttpOrchestratorResponseClient(
         if event_type == "chunk":
             return OrchestratorStreamChunk(
                 event="chunk",
+                content=parsed["content"],
+            )
+
+        if event_type == "anonymized_prompt":
+            return OrchestratorAnonymizedPrompt(
+                event="anonymized_prompt",
                 content=parsed["content"],
             )
 

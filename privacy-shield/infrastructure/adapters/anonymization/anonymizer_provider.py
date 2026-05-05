@@ -1,5 +1,4 @@
 from infrastructure.adapters.anonymization.api_anonymizer import ApiAnonymizer
-from infrastructure.adapters.anonymization.llm_anonymizer import LlmAnonymizer
 from infrastructure.ports.anonymizer import Anonymizer
 
 class AnonymizerProvider:
@@ -16,4 +15,6 @@ class AnonymizerProvider:
             return self._cache[model_alias]
         
         else:
+            from infrastructure.adapters.anonymization.llm_anonymizer import LlmAnonymizer
+
             return LlmAnonymizer(model=self.kwargs['model'], tokenizer=self.kwargs['tokenizer'])

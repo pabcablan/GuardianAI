@@ -178,6 +178,14 @@ export function ConversationPanel({
                 </span>
               </div>
               <p>{message.content}</p>
+              {message.role === "user" && message.anonymizedContent ? (
+                <div className="message__anonymized">
+                  <span className="message__anonymized-label">
+                    Texto anonimizado
+                  </span>
+                  <p>{message.anonymizedContent}</p>
+                </div>
+              ) : null}
             </article>
           ))
         ) : (

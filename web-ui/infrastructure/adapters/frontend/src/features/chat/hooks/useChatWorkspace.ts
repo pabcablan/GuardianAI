@@ -296,6 +296,30 @@ export function useChatWorkspace() {
     });
   }
 
+  function updateUserAnonymizedContent(
+    chatId: string,
+    messageId: string,
+    anonymizedContent: string,
+  ): void {
+    setSelectedChat((currentChat) => {
+      if (!currentChat || currentChat.id !== chatId) {
+        return currentChat;
+      }
+
+      return {
+        ...currentChat,
+        messages: currentChat.messages.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                anonymizedContent,
+              }
+            : message,
+        ),
+      };
+    });
+  }
+
   function selectChat(chatId: string): void {
     setSelectedChatId(chatId);
   }
@@ -476,6 +500,13 @@ export function useChatWorkspace() {
               setResponseProcessingStatus(null);
             }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
+          },
+          (anonymizedContent) => {
+            updateUserAnonymizedContent(
+              activeChatId,
+              userMessage.id,
+              anonymizedContent,
+            );
           },
         );
       }

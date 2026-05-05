@@ -153,7 +153,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
         print(
             "ORCHESTRATOR anonymize done "
             f"elapsed={time.perf_counter() - step_started_at:.3f}s "
-            f"replacement_count={len(anonymized_prompt.replacements)}",
+            f"replacement_count={anonymized_prompt.replacement_count}",
             flush=True,
         )
         step_started_at = time.perf_counter()
@@ -170,7 +170,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
         step_started_at = time.perf_counter()
         events = container.privacy_shield.deanonymize_stream(
             chunks=assistant_chunks,
-            replacements=anonymized_prompt.replacements,
+            anonymization_id=anonymized_prompt.anonymization_id,
         )
         print(
             "ORCHESTRATOR deanonymize requested "
@@ -184,7 +184,15 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
             detail=str(error),
         ) from error
 
-    return _build_streaming_response(events)
+    return _build_streaming_response(
+        events,
+        initial_events=[
+            {
+                "event": "anonymized_prompt",
+                "content": anonymized_prompt.text,
+            }
+        ],
+    )
 
 
 @app.post("/api/documents/extract-stream")
@@ -276,11 +284,14 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
 
 def _build_streaming_response(
     events: Iterator[dict[str, Any]],
+    initial_events: list[dict[str, Any]] | None = None,
 ) -> StreamingResponse:
     """Serialize downstream stream events as NDJSON.
 
     Args:
         events (Iterator[dict[str, Any]]): Downstream stream events.
+        initial_events (list[dict[str, Any]] | None): Events emitted before
+            downstream streaming starts.
 
     Returns:
         StreamingResponse: The serialized NDJSON response.
@@ -292,6 +303,9 @@ def _build_streaming_response(
             str: One JSON-encoded event followed by a newline.
         """
         try:
+            for event in initial_events or []:
+                yield json.dumps(event, ensure_ascii=True) + "\n"
+
             for event in events:
                 yield json.dumps(event, ensure_ascii=True) + "\n"
         except RuntimeError as error:
@@ -334,7 +348,7 @@ def _stream_safe_response_for_text(
     print(
         "ORCHESTRATOR document anonymize done "
         f"elapsed={time.perf_counter() - started_at:.3f}s "
-        f"replacement_count={len(anonymized_prompt.replacements)}",
+        f"replacement_count={anonymized_prompt.replacement_count}",
         flush=True,
     )
     started_at = time.perf_counter()
@@ -350,7 +364,7 @@ def _stream_safe_response_for_text(
     )
     return container.privacy_shield.deanonymize_stream(
         chunks=assistant_chunks,
-        replacements=anonymized_prompt.replacements,
+        anonymization_id=anonymized_prompt.anonymization_id,
     )
 
 

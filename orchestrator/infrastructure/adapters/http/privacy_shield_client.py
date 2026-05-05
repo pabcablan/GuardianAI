@@ -5,7 +5,7 @@ import json
 import os
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 import httpx
 
@@ -46,35 +46,36 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             "chat_id": chat_id,
             "text": text,
         }
-        response = self._post_json("/api/anonymize", payload)
+        response = self._post_json("/anonymize", payload)
         return AnonymizedPrompt(
             text=str(response["anonymized_text"]),
-            replacements=response.get("replacements", {}),
+            anonymization_id=str(response["anonymization_id"]),
+            replacement_count=int(response.get("replacement_count", 0)),
         )
 
     def deanonymize_stream(
         self,
         chunks: list[str],
-        replacements: Mapping[str, str],
+        anonymization_id: str,
     ) -> Iterator[dict[str, Any]]:
         """Stream deanonymized chunks through privacy-shield.
 
         Args:
             chunks (list[str]): The anonymized assistant response chunks.
-            replacements (Mapping[str, str]): The placeholder-to-original map.
+            anonymization_id (str): The privacy-shield session identifier.
 
         Returns:
             Iterator[dict[str, Any]]: NDJSON events emitted by privacy-shield.
         """
         payload = {
             "chunks": chunks,
-            "replacements": dict(replacements),
+            "anonymization_id": anonymization_id,
         }
 
         try:
             with httpx.stream(
                 "POST",
-                f"{self.base_url}/api/deanonymize/stream",
+                f"{self.base_url}/deanonymize/stream",
                 json=payload,
                 timeout=self.timeout_seconds,
             ) as response:

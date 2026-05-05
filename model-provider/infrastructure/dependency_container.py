@@ -9,11 +9,11 @@ from config import (
     DEFAULT_PRIVACY_MODEL_ID,
     DEFAULT_PRIVACY_MODEL_NAME,
 )
-from infrastructure.adapters.inference.lazy_inference_engine import (
-    LazyModelInferenceEngine,
+from infrastructure.adapters.inference.model_inference_engine import (
+    ModelInferenceEngine,
 )
-from infrastructure.adapters.model_loader.lazy_model_loader import (
-    LazyModelLoader,
+from infrastructure.adapters.model_loader.unsloth_repository import (
+    UnslothLoader,
 )
 
 
@@ -24,8 +24,8 @@ def build_controller() -> Controller:
         Controller: The configured model controller.
     """
     return Controller(
-        model_loader=LazyModelLoader(),
-        inference_engine=LazyModelInferenceEngine(),
+        model_loader=UnslothLoader(),
+        inference_engine=ModelInferenceEngine(),
     )
 
 
@@ -42,10 +42,7 @@ async def load_startup_models(controller: Controller) -> None:
         label="privacy",
     )
 
-    if (
-        DEFAULT_DOCUMENT_MODEL_NAME != DEFAULT_PRIVACY_MODEL_NAME
-        and DEFAULT_DOCUMENT_MODEL_ID != DEFAULT_PRIVACY_MODEL_ID
-    ):
+    if DEFAULT_DOCUMENT_MODEL_NAME != DEFAULT_PRIVACY_MODEL_NAME:
         await _load_startup_model(
             controller=controller,
             model_id=DEFAULT_DOCUMENT_MODEL_ID,

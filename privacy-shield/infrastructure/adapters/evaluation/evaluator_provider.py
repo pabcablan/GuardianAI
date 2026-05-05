@@ -1,5 +1,4 @@
 from infrastructure.adapters.evaluation.api_evaluator import ApiEvaluator
-from infrastructure.adapters.evaluation.qwen_evaluator import QwenEvaluator
 from infrastructure.ports.anonymization_evaluator import AnonymizationEvaluator
 
 class EvaluatorProvider:
@@ -16,4 +15,6 @@ class EvaluatorProvider:
             return self._cache[model_alias]
         
         else:
+            from infrastructure.adapters.evaluation.qwen_evaluator import QwenEvaluator
+
             return QwenEvaluator(model=self.kwargs['model'], tokenizer=self.kwargs['tokenizer'])

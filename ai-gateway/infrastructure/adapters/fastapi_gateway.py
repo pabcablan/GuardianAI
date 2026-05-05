@@ -38,12 +38,15 @@ class FastAPIGateway:
                 async for chunk in self._send_to_llm.stream(messages, request.model):
                     yield f"data: {chunk}\n\n"
                 yield "data: [DONE]\n\n"
-            except ProviderRateLimitError:
-                yield "data: error:429\n\n"
-            except ProviderConnectionError:
-                yield "data: error:503\n\n"
-            except ProviderAPIError:
-                yield "data: error:502\n\n"
+            except ProviderRateLimitError as error:
+                print(f"AI-GATEWAY rate limit error: {error}", flush=True)
+                yield f"data: error:429:{error}\n\n"
+            except ProviderConnectionError as error:
+                print(f"AI-GATEWAY connection error: {error}", flush=True)
+                yield f"data: error:503:{error}\n\n"
+            except ProviderAPIError as error:
+                print(f"AI-GATEWAY provider API error: {error}", flush=True)
+                yield f"data: error:502:{error}\n\n"
 
         return StreamingResponse(
             event_stream(),

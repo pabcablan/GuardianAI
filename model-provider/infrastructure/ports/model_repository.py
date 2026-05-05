@@ -1,27 +1,26 @@
-"""Port that defines model loading operations."""
-from __future__ import annotations
+""""
+Defines the contract to load a model.
+It is responsible for loading a model given its identifier and optional parameters.
+"""
 
 from abc import ABC, abstractmethod
 from typing import Any
 
-
 class ModelRepository(ABC):
-    """Define the contract for model repositories."""
-
     @abstractmethod
     async def load(self, model_id: str, name:str, **kwargs) -> tuple[Any, Any]:
         """
         Load a model given its identifier and optional parameters.
 
         Args:
-            model_id (str): The model identifier.
-            name (str): The model registry name.
-            **kwargs: Additional loading parameters.
-
+            model_id (str): The identifier of the model to load (e.g., HuggingFace repo name).
+            name (str): The name to assign to the loaded model.
+            **kwargs: Additional parameters for loading the model (e.g., device, quantization config).
+        
         Returns:
-            tuple[Any, Any]: The loaded model and tokenizer or processor.
+            tuple[Any, Any]: A tuple containing (model, tokenizer).
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     async def get(self, name: str) -> tuple[Any, Any]:
@@ -29,12 +28,12 @@ class ModelRepository(ABC):
         Get a loaded model and its tokenizer by name.
 
         Args:
-            name (str): The model registry name.
-
+            name (str): The name of the loaded model to retrieve.
+        
         Returns:
-            tuple[Any, Any]: The loaded model and tokenizer or processor.
+            tuple[Any, Any]: A tuple containing (model, tokenizer).
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     async def unload(self, name: str):
@@ -42,9 +41,9 @@ class ModelRepository(ABC):
         Unload a model and its tokenizer by name.
 
         Args:
-            name (str): The model registry name.
+            name (str): The name of the loaded model to unload.
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     async def list_loaded_models(self) -> list[dict[str, str]]:
@@ -52,6 +51,6 @@ class ModelRepository(ABC):
         List all currently loaded models.
 
         Returns:
-            list[dict[str, str]]: Loaded model metadata.
+            list[dict[str, str]]: A list of dictionaries containing information about each loaded model (e.g., name, identifier).
         """
-        raise NotImplementedError
+        pass

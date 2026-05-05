@@ -50,6 +50,19 @@ class OrchestratorStreamChunk:
 
 
 @dataclass(frozen=True)
+class OrchestratorAnonymizedPrompt:
+    """Represent the anonymized form of the user prompt.
+
+    Attributes:
+        event (Literal["anonymized_prompt"]): The stream event type.
+        content (str): The prompt after anonymization.
+    """
+
+    event: Literal["anonymized_prompt"]
+    content: str
+
+
+@dataclass(frozen=True)
 class OrchestratorStreamCompleted:
     """Represent the successful end of an orchestrator stream.
 
@@ -75,6 +88,7 @@ class OrchestratorStreamFailed:
 
 OrchestratorStreamEvent = (
     OrchestratorStreamChunk
+    | OrchestratorAnonymizedPrompt
     | OrchestratorStreamCompleted
     | OrchestratorStreamFailed
 )

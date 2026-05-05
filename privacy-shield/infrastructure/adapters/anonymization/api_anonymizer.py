@@ -17,6 +17,7 @@ class ApiAnonymizer(Anonymizer):
         self.model_name = model_name
         self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
         self.client = client or httpx.AsyncClient()
+        self.last_replacements: dict[str, str] = {}
 
     async def anonymize(self, text: str) -> str:
         """
@@ -42,6 +43,7 @@ class ApiAnonymizer(Anonymizer):
 
         extracted_entities = extract_json_safely(generated_text)
 
-        anonymized_text, _ = redact_text(text, extracted_entities)
+        anonymized_text, replacements = redact_text(text, extracted_entities)
+        self.last_replacements = replacements
 
         return anonymized_text

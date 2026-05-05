@@ -62,6 +62,11 @@ interface SafeStreamChunkResponse {
   content: string;
 }
 
+interface SafeStreamAnonymizedPromptResponse {
+  event: "anonymized_prompt";
+  content: string;
+}
+
 interface SafeStreamCompletedResponse {
   event: "completed";
 }
@@ -73,6 +78,7 @@ interface SafeStreamErrorResponse {
 
 type SafeStreamResponse =
   | SafeStreamChunkResponse
+  | SafeStreamAnonymizedPromptResponse
   | SafeStreamCompletedResponse
   | SafeStreamErrorResponse;
 
@@ -165,6 +171,7 @@ export class ChatApplicationService {
     chatId: string,
     content: string,
     onChunk: (chunk: string) => void,
+    onAnonymizedPrompt: (content: string) => void,
   ): Promise<void> {
     const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/messages/stream`, {
       method: "POST",
@@ -175,7 +182,7 @@ export class ChatApplicationService {
     });
     await this.ensure_success(response);
 
-    await this.consumeSafeStream(response, onChunk);
+    await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
   }
 
   async attachDocumentWithProgress(
@@ -331,8 +338,14 @@ export class ChatApplicationService {
   private async handleSafeStreamLine(
     rawLine: string,
     onChunk: (chunk: string) => void,
+    onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
     const payload = JSON.parse(rawLine) as SafeStreamResponse;
+
+    if (payload.event === "anonymized_prompt") {
+      onAnonymizedPrompt?.(payload.content);
+      return;
+    }
 
     if (payload.event === "chunk") {
       onChunk(payload.content);
@@ -354,6 +367,7 @@ export class ChatApplicationService {
   private async consumeSafeStream(
     response: Response,
     onChunk: (chunk: string) => void,
+    onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
     if (!response.body) {
       throw new Error("Safe response stream is unavailable.");
@@ -373,7 +387,11 @@ export class ChatApplicationService {
         buffer = buffer.slice(lineBreakIndex + 1);
 
         if (rawLine) {
-          await this.handleSafeStreamLine(rawLine, onChunk);
+          await this.handleSafeStreamLine(
+            rawLine,
+            onChunk,
+            onAnonymizedPrompt,
+          );
         }
 
         lineBreakIndex = buffer.indexOf("\n");
@@ -386,7 +404,7 @@ export class ChatApplicationService {
 
     const lastLine = buffer.trim();
     if (lastLine) {
-      await this.handleSafeStreamLine(lastLine, onChunk);
+      await this.handleSafeStreamLine(lastLine, onChunk, onAnonymizedPrompt);
     }
   }
 }

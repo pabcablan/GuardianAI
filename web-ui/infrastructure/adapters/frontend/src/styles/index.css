@@ -614,6 +614,22 @@ input {
   white-space: pre-wrap;
 }
 
+.message__anonymized {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.13);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.message__anonymized-label {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.66);
+}
+
 .message--assistant {
   margin-left: 0;
   align-self: flex-start;

@@ -45,6 +45,7 @@ from infrastructure.adapters.api.schemas import (
     CreateChatRequest,
     CreateChatResponse,
     RenameChatRequest,
+    SafeStreamAnonymizedPromptResponse,
     SafeStreamChunkResponse,
     SafeStreamCompletedResponse,
     SafeStreamErrorResponse,
@@ -61,6 +62,7 @@ from infrastructure.adapters.orchestrator.response_client import (
 )
 from infrastructure.adapters.in_memory_chat_gateway import InMemoryChatGateway
 from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorAnonymizedPrompt,
     OrchestratorStreamChunk,
     OrchestratorStreamCompleted,
     OrchestratorStreamEvent,
@@ -473,6 +475,10 @@ def _build_safe_streaming_response(
             for event in events:
                 if isinstance(event, OrchestratorStreamChunk):
                     payload = SafeStreamChunkResponse(
+                        content=event.content,
+                    ).model_dump()
+                elif isinstance(event, OrchestratorAnonymizedPrompt):
+                    payload = SafeStreamAnonymizedPromptResponse(
                         content=event.content,
                     ).model_dump()
                 elif isinstance(event, OrchestratorStreamCompleted):

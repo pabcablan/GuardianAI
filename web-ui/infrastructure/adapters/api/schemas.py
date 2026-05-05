@@ -148,6 +148,18 @@ class SafeStreamChunkResponse(BaseModel):
     content: str
 
 
+class SafeStreamAnonymizedPromptResponse(BaseModel):
+    """Represent the anonymized user prompt sent to the frontend.
+
+    Attributes:
+        event (str): The stream event type.
+        content (str): The anonymized user prompt.
+    """
+
+    event: str = "anonymized_prompt"
+    content: str
+
+
 class SafeStreamCompletedResponse(BaseModel):
     """Represent a successful safe response stream completion.
 

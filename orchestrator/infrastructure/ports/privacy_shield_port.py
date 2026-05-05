@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
 
 @dataclass(frozen=True)
@@ -12,11 +12,13 @@ class AnonymizedPrompt:
 
     Attributes:
         text (str): The anonymized prompt.
-        replacements (Mapping[str, str]): The placeholder-to-original map.
+        anonymization_id (str): The privacy-shield session identifier.
+        replacement_count (int): The number of stored replacements.
     """
 
     text: str
-    replacements: Mapping[str, str]
+    anonymization_id: str
+    replacement_count: int = 0
 
 
 class PrivacyShieldPort(Protocol):
@@ -30,19 +32,19 @@ class PrivacyShieldPort(Protocol):
             text (str): The original prompt.
 
         Returns:
-            AnonymizedPrompt: The anonymized text and replacement map.
+            AnonymizedPrompt: The anonymized text and privacy-shield session.
         """
 
     def deanonymize_stream(
         self,
         chunks: list[str],
-        replacements: Mapping[str, str],
+        anonymization_id: str,
     ) -> Iterator[dict[str, Any]]:
         """Stream deanonymized chunks through privacy-shield.
 
         Args:
             chunks (list[str]): The anonymized assistant response chunks.
-            replacements (Mapping[str, str]): The placeholder-to-original map.
+            anonymization_id (str): The privacy-shield session identifier.
 
         Returns:
             Iterator[dict[str, Any]]: Safe stream events emitted by
