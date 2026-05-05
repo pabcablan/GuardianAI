@@ -1,22 +1,14 @@
-"""Port that defines document text extraction."""
-from __future__ import annotations
+"""
+Defines the contract for a document text extractor.
+Its responsible for extracting the text content from a parsed document
+and returning an ExtractedDocument object
+"""
 
 from typing import Protocol
 
-from domain.extracted_document import ExtractedDocument
 from domain.parsed_document import ParsedDocument
-
+from domain.extracted_document import ExtractedDocument
 
 class TextExtractor(Protocol):
-    """Define the contract for text extractors."""
-
     async def extract_text(self, document: ParsedDocument) -> ExtractedDocument:
-        """Extract text from a parsed document.
-
-        Args:
-            document (ParsedDocument): The parsed document to inspect.
-
-        Returns:
-            ExtractedDocument: The document with extracted text.
-        """
         ...

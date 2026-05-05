@@ -1,5 +1,4 @@
 import os
-
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
 
@@ -12,27 +11,9 @@ from infrastructure.utils.llm_client import LLMClient
 
 from application.usecases.process_document import ProcessDocument
 
+def main():
 
-MODEL_PROVIDER_BASE_URL = os.getenv(
-    "MODEL_PROVIDER_BASE_URL",
-    "http://127.0.0.1:8006",
-)
-DOCUMENT_MODEL_NAME = os.getenv(
-    "DOCUMENT_MODEL_NAME",
-    "document_extractor",
-)
-
-
-def build_app() -> FastAPI:
-    """Build the document processor FastAPI application.
-
-    Returns:
-        FastAPI: The configured document processor API.
-    """
-    llm_client = LLMClient(
-        base_url=MODEL_PROVIDER_BASE_URL,
-        model_name=DOCUMENT_MODEL_NAME,
-    )
+    llm_client = LLMClient(base_url=os.getenv("LLM_BASE_URL"))  # Change to real LLM API URL
 
     parser = FastAPIDocumentParser()
     text_extractor = FallbackTextExtractor(
@@ -52,16 +33,7 @@ def build_app() -> FastAPI:
     async def extract_document(file: UploadFile = File(...)) -> str:
         return await process_doc.execute(file)
 
-    return app
-
-
-app = build_app()
-
-
-def main():
-    """Run the document processor API."""
     uvicorn.run(app, host="0.0.0.0", port=8001)
-
 
 if __name__ == "__main__":
     main()
