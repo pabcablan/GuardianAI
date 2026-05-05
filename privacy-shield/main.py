@@ -1,29 +1,36 @@
 import uvicorn
+import asyncio
+import httpx
 from fastapi import FastAPI
 
-from infrastructure.adapters.evaluation.qwen_evaluator import QwenEvaluator
-from infrastructure.adapters.anonymization.llm_anonymizer import LlmAnonymizer
-from infrastructure.adapters.model_loader.unsloth_provider import UnslothProvider
-
+from infrastructure.adapters.evaluation.evaluator_provider import EvaluatorProvider
+from infrastructure.adapters.anonymization.anonymizer_provider import AnonymizerProvider
 from application.usecases.document_anonymizer.anonymize_document import AnonymizeDocument
+from application.body_params_schemas.anonymize_request import AnonymizeRequest
 
-def main():
-    unsloth_provider = UnslothProvider()
+async def main():
+    app = FastAPI()
 
-    model_anonymizer, tokenizer_anonymizer = unsloth_provider.load(model_id="unsloth/Qwen3.5-0.8B",  name="anonymizer_model")
+    client = httpx.AsyncClient(timeout=None)
 
-    evaluator = QwenEvaluator(model=model_anonymizer, tokenizer=tokenizer_anonymizer)
-    anonymizer = LlmAnonymizer(model=model_anonymizer, tokenizer=tokenizer_anonymizer)
+    MODEL_PROVIDER_URL = "https://localhost:7003/generate_response"
+    MODEL_NAME = "anonymizer_model"
+
+    evaluator_provider = EvaluatorProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
+    evaluator = evaluator_provider.get_evaluator(model_alias=MODEL_NAME)
+
+    anonymizer_provider = AnonymizerProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
+    anonymizer = anonymizer_provider.get_anonymizer(model_alias=MODEL_NAME)
 
     anonymize_usecase = AnonymizeDocument(evaluator=evaluator, anonymizer=anonymizer)
     
-    app = FastAPI()
-
     @app.post("/anonymize")
-    def anonymize_route(text: str):
-        return anonymize_usecase.execute(text)
+    async def anonymize_route(request: AnonymizeRequest):
+        return await anonymize_usecase.execute(request.text)
 
-    uvicorn.run(app, host="0.0.0.0", port=7002)
+    config = uvicorn.Config(app, host="0.0.0.0", port=7002)
+    server = uvicorn.Server(config)
+    await server.serve()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

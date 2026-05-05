@@ -7,8 +7,8 @@ class AnonymizeDocument:
         self.evaluator = evaluator
         self.anonymizer = anonymizer
     
-    def execute(self, text: str) -> str:
-        if self.evaluator.evaluate(text):
-            return self.anonymizer.anonymize(text)
+    async def execute(self, text: str) -> str:
+        if await self.evaluator.evaluate(text):
+            return await self.anonymizer.anonymize(text)
         else:
             return text

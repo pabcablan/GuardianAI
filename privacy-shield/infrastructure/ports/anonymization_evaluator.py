@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 class AnonymizationEvaluator(ABC):
     @abstractmethod
-    def evaluate(self, text: str) -> bool:
+    async def evaluate(self, text: str) -> bool:
         """
         Evaluate the given text to be anonymized or not becausa it contains sensitive information.
         

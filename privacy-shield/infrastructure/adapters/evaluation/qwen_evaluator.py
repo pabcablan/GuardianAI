@@ -3,6 +3,7 @@ Defines an adapter for the Qwen model to be used as an anonymization evaluator.
 It is responsible for evaluating whether a given text contains sensitive information that should be anonymized, using the Qwen model to analyze the content and return a JSON response indicating the evaluation result.
 """
 
+from fastapi.concurrency import run_in_threadpool
 import torch
 
 from infrastructure.ports.anonymization_evaluator import AnonymizationEvaluator
@@ -17,7 +18,20 @@ class QwenEvaluator(AnonymizationEvaluator):
         self.tokenizer = tokenizer
         self.system_prompt = EVALUATOR_SYSTEM_PROMPT
     
-    def evaluate(self, text: str) -> bool:
+    async def evaluate(self, text: str) -> bool:
+        """
+        Run inference in a separate thread to avoid blocking the event loop, since the Qwen model is not async.
+
+        Args:
+            text (str): The text to be evaluated.
+        
+        Returns:
+            bool: True if the text should be anonymized, False otherwise.
+        """
+        return await run_in_threadpool(None, self._run_evaluate, text)
+        
+    
+    def _run_evaluate(self, text: str) -> bool:
         """
         Evaluate the given text to be anonymized or not because it contains sensitive information.
 
@@ -27,6 +41,7 @@ class QwenEvaluator(AnonymizationEvaluator):
         Returns:
             bool: True if the text should be anonymized, False otherwise.
         """
+                
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user",
@@ -36,7 +51,7 @@ class QwenEvaluator(AnonymizationEvaluator):
         input_text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer(text=input_text, return_tensors="pt").to(self.model.device)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             output_ids = self.model.generate(**inputs, max_new_tokens=600, temperature=0.01, do_sample=False,
                                              repetition_penalty=1.1)
 
