@@ -12,7 +12,7 @@ class LLMClient:
             content_64 = self.bytes_to_64(content)
 
             response = await client.post(
-                f"{self._base_url}/generate_response/",
+                f"{self._base_url}/generate_response",
                 json={
                 "model_name": "jd",
                 "prompt": prompt,

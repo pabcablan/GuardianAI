@@ -6,9 +6,9 @@ from infrastructure.ports.document_parser import DocumentParser
 from domain.parsed_document import ParsedDocument
 
 class FastAPIDocumentParser(DocumentParser):
-    def parse(self, uploaded_file: UploadFile = File(...)) -> ParsedDocument:
+    async def parse(self, uploaded_file: UploadFile = File(...)) -> ParsedDocument:
         return ParsedDocument(
             document_id=str(uuid.uuid4()),
             filename=uploaded_file.filename,
-            content=uploaded_file.file.read()
+            content=await uploaded_file.file.read()
         )
