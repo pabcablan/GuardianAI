@@ -1,41 +1,44 @@
-from typing import Generator
+from typing import AsyncGenerator
+
+from domain.value_objects import AnonymizedText
 from ..ports.language_model import LanguageModel
 from ..ports.audit_log import AuditLog
-from ..ports.session_manager import SessionManager
 from domain.entities.llm_request import LLMRequest
 from domain.entities.llm_response import LLMResponse
-from domain.value_objects.session_id import SessionId
-from domain.value_objects.message import Message
+from domain.value_objects.message import Message, Role
 from datetime import datetime, UTC
 import uuid
 
 
-class Complete:
+SYSTEM_PROMPT = "You are a helpful assistant. Always respond in the same language as the user. You may encounter references like [PERSON_1], [DOC_1], or similar labels. Treat them as you would any named entity and respond naturally."
+
+class SendToLLM:
 
     def __init__(
         self,
-        session_manager: SessionManager,
         language_model: LanguageModel,
         audit_log: AuditLog
     ):
-        self._session_manager = session_manager
         self._language_model = language_model
         self._audit_log = audit_log
 
-    def stream(
+    async def stream(
         self,
-        session_id: SessionId,
         messages: list[Message],
         model: str
-    ) -> Generator[str, None, None]:
+    ) -> AsyncGenerator[str, None]:
 
-        session = self._session_manager.validate(session_id)
+        system_message = Message(
+            role=Role.SYSTEM,
+            content=AnonymizedText(SYSTEM_PROMPT)
+        )
+
+        all_messages = [system_message] + messages
 
         request = LLMRequest(
             id=str(uuid.uuid4()),
-            session_id=session_id,
-            org_id=session.org_id,
-            messages=messages,
+            org_id="default",
+            messages=all_messages,
             model=model,
             created_at=datetime.now(UTC)
         )
@@ -44,7 +47,7 @@ class Complete:
         finish_reason = "unknown"
 
         try:
-            for chunk in self._language_model.stream(messages, model):
+            async for chunk in self._language_model.stream(all_messages, model):
                 yield chunk
 
             finish_reason = "stop"
@@ -59,7 +62,7 @@ class Complete:
                 finish_reason=finish_reason,
                 completed_at=datetime.now(UTC)
             )
-            self._audit_log.log(request, response)
+            await self._audit_log.log(request, response)
 
         except Exception as e:
             request.fail(str(e))

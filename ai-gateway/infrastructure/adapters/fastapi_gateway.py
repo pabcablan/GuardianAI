@@ -1,11 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from application.usecases.create_session import CreateSession
-from application.usecases.complete import Complete
-from domain.value_objects.session_id import SessionId
+from application.usecases.send_to_llm import SendToLLM
 from domain.value_objects.message import Message, Role
 from domain.value_objects.anonymized_text import AnonymizedText
-from domain.exceptions import SessionNotFoundError, ProviderRateLimitError, ProviderConnectionError, ProviderAPIError
+from domain.exceptions import ProviderRateLimitError, ProviderConnectionError, ProviderAPIError
 from pydantic import BaseModel
 
 
@@ -13,36 +11,18 @@ class MessageRequest(BaseModel):
     role: str
     content: str
 
-
-class CompletionRequest(BaseModel):
-    session_id: str
+class ChatRequest(BaseModel):
     messages: list[MessageRequest]
     model: str
 
-
-class CreateSessionRequest(BaseModel):
-    user_id: str
-    org_id: str
-
-
-class FastAPICompletion:
-    def __init__(self, completion: Complete, create_session: CreateSession):
-        self._completion = completion
-        self._create_session = create_session
+class FastAPIGateway:
+    def __init__(self, send_to_llm: SendToLLM):
+        self._send_to_llm = send_to_llm
         self._router = APIRouter()
-        self._router.add_api_route("/session", self.session, methods=["POST"])
-        self._router.add_api_route("/complete", self.complete, methods=["POST"])
+        self._router.add_api_route("/handle", self.handle, methods=["POST"])
 
-    def session(self, request: CreateSessionRequest):
-        session = self._create_session.execute(
-            user_id=request.user_id,
-            org_id=request.org_id
-        )
-        return {"session_id": str(session.session_id)}
-
-    def complete(self, request: CompletionRequest) -> StreamingResponse:
+    async def handle(self, request: ChatRequest) -> StreamingResponse:
         try:
-            session_id = SessionId.from_string(request.session_id)
             messages = [
                 Message(
                     role=Role(m.role),
@@ -53,13 +33,11 @@ class FastAPICompletion:
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        def event_stream():
+        async def event_stream():
             try:
-                for chunk in self._completion.stream(session_id, messages, request.model):
+                async for chunk in self._send_to_llm.stream(messages, request.model):
                     yield f"data: {chunk}\n\n"
                 yield "data: [DONE]\n\n"
-            except SessionNotFoundError:
-                yield "data: error:401\n\n"
             except ProviderRateLimitError:
                 yield "data: error:429\n\n"
             except ProviderConnectionError:

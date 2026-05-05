@@ -1,16 +1,17 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 from openai.types.responses import EasyInputMessageParam
 from openai import RateLimitError, APIConnectionError, APIStatusError
-from typing import Generator, List, Literal, cast
+from typing import List, Literal, cast, AsyncGenerator
+
+from application.ports import LanguageModel
 from domain.value_objects import Message
 from domain.exceptions import ProviderAPIError, ProviderConnectionError, ProviderRateLimitError
 
-
-class OpenAILanguageModel:
+class OpenAILanguageModel(LanguageModel):
     def __init__(self, api_key: str):
         self.client = OpenAI(api_key=api_key)
 
-    def stream(self, messages: List[Message], model: str) -> Generator[str, None, None]:
+    async def stream(self, messages: List[Message], model: str) -> AsyncGenerator[str, None]:
         input_messages: List[EasyInputMessageParam] = [
             EasyInputMessageParam(
                 role=cast(Literal["user", "assistant", "system", "developer"], message.role.value),
@@ -20,13 +21,14 @@ class OpenAILanguageModel:
         ]
 
         try:
-            with self.client.responses.stream(
+            async with self.client.responses.stream(
                 model=model,
-                input=input_messages
-            ) as stream:
-                for event in stream:
+                input=input_messages,
+            ) as s:
+                async for event in s:
                     if event.type == "response.output_text.delta":
                         yield event.delta
+
         except RateLimitError as e:
             raise ProviderRateLimitError(str(e))
         except APIConnectionError as e:
