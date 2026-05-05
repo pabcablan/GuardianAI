@@ -29,13 +29,13 @@ def build_controller() -> Controller:
     )
 
 
-def load_startup_models(controller: Controller) -> None:
+async def load_startup_models(controller: Controller) -> None:
     """Load the models required at service startup.
 
     Args:
         controller (Controller): The model controller.
     """
-    _load_startup_model(
+    await _load_startup_model(
         controller=controller,
         model_id=DEFAULT_PRIVACY_MODEL_ID,
         model_name=DEFAULT_PRIVACY_MODEL_NAME,
@@ -46,7 +46,7 @@ def load_startup_models(controller: Controller) -> None:
         DEFAULT_DOCUMENT_MODEL_NAME != DEFAULT_PRIVACY_MODEL_NAME
         and DEFAULT_DOCUMENT_MODEL_ID != DEFAULT_PRIVACY_MODEL_ID
     ):
-        _load_startup_model(
+        await _load_startup_model(
             controller=controller,
             model_id=DEFAULT_DOCUMENT_MODEL_ID,
             model_name=DEFAULT_DOCUMENT_MODEL_NAME,
@@ -54,7 +54,7 @@ def load_startup_models(controller: Controller) -> None:
         )
 
 
-def _load_startup_model(
+async def _load_startup_model(
     controller: Controller,
     model_id: str,
     model_name: str,
@@ -79,7 +79,7 @@ def _load_startup_model(
         model_id=model_id,
         name=model_name,
     )
-    result = controller.load_model(request)
+    result = await controller.load_model(request)
     print(result, flush=True)
     if result.startswith("Error "):
         raise RuntimeError(result)

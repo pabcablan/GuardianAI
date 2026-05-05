@@ -5,6 +5,7 @@ from fastapi import FastAPI, UploadFile, File
 
 from infrastructure.adapters.fastapi_document_parser import FastAPIDocumentParser
 from infrastructure.adapters.markitdown_text_extractor import MarkitdownTextExtractor
+from infrastructure.adapters.pymupdf_text_extractor import PyMuPDFTextExtractor
 from infrastructure.adapters.llm_text_extractor import LLMTextExtractor
 from infrastructure.utils.text_extraction_fallback import FallbackTextExtractor
 from infrastructure.utils.llm_client import LLMClient
@@ -35,7 +36,7 @@ def build_app() -> FastAPI:
 
     parser = FastAPIDocumentParser()
     text_extractor = FallbackTextExtractor(
-        primary=MarkitdownTextExtractor(),
+        primary=PyMuPDFTextExtractor(),
         fallback=LLMTextExtractor(llm_client),
         min_chars=25
     )

@@ -1,15 +1,30 @@
+"""Port that defines model text generation."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any
 
+
 class TextGenerator(ABC):
+    """Define the contract for text generation engines."""
+
     @abstractmethod
-    def generate(self, prompt: str, model: Any, tokenizer: Any) -> str:
-        """
-        Generates a response based on the given prompt.
+    def generate(
+        self,
+        prompt: str,
+        model: Any,
+        tokenizer: Any,
+        document_base64: str | None = None,
+    ) -> str:
+        """Generate a response based on a prompt.
 
         Args:
-            prompt (str): The input prompt to generate a response for.
-            model (Any): The model to use for generation.
-            tokenizer (Any): The tokenizer to use for generation.
+            prompt (str): The input prompt.
+            model (Any): The loaded model.
+            tokenizer (Any): The tokenizer or processor.
+            document_base64 (str | None): Optional base64 document payload.
+
+        Returns:
+            str: The generated response.
         """
-        pass    
+        raise NotImplementedError

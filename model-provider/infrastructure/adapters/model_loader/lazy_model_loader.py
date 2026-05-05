@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import Any
 
 from infrastructure.ports.model_repository import ModelRepository
-
+from infrastructure.adapters.model_loader.model_loader_router import (
+                ModelLoaderRouter,
+            )
 
 class LazyModelLoader(ModelRepository):
     """Import the model loader router only when a model operation is requested."""
@@ -20,10 +22,6 @@ class LazyModelLoader(ModelRepository):
             ModelLoaderRouter: The concrete model loader router.
         """
         if self._loader is None:
-            from infrastructure.adapters.model_loader.model_loader_router import (
-                ModelLoaderRouter,
-            )
-
             self._loader = ModelLoaderRouter()
 
         return self._loader
