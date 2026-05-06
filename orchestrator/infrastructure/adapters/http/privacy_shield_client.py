@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -46,19 +47,35 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             "chat_id": chat_id,
             "text": text,
         }
-        response = self._post_json("/anonymize", payload)
+        response = self._post_json("/anonymize/optimized", payload)
+
+        if isinstance(response, str):
+            return AnonymizedPrompt(
+                text=response,
+                replacements={},
+                anonymization_id=str(uuid.uuid4()),
+                replacement_count=0,
+            )
+
+        if not isinstance(response, dict):
+            raise PrivacyShieldClientError(
+                "Invalid privacy-shield anonymization response."
+            )
+
         replacements = response.get("replacements", {})
         if not isinstance(replacements, dict):
             replacements = {}
 
+        normalized_replacements = {
+            str(key): str(value)
+            for key, value in replacements.items()
+        }
+
         return AnonymizedPrompt(
             text=str(response.get("anonymized_text", "")),
-            replacements={
-                str(key): str(value)
-                for key, value in replacements.items()
-            },
-            anonymization_id=str(response["anonymization_id"]),
-            replacement_count=int(response.get("replacement_count", 0)),
+            replacements=normalized_replacements,
+            anonymization_id=str(uuid.uuid4()),
+            replacement_count=len(normalized_replacements),
         )
 
     def deanonymize_stream(
@@ -103,7 +120,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
                 "Privacy-shield service is unavailable."
             ) from error
 
-    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post_json(self, path: str, payload: dict[str, Any]) -> Any:
         """Send JSON and parse a JSON response.
 
         Args:
@@ -111,7 +128,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             payload (dict[str, Any]): The request payload.
 
         Returns:
-            dict[str, Any]: The parsed JSON response.
+            Any: The parsed JSON response.
         """
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
