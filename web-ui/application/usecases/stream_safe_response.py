@@ -18,10 +18,12 @@ class StreamSafeResponseCommand:
     Attributes:
         chat_id (str): The chat that will display the stream.
         document_id (str): The processed document associated with the stream.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     document_id: str
+    model: str
 
 
 class StreamSafeResponseUseCase:
@@ -59,5 +61,6 @@ class StreamSafeResponseUseCase:
             OrchestratorDocumentResponseRequest(
                 chat_id=command.chat_id,
                 document_id=command.document_id,
+                model=command.model,
             )
         )

@@ -18,11 +18,12 @@ class StreamMessageResponseCommand:
     Attributes:
         chat_id (str): The chat that will display the response.
         content (str): The user message content.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     content: str
-
+    model: str
 
 class StreamMessageResponseUseCase:
     """Consume a safe streamed answer for a user chat message."""
@@ -51,6 +52,7 @@ class StreamMessageResponseUseCase:
             ValueError: If the chat identifier or message content is empty.
         """
         content = command.content.strip()
+        model = command.model
         if not command.chat_id.strip():
             raise ValueError("Chat id cannot be empty.")
         if not content:
@@ -60,5 +62,6 @@ class StreamMessageResponseUseCase:
             OrchestratorMessageResponseRequest(
                 chat_id=command.chat_id,
                 content=content,
+                model=model,
             )
         )

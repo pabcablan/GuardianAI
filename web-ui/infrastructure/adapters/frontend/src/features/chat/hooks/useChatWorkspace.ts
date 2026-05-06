@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 import { createChatApplicationService } from "../application/chatApplicationService";
+import { DEFAULT_AI_MODEL } from "../types";
 import type {
   ChatMessage,
   ChatSummary,
   ChatThread,
+  AiModel,
   DocumentProcessingStatus,
   ModelReadinessStatus,
   ResponseProcessingStatus,
@@ -431,6 +433,7 @@ export function useChatWorkspace() {
     content: string,
     pendingFile: File | null = null,
     shouldPreviewAnonymizedText = false,
+    model: AiModel = DEFAULT_AI_MODEL,
   ): Promise<boolean> {
     const normalizedContent = content.trim();
     if (!normalizedContent && !pendingFile) {
@@ -511,6 +514,7 @@ export function useChatWorkspace() {
         await serviceRef.current.streamSafeResponse(
           activeChatId,
           documentId,
+          model,
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
@@ -541,6 +545,7 @@ export function useChatWorkspace() {
           const preview = await serviceRef.current.previewMessageAnonymization(
             activeChatId,
             normalizedContent,
+            model,
           );
           updateUserAnonymizedContent(
             activeChatId,
@@ -565,6 +570,7 @@ export function useChatWorkspace() {
         await serviceRef.current.streamMessage(
           activeChatId,
           normalizedContent,
+          model,
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
@@ -594,7 +600,10 @@ export function useChatWorkspace() {
     }
   }
 
-  async function approveAnonymizedMessage(message: ChatMessage): Promise<void> {
+  async function approveAnonymizedMessage(
+    message: ChatMessage,
+    model: AiModel,
+  ): Promise<void> {
     if (!selectedChatId || !message.pendingApproval) {
       return;
     }
@@ -617,6 +626,7 @@ export function useChatWorkspace() {
         selectedChatId,
         message.pendingApproval.anonymizedContent,
         message.pendingApproval.anonymizationId,
+        model,
         (chunk) => {
           if (!didReceiveFirstChunk) {
             didReceiveFirstChunk = true;

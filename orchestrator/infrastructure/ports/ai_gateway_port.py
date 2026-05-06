@@ -13,10 +13,12 @@ class AssistantStreamRequest:
     Attributes:
         chat_id (str): The chat that owns the request.
         prompt (str): The anonymized prompt sent to the assistant.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     prompt: str
+    model: str
 
 
 class AiGatewayPort(Protocol):

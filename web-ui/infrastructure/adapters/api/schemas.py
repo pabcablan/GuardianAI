@@ -79,9 +79,11 @@ class StreamMessageRequest(BaseModel):
 
     Attributes:
         content (str): The user message content.
+        model (str): The AI model selected by the user.
     """
 
     content: str = Field(min_length=1)
+    model: str = Field(min_length=1)
 
 
 class AnonymizedPreviewResponse(BaseModel):
@@ -106,10 +108,12 @@ class ContinueAnonymizedRequest(BaseModel):
     Attributes:
         anonymized_content (str): The approved anonymized content.
         anonymization_id (str): The privacy-shield session identifier.
+        model (str): The AI model selected by the user.
     """
 
     anonymized_content: str = Field(min_length=1)
     anonymization_id: str = Field(min_length=1)
+    model: str = Field(min_length=1)
 
 
 class RenameChatRequest(BaseModel):

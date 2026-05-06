@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
-import type { ChatSummary } from "../types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { AiModel, ChatSummary } from "../types";
+import { AI_MODEL_OPTIONS, AI_MODEL_PRICING } from "../types";
 
 interface SidebarProps {
   chats: ChatSummary[];
   selectedChatId: string;
   isExpanded: boolean;
   isInteractionLocked: boolean;
+  selectedModel: AiModel;
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
   onRenameChat: (chatId: string, title: string) => Promise<boolean>;
   onDeleteChat: (chatId: string) => Promise<boolean>;
+  onModelChange: (model: AiModel) => void;
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
 }
@@ -19,10 +22,12 @@ export function Sidebar({
   selectedChatId,
   isExpanded,
   isInteractionLocked,
+  selectedModel,
   onChatSelect,
   onCreateChat,
   onRenameChat,
   onDeleteChat,
+  onModelChange,
   onToggleSidebar,
   onOpenSettings,
 }: SidebarProps) {
@@ -30,7 +35,7 @@ export function Sidebar({
   const [activeChat, setActiveChat] = useState<ChatSummary | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [isApplyingAction, setIsApplyingAction] = useState(false);
-
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const filteredChats = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -42,6 +47,25 @@ export function Sidebar({
       `${chat.title} ${chat.lastMessagePreview}`.toLowerCase().includes(normalizedSearch),
     );
   }, [chats, searchTerm]);
+
+  const modelDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modelDropdownRef.current &&
+        !modelDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   function openChatActions(chat: ChatSummary): void {
     setActiveChat(chat);
@@ -84,6 +108,8 @@ export function Sidebar({
       closeChatActions();
     }
   }
+
+  const selectedModelPricing = AI_MODEL_PRICING[selectedModel];
 
   return (
     <aside className={`sidebar ${isExpanded ? "" : "sidebar--collapsed"}`.trim()}>
@@ -207,15 +233,71 @@ export function Sidebar({
 
       <div className="sidebar__footer">
         {isExpanded ? (
-          <button
-            className="sidebar__settings"
-            type="button"
-            disabled={isInteractionLocked}
-            onClick={onOpenSettings}
-          >
-            <span className="icon icon--settings" aria-hidden="true" />
-            Configuracion
-          </button>
+          <>
+            <div className="sidebar__model-select">
+              <span className="sidebar__model-label">Modelo IA</span>
+
+              <div ref={modelDropdownRef} className={`model-dropdown ${isInteractionLocked ? "is-disabled" : ""}`}>
+                <button
+                  className="model-dropdown__trigger"
+                  type="button"
+                  disabled={isInteractionLocked}
+                  onClick={() => setIsModelDropdownOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isModelDropdownOpen}
+                >
+                  <span className="model-dropdown__trigger-copy">
+                    <span className="model-dropdown__name">{selectedModel}</span>
+                    <span className="model-dropdown__price">
+                      Input: {selectedModelPricing.input} | Output:{" "}
+                      {selectedModelPricing.output}
+                    </span>
+                  </span>
+                  <span className="model-dropdown__chevron" aria-hidden="true">
+                    ⌄
+                  </span>
+                </button>
+
+                {isModelDropdownOpen && !isInteractionLocked && (
+                  <ul className="model-dropdown__menu" role="listbox">
+                    {AI_MODEL_OPTIONS.map((model) => {
+                      const pricing = AI_MODEL_PRICING[model];
+
+                      return (
+                        <li
+                          key={model}
+                          className={`model-dropdown__option ${
+                            selectedModel === model ? "is-selected" : ""
+                          }`}
+                          role="option"
+                          aria-selected={selectedModel === model}
+                          onClick={() => {
+                            onModelChange(model);
+                            setIsModelDropdownOpen(false);
+                          }}
+                        >
+                          <span className="model-dropdown__name">{model}</span>
+                          <span className="model-dropdown__price">
+                            Input: {pricing.input} | Output: {pricing.output}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <button
+              className="sidebar__settings"
+              type="button"
+              disabled={isInteractionLocked}
+              onClick={onOpenSettings}
+            >
+              <span className="icon icon--settings" aria-hidden="true" />
+              Configuracion
+            </button>
+          </>
         ) : (
           <button
             className="sidebar__compact-action"

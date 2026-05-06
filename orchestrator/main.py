@@ -70,6 +70,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
             orchestration_service.stream_message_response(
                 chat_id=payload.chat_id,
                 text=payload.text,
+                model=payload.model,
             )
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
@@ -155,6 +156,7 @@ def stream_anonymized_response(
             chat_id=payload.chat_id,
             anonymized_text=payload.anonymized_text,
             anonymization_id=payload.anonymization_id,
+            model=payload.model,
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise _bad_gateway(error) from error
@@ -204,10 +206,11 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
     """
     chat_id = payload.get("chat_id", "").strip()
     document_id = payload.get("document_id", "").strip()
-    if not chat_id or not document_id:
+    model = payload.get("model", "").strip()
+    if not chat_id or not document_id or not model:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="chat_id and document_id are required.",
+            detail="chat_id, document_id, and model are required.",
         )
 
     try:
@@ -215,6 +218,7 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             orchestration_service.stream_document_response(
                 chat_id=chat_id,
                 document_id=document_id,
+                model=model,
             )
         )
     except KeyError as error:

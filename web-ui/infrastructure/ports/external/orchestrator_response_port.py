@@ -13,10 +13,12 @@ class OrchestratorDocumentResponseRequest:
     Attributes:
         chat_id (str): The chat that will display the response stream.
         document_id (str): The processed document associated with the stream.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     document_id: str
+    model: str
 
 
 @dataclass(frozen=True)
@@ -30,10 +32,12 @@ class OrchestratorMessageResponseRequest:
     Attributes:
         chat_id (str): The chat that will display the response stream.
         content (str): The original user prompt.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     content: str
+    model: str
 
 
 @dataclass(frozen=True)
@@ -70,11 +74,13 @@ class OrchestratorAnonymizedResponseRequest:
         chat_id (str): The chat that owns the request.
         anonymized_content (str): The anonymized text.
         anonymization_id (str): The privacy-shield session identifier.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     anonymized_content: str
     anonymization_id: str
+    model: str
 
 
 @dataclass(frozen=True)

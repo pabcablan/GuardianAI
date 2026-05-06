@@ -182,6 +182,7 @@ def stream_message_response(
         StreamingResponse: The NDJSON safe response stream.
     """
     content = payload.content.strip()
+    model = payload.model
     user_message = make_message(role="user", content=content)
 
     try:
@@ -190,6 +191,7 @@ def stream_message_response(
             StreamMessageResponseCommand(
                 chat_id=chat_id,
                 content=content,
+                model=model,
             ),
         )
     except ValueError as error:
@@ -277,6 +279,7 @@ def stream_approved_anonymized_response(
             chat_id=chat_id,
             anonymized_content=payload.anonymized_content,
             anonymization_id=payload.anonymization_id,
+            model=payload.model,
         ),
     )
     return build_safe_streaming_response(
@@ -382,12 +385,13 @@ def delete_chat(chat_id: str) -> None:
 
 
 @app.get("/api/chats/{chat_id}/documents/{document_id}/safe-stream")
-def stream_safe_response(chat_id: str, document_id: str):
+def stream_safe_response(chat_id: str, document_id: str, model: str):
     """Stream safe response chunks for a processed document.
 
     Args:
         chat_id (str): The identifier of the target chat.
         document_id (str): The identifier of the processed document.
+        model (str): The AI model selected by the user.
 
     Returns:
         StreamingResponse: The NDJSON safe response stream.
@@ -397,6 +401,7 @@ def stream_safe_response(chat_id: str, document_id: str):
             StreamSafeResponseCommand(
                 chat_id=chat_id,
                 document_id=document_id,
+                model=model,
             ),
         )
     except ValueError as error:

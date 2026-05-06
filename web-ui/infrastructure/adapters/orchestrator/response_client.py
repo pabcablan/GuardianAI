@@ -71,6 +71,7 @@ class HttpOrchestratorResponseClient(
                 "chat_id": request.chat_id,
                 "anonymized_text": request.anonymized_content,
                 "anonymization_id": request.anonymization_id,
+                "model": request.model,
             },
         )
 
@@ -92,6 +93,7 @@ class HttpOrchestratorResponseClient(
             json_payload={
                 "chat_id": request.chat_id,
                 "text": request.content,
+                "model": request.model,
             },
         )
 
@@ -113,6 +115,7 @@ class HttpOrchestratorResponseClient(
             json_payload={
                 "chat_id": request.chat_id,
                 "document_id": request.document_id,
+                "model": request.model,
             },
         )
 

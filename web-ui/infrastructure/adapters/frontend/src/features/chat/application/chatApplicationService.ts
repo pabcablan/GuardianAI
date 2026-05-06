@@ -1,6 +1,7 @@
 import type {
   ChatSummary,
   ChatThread,
+  AiModel,
   DocumentProcessingStatus,
   ModelReadinessStatus,
 } from "../types";
@@ -179,6 +180,7 @@ export class ChatApplicationService {
   async streamMessage(
     chatId: string,
     content: string,
+    model: AiModel,
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt: (content: string) => void,
   ): Promise<void> {
@@ -187,7 +189,7 @@ export class ChatApplicationService {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, model }),
     });
     await this.ensure_success(response);
 
@@ -197,6 +199,7 @@ export class ChatApplicationService {
   async previewMessageAnonymization(
     chatId: string,
     content: string,
+    model: AiModel,
   ): Promise<AnonymizedPreviewResponse> {
     const response = await fetch(
       `${this.apiBaseUrl}/api/chats/${chatId}/messages/anonymize-preview`,
@@ -205,7 +208,7 @@ export class ChatApplicationService {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, model }),
       },
     );
     await this.ensure_success(response);
@@ -232,6 +235,7 @@ export class ChatApplicationService {
     chatId: string,
     anonymizedContent: string,
     anonymizationId: string,
+    model: AiModel,
     onChunk: (chunk: string) => void,
   ): Promise<void> {
     const response = await fetch(
@@ -244,6 +248,7 @@ export class ChatApplicationService {
         body: JSON.stringify({
           anonymized_content: anonymizedContent,
           anonymization_id: anonymizationId,
+          model,
         }),
       },
     );
@@ -327,11 +332,13 @@ export class ChatApplicationService {
   async streamSafeResponse(
     chatId: string,
     documentId: string,
+    model: AiModel,
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
+    const query = new URLSearchParams({ model });
     const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream`,
+      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream?${query.toString()}`,
     );
     await this.ensure_success(response);
 

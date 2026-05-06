@@ -28,12 +28,14 @@ class OrchestrationService:
         self,
         chat_id: str,
         text: str,
+        model: str,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Anonymize a user prompt and stream a safe assistant response.
 
         Args:
             chat_id (str): The chat that owns the request.
             text (str): The user prompt.
+            model (str): The AI model selected by the user.
 
         Returns:
             tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]: The anonymized
@@ -48,6 +50,7 @@ class OrchestrationService:
         anonymized_prompt, events = self.stream_safe_response_for_text(
             chat_id=chat_id,
             text=text,
+            model=model,
             log_prefix="ORCHESTRATOR",
         )
         print(
@@ -105,6 +108,7 @@ class OrchestrationService:
         chat_id: str,
         anonymized_text: str,
         anonymization_id: str,
+        model: str,
     ) -> Iterator[dict[str, Any]]:
         """Generate and restore an answer from already anonymized text.
 
@@ -112,6 +116,7 @@ class OrchestrationService:
             chat_id (str): The chat that owns the request.
             anonymized_text (str): The anonymized text sent to the assistant.
             anonymization_id (str): The privacy-shield session identifier.
+            model (str): The AI model selected by the user.
 
         Returns:
             Iterator[dict[str, Any]]: Safe response stream events.
@@ -119,6 +124,7 @@ class OrchestrationService:
         assistant_chunks = self._collect_ai_gateway_chunks(
             chat_id=chat_id,
             anonymized_prompt=anonymized_text,
+            model=model,
         )
         return self._stream_response_from_anonymized_chunks(
             assistant_chunks=assistant_chunks,
@@ -177,12 +183,14 @@ class OrchestrationService:
         self,
         chat_id: str,
         document_id: str,
+        model: str,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Generate a safe response for a processed document.
 
         Args:
             chat_id (str): The chat that owns the request.
             document_id (str): The processed document identifier.
+            model (str): The AI model selected by the user.
 
         Returns:
             tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]: The anonymized
@@ -191,6 +199,7 @@ class OrchestrationService:
         return self.stream_safe_response_for_text(
             chat_id=chat_id,
             text=self.build_document_text(document_id),
+            model=model,
             log_prefix="ORCHESTRATOR document",
         )
 
@@ -221,6 +230,7 @@ class OrchestrationService:
         self,
         chat_id: str,
         text: str,
+        model: str,
         log_prefix: str,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Run text through privacy-shield, assistant, and restoration.
@@ -228,6 +238,7 @@ class OrchestrationService:
         Args:
             chat_id (str): The chat that owns the request.
             text (str): The original text to protect and answer.
+            model (str): The AI model selected by the user.
             log_prefix (str): The prefix used in diagnostic logs.
 
         Returns:
@@ -249,6 +260,7 @@ class OrchestrationService:
         assistant_chunks = self._collect_ai_gateway_chunks(
             chat_id=chat_id,
             anonymized_prompt=anonymized_prompt.text,
+            model=model,
         )
         print(
             f"{log_prefix} ai-gateway done "
@@ -268,6 +280,7 @@ class OrchestrationService:
         self,
         chat_id: str,
         anonymized_prompt: str,
+        model: str,
     ) -> list[str]:
         """Collect assistant chunks from the configured ai-gateway.
 
@@ -275,6 +288,7 @@ class OrchestrationService:
             chat_id (str): The chat that owns the request.
             anonymized_prompt (str): The anonymized prompt sent to the
                 assistant.
+            model (str): The AI model selected by the user.
 
         Returns:
             list[str]: The anonymized assistant response chunks.
@@ -285,6 +299,7 @@ class OrchestrationService:
                 AssistantStreamRequest(
                     chat_id=chat_id,
                     prompt=anonymized_prompt,
+                    model=model,
                 )
             )
             if chunk

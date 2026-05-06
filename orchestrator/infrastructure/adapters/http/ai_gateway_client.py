@@ -29,7 +29,6 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
         "AI_GATEWAY_BASE_URL",
         "http://127.0.0.1:8005",
     )
-    model: str = os.getenv("AI_GATEWAY_MODEL", "gpt-4.1-mini")
     org_id: str = os.getenv("AI_GATEWAY_ORG_ID", "guardianai")
 
     def stream_response(
@@ -52,6 +51,7 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
                 yield from self._stream_completion(
                     client=client,
                     prompt=request.prompt,
+                    model=request.model,
                 )
         except httpx.RequestError as error:
             raise AiGatewayClientError(
@@ -62,12 +62,14 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
         self,
         client: httpx.Client,
         prompt: str,
+        model: str,
     ) -> Iterator[str]:
         """Stream a completion from ai-gateway.
 
         Args:
             client (httpx.Client): The configured HTTP client.
             prompt (str): The anonymized prompt sent to the model.
+            model (str): The AI model selected by the user.
 
         Yields:
             str: Assistant response chunks.
@@ -79,7 +81,7 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
                     "content": prompt,
                 },
             ],
-            "model": self.model,
+            "model": model,
         }
 
         with client.stream(
