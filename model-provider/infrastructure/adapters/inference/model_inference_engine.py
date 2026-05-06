@@ -1,4 +1,6 @@
+import base64
 import torch
+
 from infrastructure.ports.text_generator import TextGenerator
 from infrastructure.ports.model_repository import ModelRepository
 
@@ -11,7 +13,7 @@ class ModelInferenceEngine(TextGenerator):
             messages = [{"role": "user", "content": prompt}]
 
         if document_base64:
-            messages[0]["content"] += "\n\n[DOCUMENTO ADJUNTO]"
+            messages[0]["content"] += base64.b64decode(document_base64)
             
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text=input_text, return_tensors="pt").to(model.device)
