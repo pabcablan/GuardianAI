@@ -15,7 +15,7 @@ from application.body_params_schemas.anonymize_request import AnonymizeRequest
 from application.usecases.document_deanonymizer.deanonymize_document_stream import DeanonymizeDocumentStream
 from infrastructure.adapters.deanonymization.streaming_deanonymizer import StreamingDeanonymizer
 from application.body_params_schemas.deanonymize_request import DeanonymizeRequest
-
+from application.usecases.document_anonymizer.anonymize_document_optimized import AnonymizeDocumentOptimized
 
 async def main():
     app = FastAPI()
@@ -29,23 +29,22 @@ async def main():
     evaluator_provider = EvaluatorProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
     evaluator = evaluator_provider.get_evaluator(model_alias=MODEL_NAME)
 
-    anonymizer_provider = AnonymizerProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
-    anonymizer = anonymizer_provider.get_anonymizer(model_alias=MODEL_NAME)
+    provider_std = AnonymizerProvider(use_api=True, optimized=False, api_url=MODEL_PROVIDER_URL, client=client)
+    anonymizer_std = provider_std.get_anonymizer(model_alias=MODEL_NAME)
+    
+    provider_opt = AnonymizerProvider(use_api=True, optimized=True, api_url=MODEL_PROVIDER_URL, client=client)
+    anonymizer_opt = provider_opt.get_anonymizer(model_alias=MODEL_NAME)
 
-    anonymize_usecase = AnonymizeDocument(evaluator=evaluator, anonymizer=anonymizer)
+    anonymize_usecase = AnonymizeDocument(evaluator=evaluator, anonymizer=anonymizer_std)
+    anonymize_optimized_usecase = AnonymizeDocumentOptimized(anonymizer=anonymizer_opt)
 
     @app.post("/anonymize")
     async def anonymize_route(request: AnonymizeRequest):
-        result = await anonymize_usecase.execute(request.text)
-        replacements = getattr(anonymizer, "last_replacements", {})
-        anonymization_id = str(uuid.uuid4())
-        anonymization_sessions[anonymization_id] = dict(replacements)
-        return {
-            "anonymized_text": result["anonymized_text"],
-            "anonymization_id": anonymization_id,
-            "replacements": replacements,
-            "replacement_count": len(replacements),
-        }
+        return await anonymize_usecase.execute(request.text)
+    
+    @app.post("/anonymize/optimized")
+    async def anonymize_optimized_route(request: AnonymizeRequest):
+        return await anonymize_optimized_usecase.execute(request.text)
 
     @app.post("/deanonymize/stream")
     async def deanonymize_route(request: DeanonymizeRequest):
