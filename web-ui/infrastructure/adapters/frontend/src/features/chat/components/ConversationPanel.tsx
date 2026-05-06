@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
   ChatMessage,
@@ -48,7 +48,26 @@ export function ConversationPanel({
   onSubmit,
 }: ConversationPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const lastMessage = chat?.messages[chat.messages.length - 1];
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [
+    chat?.id,
+    chat?.messages.length,
+    lastMessage?.content,
+    lastMessage?.anonymizedContent,
+    lastMessage?.pendingApproval,
+    documentProcessingStatus?.message,
+    documentProcessingStatus?.progress,
+    responseProcessingStatus?.message,
+    isResponding,
+  ]);
 
   function handleDragOver(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
@@ -91,64 +110,68 @@ export function ConversationPanel({
           </section>
         ) : null}
 
-        {documentProcessingStatus ? (
-          <section className="processing-card" aria-live="polite" aria-atomic="true">
-            <div className="processing-card__header">
-              <div>
-                <p className="processing-card__eyebrow">Procesando documento</p>
-                <h2 className="processing-card__title">{documentProcessingStatus.filename}</h2>
-              </div>
-              <span className="processing-card__stage">{documentProcessingStatus.stage}</span>
-            </div>
-            <p className="processing-card__message">{documentProcessingStatus.message}</p>
-            <div
-              className={`processing-card__bar ${documentProcessingStatus.progress === null ? "processing-card__bar--indeterminate" : ""}`.trim()}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={
-                documentProcessingStatus.progress === null
-                  ? undefined
-                  : Math.round(documentProcessingStatus.progress * 100)
-              }
-            >
-              <span
-                className="processing-card__bar-fill"
-                style={
-                  documentProcessingStatus.progress === null
-                    ? undefined
-                    : { width: `${Math.max(8, documentProcessingStatus.progress * 100)}%` }
-                }
-              />
-            </div>
-            <p className="processing-card__meta">
-              {documentProcessingStatus.progress === null
-                ? "Esperando actualizaciones del backend..."
-                : `${documentProcessingStatus.current} de ${documentProcessingStatus.total}`}
-            </p>
-          </section>
-        ) : null}
+        {documentProcessingStatus || responseProcessingStatus ? (
+          <div className="conversation__progress-stack">
+            {documentProcessingStatus ? (
+              <section className="processing-card" aria-live="polite" aria-atomic="true">
+                <div className="processing-card__header">
+                  <div>
+                    <p className="processing-card__eyebrow">Procesando documento</p>
+                    <h2 className="processing-card__title">{documentProcessingStatus.filename}</h2>
+                  </div>
+                  <span className="processing-card__stage">{documentProcessingStatus.stage}</span>
+                </div>
+                <p className="processing-card__message">{documentProcessingStatus.message}</p>
+                <div
+                  className={`processing-card__bar ${documentProcessingStatus.progress === null ? "processing-card__bar--indeterminate" : ""}`.trim()}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={
+                    documentProcessingStatus.progress === null
+                      ? undefined
+                      : Math.round(documentProcessingStatus.progress * 100)
+                  }
+                >
+                  <span
+                    className="processing-card__bar-fill"
+                    style={
+                      documentProcessingStatus.progress === null
+                        ? undefined
+                        : { width: `${Math.max(8, documentProcessingStatus.progress * 100)}%` }
+                    }
+                  />
+                </div>
+                <p className="processing-card__meta">
+                  {documentProcessingStatus.progress === null
+                    ? "Esperando actualizaciones del backend..."
+                    : `${documentProcessingStatus.current} de ${documentProcessingStatus.total}`}
+                </p>
+              </section>
+            ) : null}
 
-        {responseProcessingStatus ? (
-          <section className="processing-card" aria-live="polite" aria-atomic="true">
-            <div className="processing-card__header">
-              <div>
-                <p className="processing-card__eyebrow">Protegiendo contenido</p>
-                <h2 className="processing-card__title">{responseProcessingStatus.title}</h2>
-              </div>
-              <span className="processing-card__stage">{responseProcessingStatus.stage}</span>
-            </div>
-            <p className="processing-card__message">{responseProcessingStatus.message}</p>
-            <div
-              className="processing-card__bar processing-card__bar--indeterminate"
-              role="progressbar"
-            >
-              <span className="processing-card__bar-fill" />
-            </div>
-            <p className="processing-card__meta">
-              Esperando los primeros fragmentos de la respuesta segura...
-            </p>
-          </section>
+            {responseProcessingStatus ? (
+              <section className="processing-card" aria-live="polite" aria-atomic="true">
+                <div className="processing-card__header">
+                  <div>
+                    <p className="processing-card__eyebrow">Protegiendo contenido</p>
+                    <h2 className="processing-card__title">{responseProcessingStatus.title}</h2>
+                  </div>
+                  <span className="processing-card__stage">{responseProcessingStatus.stage}</span>
+                </div>
+                <p className="processing-card__message">{responseProcessingStatus.message}</p>
+                <div
+                  className="processing-card__bar processing-card__bar--indeterminate"
+                  role="progressbar"
+                >
+                  <span className="processing-card__bar-fill" />
+                </div>
+                <p className="processing-card__meta">
+                  Esperando los primeros fragmentos de la respuesta segura...
+                </p>
+              </section>
+            ) : null}
+          </div>
         ) : null}
 
         {errorMessage ? (
@@ -209,6 +232,7 @@ export function ConversationPanel({
             </p>
           </div>
         )}
+        <div ref={messageEndRef} className="conversation__scroll-anchor" />
       </div>
 
       <footer className="composer">

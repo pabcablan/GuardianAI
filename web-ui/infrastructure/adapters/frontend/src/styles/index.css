@@ -575,12 +575,35 @@ input {
 }
 
 .conversation__canvas {
+  position: static;
   display: flex;
   flex-direction: column;
   gap: 32px;
   min-height: 0;
   overflow: auto;
   padding: 12px 24px 28px 0;
+  scroll-behavior: smooth;
+  scroll-padding-bottom: 28px;
+}
+
+.conversation__progress-stack {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 24px;
+  z-index: 4;
+  display: grid;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.conversation__progress-stack .processing-card {
+  pointer-events: auto;
+}
+
+.conversation__scroll-anchor {
+  flex: 0 0 1px;
+  width: 100%;
 }
 
 .conversation__welcome {
@@ -759,6 +782,7 @@ input {
 }
 
 .model-readiness-card {
+  position: absolute;
   display: grid;
   gap: 10px;
   max-width: min(620px, 100%);
