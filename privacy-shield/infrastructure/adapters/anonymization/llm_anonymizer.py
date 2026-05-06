@@ -19,7 +19,7 @@ class LlmAnonymizer(Anonymizer):
         self.tokenizer = tokenizer
         self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
     
-    async def anonymize(self, text: str) -> str:
+    async def anonymize(self, text: str) -> dict:
         """
         Anonymizes the input text by extracting sensitive information using a language model and replacing it with placeholders.
 
@@ -27,13 +27,13 @@ class LlmAnonymizer(Anonymizer):
             text (str): The input text to be anonymized.
         
         Returns:
-            str: The anonymized text with sensitive information replaced by placeholders.
+            dict: The anonymized version of the input text with the anonymized fields.
         """
 
 
         return await run_in_threadpool(None, self._run_anonymization, text)
     
-    def _run_anonymization(self, text: str) -> str:
+    def _run_anonymization(self, text: str) -> dict:
         message = [
             {
                 "role": "user",
@@ -54,4 +54,5 @@ class LlmAnonymizer(Anonymizer):
         generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
         extracted_entities = extract_json_safely(generated_text)
 
-        return redact_text(text, extracted_entities)
+        anonymized_text, mapping = redact_text(text, extracted_entities)
+        return {"anonymized_text": anonymized_text, "replacements": mapping}

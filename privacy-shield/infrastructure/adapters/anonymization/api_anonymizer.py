@@ -18,7 +18,7 @@ class ApiAnonymizer(Anonymizer):
         self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
         self.client = client or httpx.AsyncClient()
 
-    async def anonymize(self, text: str) -> str:
+    async def anonymize(self, text: str) -> dict:
         """
         Anonymizes the input text by sending it to an external API for processing and then redacting the sensitive information based on the API response.
 
@@ -26,7 +26,7 @@ class ApiAnonymizer(Anonymizer):
             text (str): The input text to be anonymized.
 
         Returns:
-            str: The anonymized text.
+            dict: The anonymized version of the input text with the anonymized fields.
         """
         body = {
             "model_name": self.model_name,
@@ -42,6 +42,6 @@ class ApiAnonymizer(Anonymizer):
 
         extracted_entities = extract_json_safely(generated_text)
 
-        anonymized_text, _ = redact_text(text, extracted_entities)
+        anonymized_text, mapping = redact_text(text, extracted_entities)
 
-        return anonymized_text
+        return {"anonymized_text": anonymized_text, "replacements": mapping}
