@@ -1,0 +1,450 @@
+[33mcommit a0c23a84f823095254cc09b22755d33232eccdb4[m[33m ([m[1;36mHEAD -> [m[1;32mfeature/orchestrator[m[33m, [m[1;31mGuardianAi/feature/orchestrator[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed May 6 11:18:26 2026 +0100
+
+    feat: added model selector
+
+[33mcommit 107170876d3c659e8e9b6edb0576ba2e41272128[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed May 6 09:59:36 2026 +0100
+
+    refactor: ui update
+
+[33mcommit 828141e4116b27dd059e9710828ffe2b1f3de439[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed May 6 09:46:27 2026 +0100
+
+    refactor: refactor in web-ui and orchestrator modules
+
+[33mcommit 3041fd0e864c15ce2cdf34b769944d907f1ee897[m[33m ([m[1;31mGuardianAi/feature/bd[m[33m, [m[1;32mfeature/bd[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed May 6 09:09:13 2026 +0100
+
+    feat: add document anonimyzed preview
+
+[33mcommit a15f4285bcbe24d92adf660a16ab5585fb3fa79a[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 18:24:48 2026 +0100
+
+    feat: added Mongo DB
+
+[33mcommit 5f76f6f3f10b48a1650ad4cfa54072ba3b717d45[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 17:52:41 2026 +0100
+
+    feat: All modules connected
+
+[33mcommit 77be5a1e2e7b63cccd12651d7ddcae074b6d2b16[m
+Merge: 4461d01 1985a8e
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 17:52:31 2026 +0100
+
+    Merge remote-tracking branch 'GuardianAi/sandbox/privacy-shield_all' into feature/orchestrator
+
+[33mcommit 4461d011042d6349aee1f96e92823995ca123c38[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 15:51:34 2026 +0100
+
+    refactor: docker settings
+
+[33mcommit 1985a8e57fbf8552d6028782a1c2e4e1236abbab[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue May 5 15:13:05 2026 +0100
+
+    fix: new model-provider with neccesary changes for privacy-shield, need optimization and correction on document_base64
+
+[33mcommit 9474ac059ab600855f69c687edfabd8c0f44738c[m
+Merge: 3127739 30e4da5
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue May 5 14:14:48 2026 +0100
+
+    Merge branch 'feature/model-provider_moderl-loader' into sandbox/privacy-shield_all
+
+[33mcommit 31277399fdc232e46f7289c7ff3ad61a8e7ac8fe[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue May 5 13:55:47 2026 +0100
+
+    feat: asynchronous petitions and new implementation using model-loader module
+
+[33mcommit 208d18b047ef500792d8d69a2000425d26a04768[m
+Merge: d1e8f5a 750eba8
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 12:00:02 2026 +0100
+
+    Merge branch 'feature/document_processor/refactoring' into feature/orchestrator
+
+[33mcommit 750eba8eb968c802ebf4f382c5a50cc691bfc0e8[m[33m ([m[1;31mGuardianAi/feature/document_processor/refactoring[m[33m, [m[1;32mfeature/document_processor/refactoring[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:59:50 2026 +0100
+
+    feat: added async fallback
+
+[33mcommit d1e8f5ac56c48b10b34be7c3dd40eeaf8039623f[m
+Merge: 15df5c2 0ef68c0
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:55:02 2026 +0100
+
+    Merge branch 'feature/document_processor/refactoring' into feature/orchestrator
+
+[33mcommit 0ef68c06d70d70695f9d0b18db55adc24ce5c970[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:54:35 2026 +0100
+
+    refactor: add async functions
+
+[33mcommit 15df5c2c2c28e4a43afdda65a67112245cbe95d6[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:42:23 2026 +0100
+
+    reafactor: Application unified
+
+[33mcommit af43f01adeb073a1f505b0e4c30852b16378fa0c[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:29:06 2026 +0100
+
+    feat: app adapted
+
+[33mcommit 017335460a2ca414708caa94bd8605532a80a822[m
+Merge: 4308345 30e4da5
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:07:50 2026 +0100
+
+    Merge branch 'feature/model-provider_moderl-loader' into feature/orchestrator
+
+[33mcommit 43083459471f656f03d5e9eba5f3d3b2d9506d39[m
+Merge: 48773a1 352e8af
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 11:04:39 2026 +0100
+
+    Merge branch 'feature/document_processor/refactoring' into feature/orchestrator
+
+[33mcommit 48773a16878e0dab43eb7b1627739d6bbd122229[m
+Merge: 6af27ae 5aa06e8
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 10:56:15 2026 +0100
+
+    Merge branch 'ai-gateway' into feature/orchestrator
+
+[33mcommit 5aa06e81f0fc77942bcbfd73739c809385686eb2[m[33m ([m[1;31mGuardianAi/ai-gateway[m[33m, [m[1;32mai-gateway[m[33m)[m
+Author: Joel <joelojsan@gmail.com>
+Date:   Tue May 5 10:51:29 2026 +0100
+
+    feat: changed prompt and added needed async
+
+[33mcommit 6af27ae039ed7acb0dba66317c54716270aae8ed[m[33m ([m[1;31mGuardianAi/feature/docker[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 09:57:00 2026 +0100
+
+    feat: added docker
+
+[33mcommit 3641bb0533581fa54804ed5bfd71b87ea3e4090e[m
+Author: Joel <joelojsan@gmail.com>
+Date:   Tue May 5 09:17:24 2026 +0100
+
+    feature: async added
+
+[33mcommit 7664e7df0e5706369def1608413380ae1ff6272f[m[33m ([m[1;32mfeature/model-provider-vlm[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue May 5 08:51:28 2026 +0100
+
+    refactor: code added in document-extractor and privacy-shield
+
+[33mcommit 352e8af14b8b9063c9525725385a6fb420f16047[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Mon May 4 14:02:07 2026 +0200
+
+    refactor(docstrings): add docstrings to some files and their functions, delete extraction_progress since it's not used
+
+[33mcommit b1bf23c24382f5aaf229071e6751ccdb7a8ac6a4[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Mon May 4 13:32:51 2026 +0200
+
+    refactor(async): delete async function from text_extraction adapters, except llm extraction
+
+[33mcommit 30e4da5801f779ae2626e83d8337c60dd80295e0[m[33m ([m[1;32mfeature/model-provider_moderl-loader[m[33m)[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Mon May 4 12:21:59 2026 +0100
+
+    feat: asyncronous petitions handled and inference_mode for optimization
+
+[33mcommit 4b1acb4e8b1749e32225d2c84146a245d09fbd70[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Mon May 4 12:42:48 2026 +0200
+
+    feat(pymupdf): add pymupdf4llm text extraction
+
+[33mcommit 44e9568436e95e72716ee4e179e1624e5be010e7[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Mon May 4 11:13:39 2026 +0100
+
+    feat: added vlm-option to the model
+
+[33mcommit 0be2ec561ff386b2cb6687094acdf831109667a3[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Mon May 4 10:40:59 2026 +0100
+
+    feat: added document model
+
+[33mcommit fc96279bbe5586d61a582906d138cac850fc1c70[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Mon May 4 09:41:49 2026 +0100
+
+    refactor: Code refactor in document-extractor
+
+[33mcommit f80c88fcd36f6971ea1a663e841fcc9dc0d61abd[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Mon May 4 10:31:21 2026 +0200
+
+    feat(llm): send pdf in bytes64 to llm
+
+[33mcommit c8753100f42664de701900db525cadc61388c637[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Fri May 1 16:20:06 2026 +0100
+
+    feat: Ai-gateway integration
+
+[33mcommit c086d8924b74985508e5f70a2fcd6646afff8c02[m
+Merge: 2422339 010f4c9
+Author: Saul <exmosaul@gmail.com>
+Date:   Fri May 1 16:19:46 2026 +0100
+
+    Merge branch 'ai-gateway' into develop
+
+[33mcommit 242233975b3d21b3a282cfc331a0449b294b5347[m[33m ([m[1;32msandbox/shield-ui-document-orchestrator[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Fri May 1 15:53:18 2026 +0100
+
+    feat: Integration model_provider
+
+[33mcommit 527de26c59b40d3bea4668b6b61898727461e7f8[m
+Merge: 94be527 3272932
+Author: Saul <exmosaul@gmail.com>
+Date:   Fri May 1 15:25:56 2026 +0100
+
+    Merge branch 'feature/model-provider_moderl-loader' into sandbox/shield-ui-document-orchestrator
+
+[33mcommit 94be5277c34f0a71da6cd1d35e68e48abc02621a[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Fri May 1 10:23:23 2026 +0100
+
+    refactor: orchestrator adaptar in the web-ui
+
+[33mcommit cf6f0b3da9645f91a339b3f973f9c46279a428cb[m[33m ([m[1;31mGuardianAi/sandbox/shield-ui-document-orchestrator[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 30 14:03:56 2026 +0100
+
+    feat: added httpx to the project
+
+[33mcommit 32729328c9882d7ea9a7fd3648fb35d9610f236f[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Thu Apr 30 13:25:37 2026 +0100
+
+    feat(model_loader): new module for load models and chat with them in a server via API and hexagonal arquitecture
+
+[33mcommit 010f4c9477cdd84d937da1b0108894ae731c97aa[m
+Author: Joel <joelojsan@gmail.com>
+Date:   Thu Apr 30 12:54:45 2026 +0100
+
+    ai-module MVP done
+
+[33mcommit 363c1cc997dfebe1c7fcaff199f2f82f08fb9b02[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 30 12:18:54 2026 +0100
+
+    feat: added script to initialize the proyect
+
+[33mcommit d661bb07c924a85bac274624ee95e79dc55d06ad[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 30 12:10:53 2026 +0100
+
+    feat: Combination of every module except api-gateway
+
+[33mcommit 5ac4917e8925d5120513b92881e6deb369d707d9[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Thu Apr 30 12:42:41 2026 +0200
+
+    fix(markitdown): fix markitdown bytes to bytesio, and creation of domain objects
+
+[33mcommit 835ae890b4a33dcbef21154828e1e435a192e884[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Wed Apr 29 14:38:09 2026 +0200
+
+    feat(fallback): add fallback for text extraction
+
+[33mcommit 19e574e669c7a704dbaa95d46f594b4ba20cc1a7[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Wed Apr 29 14:18:46 2026 +0200
+
+    refactor(all): create new ports (parse and extraction), adapters (fastapi, markitdown, llm), change usecase and main, main now has the endpoint
+
+[33mcommit b76b40915db3aae354c758f469a88d41bbf482fe[m[33m ([m[1;31mGuardianAi/sandbox/shield-ui-orchestrator[m[33m, [m[1;32msandbox/shield-ui-orchestrator[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 29 12:37:42 2026 +0100
+
+    feat: added orchestrator and connected with ui and privacy-shield
+
+[33mcommit 296eb8b911bc89b4a1fbfdba349651e9a144b564[m[33m ([m[1;31mGuardianAi/sandbox/privacy-shield-ui[m[33m, [m[1;32msandbox/privacy-shield-ui[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 29 11:29:56 2026 +0100
+
+    feat: ui-privacy-shield union
+
+[33mcommit 52056bdbb06d60cf6520d5423c424d30d8def533[m
+Merge: d70b8c0 4b56e02
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 29 11:29:26 2026 +0100
+
+    Merge branch 'feature/privacy-shield-deanonymizer' into sandbox/privacy-shield-ui
+
+[33mcommit d70b8c08cd19f5da99d19b2396e34d9f101a63ae[m
+Merge: d086cb0 0140f43
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 29 10:50:34 2026 +0100
+
+    Merge branch 'feature/document_processor_ui' into sandbox/privacy-shield-ui
+
+[33mcommit d086cb0c061f27f0f27778696a1159c5ee8a3b31[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Wed Apr 29 10:27:06 2026 +0100
+
+    feat: API REST implemented and use case with hexagonal architecture
+
+[33mcommit 0140f439dc790586f7b8ddab0624255541fcb5b1[m[33m ([m[1;31mGuardianAi/feature/document_processor_ui[m[33m, [m[1;32mfeature/document_processor_ui[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 29 10:03:31 2026 +0100
+
+    feat: Edit and remove chat
+
+[33mcommit e516b14f58dc1a5accfa74d6082801e61e41a25a[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Tue Apr 28 13:54:31 2026 +0200
+
+    refactor(main): add main, next steps: delete app and mix with usecase, delete dependencies, add ports
+
+[33mcommit 97477d4ed5c6aeea35c479fd1834e34916e6efbe[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue Apr 28 11:27:26 2026 +0100
+
+    feat: functional main with a version, needs use case
+
+[33mcommit 70dd4687755f4268ade1d7a66786ab9934dc2c55[m
+Merge: 6eccf4b 01c4382
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue Apr 28 11:03:07 2026 +0100
+
+    Merge branch 'feature/privacy-shield-anonimyze_text' into sandbox/privacy-shield_all
+
+[33mcommit 95d3aa4856ad5d700f7c4e336d0c4e626053032f[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 28 11:01:15 2026 +0100
+
+    feat: Created conection with privacy_shield module
+
+[33mcommit 6eccf4b67da9bf696894cd10f39aa0957619b247[m
+Merge: ee84e4c f8b5f6a
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue Apr 28 11:00:17 2026 +0100
+
+    Merge branch 'feature/privacy-shield-anonimyze_confirmation' into sandbox/privacy-shield_all
+
+[33mcommit d3da313b625f567ba1a830ee571f392da066911e[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 28 10:29:00 2026 +0100
+
+    feat: Added stream responses
+
+[33mcommit 01c4382f952afbe11bd2d47b657b46a846771d28[m[33m ([m[1;31mGuardianAi/feature/privacy-shield-anonimyze_text[m[33m)[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue Apr 28 10:02:23 2026 +0100
+
+    feat: anonymize text with LLM an Hexagonal Arquitecture
+
+[33mcommit 2eb76c874ddcba2a509ba4f15ba23b83a1cf9d65[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Tue Apr 28 11:01:07 2026 +0200
+
+    refactor(domain): make a file for each domain class, delete 'is_pdf' function from domain (should be at a higher level)
+
+[33mcommit 4b56e028cfc0d33af56ad395010861b047d3e6c7[m[33m ([m[1;31mGuardianAi/feature/privacy-shield-deanonymizer[m[33m, [m[1;32mfeature/privacy-shield-deanonymizer[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 28 09:30:45 2026 +0100
+
+    feat: Added deanonimyzer
+
+[33mcommit f8b5f6a0b5f011ad8ad7acf20c0576746464bd43[m[33m ([m[1;31mGuardianAi/feature/privacy-shield-anonimyze_confirmation[m[33m)[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Tue Apr 28 09:03:13 2026 +0100
+
+    fix: specification of text param on tokenizer after tryouts for errors corrections
+
+[33mcommit efe7b4039216d5d7b544985bbea6e8bca7527d2e[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 28 08:40:44 2026 +0100
+
+    Refactor: Added docstrings
+
+[33mcommit 1842965f85445255fce21268da7fb359b63a1f62[m
+Author: juand4569 <juand24601@gmail.com>
+Date:   Mon Apr 27 14:44:13 2026 +0200
+
+    refactor(all): start refactoring all, add TODOs and a config file
+
+[33mcommit b17a6fa819bc86b6050a0052e300850d7fd7a464[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Mon Apr 27 13:29:32 2026 +0100
+
+    feat: Qwen Implementation for Anonymization Classifier, system prompts and utils with Hexagonal Architecture
+
+[33mcommit ee84e4c8e544859009d283272b42d8498a0981de[m[33m ([m[1;31mGuardianAi/feature/privacy-shield-model_loader[m[33m)[m
+Author: Pablo <pabcablan2005@gmail.com>
+Date:   Mon Apr 27 12:19:47 2026 +0100
+
+    feat: model loader for Unsloth and Transformers Libraries implemented with Hexagonal Architecture
+
+[33mcommit cda2e8e4d1ee60e37a7aceb84233bb37ac83873e[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 23 10:24:52 2026 +0100
+
+    Refactor: changes removing old code
+
+[33mcommit 3f67b18f5a72bf8db216c1113450b4b7c70d1cbc[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 23 09:50:58 2026 +0100
+
+    feat: progress indicators in the ui
+
+[33mcommit ed05bc04ed7b66267601afca3b2e9f9b5aebceea[m[33m ([m[1;31mGuardianAi/feature/document_processor_module[m[33m, [m[1;32mfeature/document_processor_module[m[33m)[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Thu Apr 23 09:04:58 2026 +0100
+
+    feat: Added text extraction with pdf plumber
+
+[33mcommit 958869d90ed005c7d054a4081fc16cc05482c221[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Wed Apr 22 09:40:53 2026 +0100
+
+    feat: Added text extraction module
+
+[33mcommit f7bae4270b4d06a4079f9663e90b3b924e0f0f19[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 21 12:41:56 2026 +0100
+
+    feat: Web module almost done
+
+[33mcommit 7e59376fdccf691da9ef33d595a07d56dc23d7c2[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 21 09:35:00 2026 +0100
+
+    refactor: Change in the folders tree
+
+[33mcommit 18e9d8172333227f9b1ede3968ceb30b53462c06[m
+Author: Saul <exmosaul@gmail.com>
+Date:   Tue Apr 21 09:31:53 2026 +0100
+
+    refactor: Application modules created
+
+[33mcommit dfc36d643f1159cc6389963233814543899ccbb7[m[33m ([m[1;31mGuardianAi/master[m[33m, [m[1;31mGuardianAi/develop[m[33m, [m[1;32mmaster[m[33m, [m[1;32mdevelop[m[33m)[m
+Author: Joel <joelojsan@gmail.com>
+Date:   Thu Apr 16 11:40:03 2026 +0100
+
+    first commit

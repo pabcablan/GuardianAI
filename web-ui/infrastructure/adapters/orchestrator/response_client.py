@@ -42,6 +42,7 @@ class HttpOrchestratorResponseClient(
             payload={
                 "chat_id": request.chat_id,
                 "text": request.content,
+                "model": request.model,
             },
         )
         return self._parse_preview_payload(payload)

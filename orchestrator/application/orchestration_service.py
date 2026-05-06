@@ -23,6 +23,7 @@ class OrchestrationService:
         """
         self._container = container
         self._processed_documents: dict[str, ProcessedDocumentContext] = {}
+        self._anonymization_replacements: dict[str, dict[str, str]] = {}
 
     def stream_message_response(
         self,
@@ -74,10 +75,12 @@ class OrchestrationService:
         Returns:
             AnonymizedPrompt: The anonymized text metadata.
         """
-        return self._container.privacy_shield.anonymize(
+        anonymized_prompt = self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
         )
+        self._store_replacements(anonymized_prompt)
+        return anonymized_prompt
 
     def preview_document_anonymization(
         self,
@@ -98,10 +101,12 @@ class OrchestrationService:
             ValueError: If the stored document has no usable text.
         """
         text = self.build_document_text(document_id)
-        return self._container.privacy_shield.anonymize(
+        anonymized_prompt = self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
         )
+        self._store_replacements(anonymized_prompt)
+        return anonymized_prompt
 
     def stream_anonymized_response(
         self,
@@ -128,7 +133,7 @@ class OrchestrationService:
         )
         return self._stream_response_from_anonymized_chunks(
             assistant_chunks=assistant_chunks,
-            anonymization_id=anonymization_id,
+            replacements=self._get_replacements(anonymization_id),
         )
 
     def stream_extract_document(
@@ -250,6 +255,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
+        self._store_replacements(anonymized_prompt)
         print(
             f"{log_prefix} anonymize done "
             f"elapsed={time.perf_counter() - started_at:.3f}s "
@@ -272,7 +278,7 @@ class OrchestrationService:
             anonymized_prompt,
             self._stream_response_from_anonymized_chunks(
                 assistant_chunks=assistant_chunks,
-                anonymization_id=anonymized_prompt.anonymization_id,
+                replacements=anonymized_prompt.replacements,
             ),
         )
 
@@ -308,21 +314,49 @@ class OrchestrationService:
     def _stream_response_from_anonymized_chunks(
         self,
         assistant_chunks: list[str],
-        anonymization_id: str,
+        replacements: dict[str, str],
     ) -> Iterator[dict[str, Any]]:
         """Restore assistant chunks through privacy-shield.
 
         Args:
             assistant_chunks (list[str]): The anonymized assistant chunks.
-            anonymization_id (str): The privacy-shield session identifier.
+            replacements (dict[str, str]): The replacement mappings for
+                deanonymization.
 
         Returns:
             Iterator[dict[str, Any]]: Safe response stream events.
         """
         return self._container.privacy_shield.deanonymize_stream(
             chunks=assistant_chunks,
-            anonymization_id=anonymization_id,
+            replacements=replacements,
         )
+
+    def _store_replacements(self, anonymized_prompt: AnonymizedPrompt) -> None:
+        """Store replacements returned by privacy-shield for later restore.
+
+        Args:
+            anonymized_prompt (AnonymizedPrompt): The anonymization result.
+        """
+        self._anonymization_replacements[
+            anonymized_prompt.anonymization_id
+        ] = dict(anonymized_prompt.replacements)
+
+    def _get_replacements(self, anonymization_id: str) -> dict[str, str]:
+        """Return stored replacements for an anonymization session.
+
+        Args:
+            anonymization_id (str): The anonymization session identifier.
+
+        Returns:
+            dict[str, str]: The replacement mappings.
+
+        Raises:
+            ValueError: If the anonymization session is unknown.
+        """
+        try:
+            return self._anonymization_replacements[anonymization_id]
+        except KeyError as error:
+            raise ValueError("Unknown anonymization id.") from error
 
     def _build_document_prompt(
         self,

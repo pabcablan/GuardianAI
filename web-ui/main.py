@@ -240,6 +240,7 @@ def preview_message_anonymization(
             OrchestratorAnonymizationPreviewRequest(
                 chat_id=chat_id,
                 content=content,
+                model=payload.model,
             ),
         )
         container.chat_repository.update_message_anonymized_content(

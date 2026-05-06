@@ -47,10 +47,12 @@ class OrchestratorAnonymizationPreviewRequest:
     Attributes:
         chat_id (str): The chat that owns the text.
         content (str): The text to anonymize.
+        model (str): The AI model selected by the user.
     """
 
     chat_id: str
     content: str
+    model: str
 
 
 @dataclass(frozen=True)

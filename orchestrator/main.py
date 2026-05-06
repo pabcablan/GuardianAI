@@ -160,6 +160,11 @@ def stream_anonymized_response(
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise _bad_gateway(error) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
 
     return _build_streaming_response(events)
 

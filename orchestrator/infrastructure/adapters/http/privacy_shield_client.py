@@ -47,8 +47,16 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             "text": text,
         }
         response = self._post_json("/anonymize", payload)
+        replacements = response.get("replacements", {})
+        if not isinstance(replacements, dict):
+            replacements = {}
+
         return AnonymizedPrompt(
-            text=str(response["anonymized_text"]),
+            text=str(response.get("anonymized_text", "")),
+            replacements={
+                str(key): str(value)
+                for key, value in replacements.items()
+            },
             anonymization_id=str(response["anonymization_id"]),
             replacement_count=int(response.get("replacement_count", 0)),
         )
@@ -56,20 +64,21 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
     def deanonymize_stream(
         self,
         chunks: list[str],
-        anonymization_id: str,
+        replacements: dict[str, str],
     ) -> Iterator[dict[str, Any]]:
         """Stream deanonymized chunks through privacy-shield.
 
         Args:
             chunks (list[str]): The anonymized assistant response chunks.
-            anonymization_id (str): The privacy-shield session identifier.
+            replacements (dict[str, str]): The replacements for
+                deanonymization.
 
         Returns:
             Iterator[dict[str, Any]]: NDJSON events emitted by privacy-shield.
         """
         payload = {
             "chunks": chunks,
-            "anonymization_id": anonymization_id,
+            "replacements": replacements,
         }
 
         try:

@@ -12,11 +12,14 @@ class AnonymizedPrompt:
 
     Attributes:
         text (str): The anonymized prompt.
+        replacements (dict[str, str]): The replacement mappings used to
+            deanonymize later.
         anonymization_id (str): The privacy-shield session identifier.
         replacement_count (int): The number of stored replacements.
     """
 
     text: str
+    replacements: dict[str, str]
     anonymization_id: str
     replacement_count: int = 0
 
@@ -38,13 +41,13 @@ class PrivacyShieldPort(Protocol):
     def deanonymize_stream(
         self,
         chunks: list[str],
-        anonymization_id: str,
+        replacements: dict[str, str],
     ) -> Iterator[dict[str, Any]]:
         """Stream deanonymized chunks through privacy-shield.
 
         Args:
             chunks (list[str]): The anonymized assistant response chunks.
-            anonymization_id (str): The privacy-shield session identifier.
+            replacements (dict[str, str]): The replacements for deanonymization.
 
         Returns:
             Iterator[dict[str, Any]]: Safe stream events emitted by
