@@ -36,6 +36,7 @@ export function ChatWorkspace() {
     renameChat,
     deleteChat,
     sendMessage,
+    approveAnonymizedMessage,
   } = useChatWorkspace();
   const [draft, setDraft] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -66,7 +67,11 @@ export function ChatWorkspace() {
   }
 
   async function handleSubmit() {
-    const didSend = await sendMessage(draft, pendingFile);
+    const didSend = await sendMessage(
+      draft,
+      pendingFile,
+      shouldPreviewAnonymizedText,
+    );
     if (!didSend) {
       return;
     }
@@ -116,6 +121,9 @@ export function ChatWorkspace() {
           onPreviewAnonymizedTextChange={setShouldPreviewAnonymizedText}
           onFileSelect={handleFileSelect}
           onClearFile={() => setPendingFile(null)}
+          onApproveAnonymizedMessage={(message) => {
+            void approveAnonymizedMessage(message);
+          }}
           onSubmit={() => {
             void handleSubmit();
           }}

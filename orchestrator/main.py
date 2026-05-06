@@ -2,110 +2,34 @@
 from __future__ import annotations
 
 import json
-import os
-import time
 from collections.abc import Iterator
-from dataclasses import dataclass
 from typing import Any
 
-from infrastructure.adapters.fake_assistant_stream_gateway import (
-    FakeAssistantStreamGateway,
-)
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
-from infrastructure.adapters.http.ai_gateway_client import (
-    AiGatewayClientError,
-    HttpAiGatewayClient,
+from application.orchestration_service import OrchestrationService
+from infrastructure.adapters.api.schemas import (
+    AnonymizedStreamRequest,
+    DocumentPreviewRequest,
+    MessageStreamRequest,
 )
-from infrastructure.adapters.http.privacy_shield_client import (
-    HttpPrivacyShieldClient,
-    PrivacyShieldClientError,
-)
+from infrastructure.adapters.http.ai_gateway_client import AiGatewayClientError
 from infrastructure.adapters.http.document_processor_client import (
     DocumentProcessorClientError,
-    HttpDocumentProcessingClient,
 )
-from infrastructure.ports.ai_gateway_port import (
-    AiGatewayPort,
-    AssistantStreamRequest,
+from infrastructure.adapters.http.privacy_shield_client import (
+    PrivacyShieldClientError,
 )
-from infrastructure.ports.document_processor_port import (
-    DocumentProcessorPort,
-    DocumentUploadRequest,
-)
-from infrastructure.ports.privacy_shield_port import (
-    AnonymizedPrompt,
-    PrivacyShieldPort,
-)
+from infrastructure.dependency_container import build_container
+from infrastructure.ports.privacy_shield_port import AnonymizedPrompt
 
 
-class MessageStreamRequest(BaseModel):
-    """Represent a prompt stream request from web-ui.
-
-    Attributes:
-        chat_id (str): The chat that will display the response.
-        text (str): The original user prompt.
-    """
-
-    chat_id: str = Field(min_length=1)
-    text: str = Field(min_length=1)
-
-
-@dataclass(frozen=True)
-class OrchestratorContainer:
-    """Group the orchestrator dependencies.
-
-    Attributes:
-        privacy_shield (PrivacyShieldPort): The privacy-shield client.
-        document_processor (DocumentProcessorPort): The document processor
-            client.
-        ai_gateway (AiGatewayPort): The assistant stream gateway.
-    """
-
-    privacy_shield: PrivacyShieldPort
-    document_processor: DocumentProcessorPort
-    ai_gateway: AiGatewayPort
-
-
-@dataclass(frozen=True)
-class ProcessedDocumentContext:
-    """Store the extracted document text and the optional user prompt.
-
-    Attributes:
-        extracted_text (str): The text returned by document-processor.
-        prompt (str): The optional prompt sent with the uploaded document.
-    """
-
-    extracted_text: str
-    prompt: str = ""
-
-
-def build_container() -> OrchestratorContainer:
-    """Build the orchestrator dependency graph.
-
-    Returns:
-        OrchestratorContainer: The configured dependency container.
-    """
-    assistant_mode = os.getenv("ORCHESTRATOR_ASSISTANT_MODE", "fake").lower()
-    ai_gateway: AiGatewayPort
-    if assistant_mode == "real":
-        ai_gateway = HttpAiGatewayClient()
-    else:
-        ai_gateway = FakeAssistantStreamGateway()
-
-    return OrchestratorContainer(
-        privacy_shield=HttpPrivacyShieldClient(),
-        document_processor=HttpDocumentProcessingClient(),
-        ai_gateway=ai_gateway,
-    )
-
-
-processed_documents: dict[str, ProcessedDocumentContext] = {}
 container = build_container()
+orchestration_service = OrchestrationService(container)
+
 app = FastAPI(
     title="GuardianAI Orchestrator",
     version="0.1.0",
@@ -133,7 +57,7 @@ def healthcheck() -> dict[str, str]:
 
 @app.post("/api/messages/stream")
 def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
-    """Coordinate prompt anonymization, fake assistant, and deanonymization.
+    """Coordinate prompt anonymization, assistant, and deanonymization.
 
     Args:
         payload (MessageStreamRequest): The prompt stream request from web-ui.
@@ -141,61 +65,101 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
     Returns:
         StreamingResponse: The safe NDJSON stream consumed by web-ui.
     """
-    started_at = time.perf_counter()
-    print(
-        "ORCHESTRATOR /api/messages/stream "
-        f"chat_id={payload.chat_id} text_len={len(payload.text)}",
-        flush=True,
-    )
     try:
-        step_started_at = time.perf_counter()
-        anonymized_prompt = container.privacy_shield.anonymize(
-            chat_id=payload.chat_id,
-            text=payload.text,
-        )
-        print(
-            "ORCHESTRATOR anonymize done "
-            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
-            f"replacement_count={anonymized_prompt.replacement_count}",
-            flush=True,
-        )
-        step_started_at = time.perf_counter()
-        assistant_chunks = _collect_ai_gateway_chunks(
-            chat_id=payload.chat_id,
-            anonymized_prompt=anonymized_prompt.text,
-        )
-        print(
-            "ORCHESTRATOR ai-gateway done "
-            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
-            f"chunk_count={len(assistant_chunks)}",
-            flush=True,
-        )
-        step_started_at = time.perf_counter()
-        events = container.privacy_shield.deanonymize_stream(
-            chunks=assistant_chunks,
-            anonymization_id=anonymized_prompt.anonymization_id,
-        )
-        print(
-            "ORCHESTRATOR deanonymize requested "
-            f"elapsed={time.perf_counter() - step_started_at:.3f}s "
-            f"total_before_stream={time.perf_counter() - started_at:.3f}s",
-            flush=True,
+        anonymized_prompt, events = (
+            orchestration_service.stream_message_response(
+                chat_id=payload.chat_id,
+                text=payload.text,
+            )
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(error),
-        ) from error
+        raise _bad_gateway(error) from error
 
     return _build_streaming_response(
         events,
-        initial_events=[
-            {
-                "event": "anonymized_prompt",
-                "content": anonymized_prompt.text,
-            }
-        ],
+        initial_events=[_build_anonymized_prompt_event(anonymized_prompt)],
     )
+
+
+@app.post("/api/messages/anonymize-preview")
+def preview_message_anonymization(
+    payload: MessageStreamRequest,
+) -> dict[str, Any]:
+    """Return the anonymized prompt without calling the assistant.
+
+    Args:
+        payload (MessageStreamRequest): The prompt to anonymize.
+
+    Returns:
+        dict[str, Any]: The anonymized prompt metadata.
+    """
+    try:
+        anonymized_prompt = (
+            orchestration_service.preview_message_anonymization(
+                chat_id=payload.chat_id,
+                text=payload.text,
+            )
+        )
+    except PrivacyShieldClientError as error:
+        raise _bad_gateway(error) from error
+
+    return _build_anonymized_preview_payload(anonymized_prompt)
+
+
+@app.post("/api/documents/anonymize-preview")
+def preview_document_anonymization(
+    payload: DocumentPreviewRequest,
+) -> dict[str, Any]:
+    """Return the anonymized document prompt without calling the assistant.
+
+    Args:
+        payload (DocumentPreviewRequest): The processed document identifiers.
+
+    Returns:
+        dict[str, Any]: The anonymized document prompt metadata.
+    """
+    try:
+        anonymized_prompt = (
+            orchestration_service.preview_document_anonymization(
+                chat_id=payload.chat_id,
+                document_id=payload.document_id,
+            )
+        )
+    except KeyError as error:
+        raise _processed_document_not_found() from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    except PrivacyShieldClientError as error:
+        raise _bad_gateway(error) from error
+
+    return _build_anonymized_preview_payload(anonymized_prompt)
+
+
+@app.post("/api/anonymized/stream")
+def stream_anonymized_response(
+    payload: AnonymizedStreamRequest,
+) -> StreamingResponse:
+    """Call the assistant with already anonymized text and restore the answer.
+
+    Args:
+        payload (AnonymizedStreamRequest): The anonymized prompt data.
+
+    Returns:
+        StreamingResponse: The safe NDJSON stream consumed by web-ui.
+    """
+    try:
+        events = orchestration_service.stream_anonymized_response(
+            chat_id=payload.chat_id,
+            anonymized_text=payload.anonymized_text,
+            anonymization_id=payload.anonymization_id,
+        )
+    except (AiGatewayClientError, PrivacyShieldClientError) as error:
+        raise _bad_gateway(error) from error
+
+    return _build_streaming_response(events)
 
 
 @app.post("/api/documents/extract-stream")
@@ -217,18 +181,13 @@ async def extract_document_stream(
     content = await file.read()
 
     try:
-        events = container.document_processor.stream_extract_document(
-            DocumentUploadRequest(
-                filename=filename,
-                content_type=content_type,
-                content=content,
-            )
+        events = orchestration_service.stream_extract_document(
+            filename=filename,
+            content_type=content_type,
+            content=content,
         )
     except DocumentProcessorClientError as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(error),
-        ) from error
+        raise _bad_gateway(error) from error
 
     return _build_document_streaming_response(events, prompt=prompt)
 
@@ -242,9 +201,6 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
 
     Returns:
         StreamingResponse: The safe NDJSON stream consumed by web-ui.
-
-    Raises:
-        HTTPException: If the document is unknown or privacy-shield fails.
     """
     chat_id = payload.get("chat_id", "").strip()
     document_id = payload.get("document_id", "").strip()
@@ -254,42 +210,26 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             detail="chat_id and document_id are required.",
         )
 
-    document_context = processed_documents.get(document_id)
-    if document_context is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Processed document not found.",
+    try:
+        anonymized_prompt, events = (
+            orchestration_service.stream_document_response(
+                chat_id=chat_id,
+                document_id=document_id,
+            )
         )
-
-    text = _build_document_prompt(document_context)
-    if not text.strip():
+    except KeyError as error:
+        raise _processed_document_not_found() from error
+    except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "Document processor returned empty text and no prompt was "
-                "provided."
-            ),
-        )
-
-    try:
-        anonymized_prompt, events = _stream_safe_response_for_text(
-            chat_id=chat_id,
-            text=text,
-        )
-    except (AiGatewayClientError, PrivacyShieldClientError) as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(error),
         ) from error
+    except (AiGatewayClientError, PrivacyShieldClientError) as error:
+        raise _bad_gateway(error) from error
 
     return _build_streaming_response(
         events,
-        initial_events=[
-            {
-                "event": "anonymized_prompt",
-                "content": anonymized_prompt.text,
-            }
-        ],
+        initial_events=[_build_anonymized_prompt_event(anonymized_prompt)],
     )
 
 
@@ -338,76 +278,6 @@ def _build_streaming_response(
     )
 
 
-def _stream_safe_response_for_text(
-    chat_id: str,
-    text: str,
-) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
-    """Run the text through privacy-shield, fake assistant, and restoration.
-
-    Args:
-        chat_id (str): The chat that owns the request.
-        text (str): The original text to protect and answer.
-
-    Returns:
-        tuple[AnonymizedPrompt, Iterator[dict[str, Any]]): The anonymized text
-            metadata and safe response stream events.
-    """
-    started_at = time.perf_counter()
-    anonymized_prompt = container.privacy_shield.anonymize(
-        chat_id=chat_id,
-        text=text,
-    )
-    print(
-        "ORCHESTRATOR document anonymize done "
-        f"elapsed={time.perf_counter() - started_at:.3f}s "
-        f"replacement_count={anonymized_prompt.replacement_count}",
-        flush=True,
-    )
-    started_at = time.perf_counter()
-    assistant_chunks = _collect_ai_gateway_chunks(
-        chat_id=chat_id,
-        anonymized_prompt=anonymized_prompt.text,
-    )
-    print(
-        "ORCHESTRATOR document ai-gateway done "
-        f"elapsed={time.perf_counter() - started_at:.3f}s "
-        f"chunk_count={len(assistant_chunks)}",
-        flush=True,
-    )
-    return (
-        anonymized_prompt,
-        container.privacy_shield.deanonymize_stream(
-            chunks=assistant_chunks,
-            anonymization_id=anonymized_prompt.anonymization_id,
-        ),
-    )
-
-
-def _collect_ai_gateway_chunks(
-    chat_id: str,
-    anonymized_prompt: str,
-) -> list[str]:
-    """Collect assistant chunks from the configured ai-gateway.
-
-    Args:
-        chat_id (str): The chat that owns the request.
-        anonymized_prompt (str): The anonymized prompt sent to the assistant.
-
-    Returns:
-        list[str]: The anonymized assistant response chunks.
-    """
-    return [
-        chunk
-        for chunk in container.ai_gateway.stream_response(
-            AssistantStreamRequest(
-                chat_id=chat_id,
-                prompt=anonymized_prompt,
-            )
-        )
-        if chunk
-    ]
-
-
 def _build_document_streaming_response(
     events: Iterator[dict[str, Any]],
     prompt: str,
@@ -429,17 +299,10 @@ def _build_document_streaming_response(
         """
         try:
             for event in events:
-                if event.get("event") == "completed":
-                    document_id = str(event.get("document_id", ""))
-                    extracted_text = str(event.get("extracted_text", ""))
-                    if document_id:
-                        processed_documents[document_id] = (
-                            ProcessedDocumentContext(
-                                extracted_text=extracted_text,
-                                prompt=prompt.strip(),
-                            )
-                        )
-
+                orchestration_service.store_document_if_completed(
+                    event=event,
+                    prompt=prompt,
+                )
                 yield json.dumps(event, ensure_ascii=True) + "\n"
         except RuntimeError as error:
             yield json.dumps(
@@ -460,27 +323,66 @@ def _build_document_streaming_response(
     )
 
 
-def _build_document_prompt(document_context: ProcessedDocumentContext) -> str:
-    """Build the text that enters the safe response pipeline.
+def _build_anonymized_prompt_event(
+    anonymized_prompt: AnonymizedPrompt,
+) -> dict[str, str]:
+    """Build the stream event that exposes anonymized text to web-ui.
 
     Args:
-        document_context (ProcessedDocumentContext): The stored document data.
+        anonymized_prompt (AnonymizedPrompt): The anonymized prompt metadata.
 
     Returns:
-        str: The prompt-only, document-only, or combined prompt text.
+        dict[str, str]: The stream event payload.
     """
-    prompt = document_context.prompt.strip()
-    extracted_text = document_context.extracted_text.strip()
+    return {
+        "event": "anonymized_prompt",
+        "content": anonymized_prompt.text,
+    }
 
-    if prompt and extracted_text:
-        return (
-            "User prompt:\n"
-            f"{prompt}\n\n"
-            "Document text:\n"
-            f"{extracted_text}"
-        )
 
-    return prompt or extracted_text
+def _build_anonymized_preview_payload(
+    anonymized_prompt: AnonymizedPrompt,
+) -> dict[str, Any]:
+    """Build the API payload for anonymization previews.
+
+    Args:
+        anonymized_prompt (AnonymizedPrompt): The anonymized prompt metadata.
+
+    Returns:
+        dict[str, Any]: The preview payload.
+    """
+    return {
+        "anonymized_text": anonymized_prompt.text,
+        "anonymization_id": anonymized_prompt.anonymization_id,
+        "replacement_count": anonymized_prompt.replacement_count,
+    }
+
+
+def _processed_document_not_found() -> HTTPException:
+    """Build the processed-document-not-found HTTP error.
+
+    Returns:
+        HTTPException: The HTTP 404 error.
+    """
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Processed document not found.",
+    )
+
+
+def _bad_gateway(error: Exception) -> HTTPException:
+    """Build a bad gateway error for downstream service failures.
+
+    Args:
+        error (Exception): The downstream service error.
+
+    Returns:
+        HTTPException: The HTTP 502 error.
+    """
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=str(error),
+    )
 
 
 if __name__ == "__main__":

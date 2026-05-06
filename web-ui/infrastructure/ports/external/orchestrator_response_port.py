@@ -37,6 +37,62 @@ class OrchestratorMessageResponseRequest:
 
 
 @dataclass(frozen=True)
+class OrchestratorAnonymizationPreviewRequest:
+    """Represent text that must be anonymized for user preview.
+
+    Attributes:
+        chat_id (str): The chat that owns the text.
+        content (str): The text to anonymize.
+    """
+
+    chat_id: str
+    content: str
+
+
+@dataclass(frozen=True)
+class OrchestratorDocumentAnonymizationPreviewRequest:
+    """Represent a processed document that must be anonymized for preview.
+
+    Attributes:
+        chat_id (str): The chat that owns the document.
+        document_id (str): The processed document identifier.
+    """
+
+    chat_id: str
+    document_id: str
+
+
+@dataclass(frozen=True)
+class OrchestratorAnonymizedResponseRequest:
+    """Represent already anonymized text ready for assistant processing.
+
+    Attributes:
+        chat_id (str): The chat that owns the request.
+        anonymized_content (str): The anonymized text.
+        anonymization_id (str): The privacy-shield session identifier.
+    """
+
+    chat_id: str
+    anonymized_content: str
+    anonymization_id: str
+
+
+@dataclass(frozen=True)
+class OrchestratorAnonymizationPreview:
+    """Represent anonymized text prepared for review.
+
+    Attributes:
+        anonymized_content (str): The anonymized text.
+        anonymization_id (str): The privacy-shield session identifier.
+        replacement_count (int): The number of replacements found.
+    """
+
+    anonymized_content: str
+    anonymization_id: str
+    replacement_count: int
+
+
+@dataclass(frozen=True)
 class OrchestratorStreamChunk:
     """Represent one safe text chunk emitted by orchestrator.
 
@@ -96,6 +152,49 @@ OrchestratorStreamEvent = (
 
 class OrchestratorResponsePort(Protocol):
     """Define how web-ui consumes safe streams from orchestrator."""
+
+    def preview_message_anonymization(
+        self,
+        request: OrchestratorAnonymizationPreviewRequest,
+    ) -> OrchestratorAnonymizationPreview:
+        """Return anonymized text without calling the assistant.
+
+        Args:
+            request (OrchestratorAnonymizationPreviewRequest): The text to
+                anonymize.
+
+        Returns:
+            OrchestratorAnonymizationPreview: The anonymized text metadata.
+        """
+
+    def preview_document_anonymization(
+        self,
+        request: OrchestratorDocumentAnonymizationPreviewRequest,
+    ) -> OrchestratorAnonymizationPreview:
+        """Return an anonymized processed document without calling the assistant.
+
+        Args:
+            request (OrchestratorDocumentAnonymizationPreviewRequest): The
+                processed document identifiers.
+
+        Returns:
+            OrchestratorAnonymizationPreview: The anonymized text metadata.
+        """
+
+    def stream_anonymized_response(
+        self,
+        request: OrchestratorAnonymizedResponseRequest,
+    ) -> Iterator[OrchestratorStreamEvent]:
+        """Stream a response from already anonymized text.
+
+        Args:
+            request (OrchestratorAnonymizedResponseRequest): The anonymized
+                text and session identifier.
+
+        Returns:
+            Iterator[OrchestratorStreamEvent]: Safe text chunks and terminal
+            stream events emitted by orchestrator.
+        """
 
     def stream_safe_response(
         self,

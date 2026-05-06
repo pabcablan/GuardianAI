@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import type {
+  ChatMessage,
   ChatThread,
   DocumentProcessingStatus,
   ModelReadinessStatus,
@@ -23,6 +24,7 @@ interface ConversationPanelProps {
   onPreviewAnonymizedTextChange: (value: boolean) => void;
   onFileSelect: (file: File | null) => void;
   onClearFile: () => void;
+  onApproveAnonymizedMessage: (message: ChatMessage) => void;
   onSubmit: () => void;
 }
 
@@ -42,6 +44,7 @@ export function ConversationPanel({
   onPreviewAnonymizedTextChange,
   onFileSelect,
   onClearFile,
+  onApproveAnonymizedMessage,
   onSubmit,
 }: ConversationPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -173,7 +176,7 @@ export function ConversationPanel({
                       <img className="icon-image" src="/icons/ai-robot.svg" alt="" aria-hidden="true" />
                     </span>
                   ) : (
-                    "Tu"
+                    "Tú"
                   )}
                 </span>
               </div>
@@ -184,6 +187,16 @@ export function ConversationPanel({
                     Texto anonimizado
                   </span>
                   <p>{message.anonymizedContent}</p>
+                  {message.pendingApproval ? (
+                    <button
+                      className="message__approve-button"
+                      type="button"
+                      disabled={isResponding}
+                      onClick={() => onApproveAnonymizedMessage(message)}
+                    >
+                      Enviar a la IA
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </article>

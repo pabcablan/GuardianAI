@@ -1,78 +1,51 @@
-"""FastAPI entrypoint and dependency composition for the web-ui module.
+"""FastAPI entrypoint and routes for the web-ui module.
 
 Run it from the `web-ui` directory with:
 `uvicorn main:app --reload`
 """
 from __future__ import annotations
 
-import json
 import os
-from collections.abc import Iterator
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 
-from application.usecases.attach_document import (
-    AttachDocumentCommand,
-    AttachDocumentCompleted,
-    AttachDocumentFailed,
-    AttachDocumentProgress,
-    AttachDocumentUseCase,
-)
-from application.usecases.create_chat import CreateChatCommand, CreateChatUseCase
-from application.usecases.delete_chat import DeleteChatUseCase
-from application.usecases.list_chats import ListChatsUseCase
-from application.usecases.load_chat import LoadChatUseCase
-from application.usecases.rename_chat import RenameChatCommand, RenameChatUseCase
+from application.usecases.attach_document import AttachDocumentCommand
+from application.usecases.create_chat import CreateChatCommand
+from application.usecases.rename_chat import RenameChatCommand
 from application.usecases.stream_message_response import (
     StreamMessageResponseCommand,
-    StreamMessageResponseUseCase,
 )
 from application.usecases.stream_safe_response import (
     StreamSafeResponseCommand,
-    StreamSafeResponseUseCase,
+)
+from infrastructure.adapters.api.context import (
+    WebUiApiState,
+    make_assistant_message,
+    make_message,
 )
 from infrastructure.adapters.api.schemas import (
-    AttachDocumentCompletedResponse,
-    AttachDocumentErrorResponse,
-    AttachDocumentProgressResponse,
+    AnonymizedPreviewResponse,
     ChatDetailResponse,
     ChatMessageResponse,
     ChatSummaryResponse,
+    ContinueAnonymizedRequest,
     CreateChatRequest,
     CreateChatResponse,
     RenameChatRequest,
-    SafeStreamAnonymizedPromptResponse,
-    SafeStreamChunkResponse,
-    SafeStreamCompletedResponse,
-    SafeStreamErrorResponse,
     StreamMessageRequest,
 )
-from infrastructure.adapters.connected_document_service import (
-    ConnectedDocumentService,
+from infrastructure.adapters.api.streaming import (
+    build_document_streaming_response,
+    build_safe_streaming_response,
 )
-from infrastructure.adapters.orchestrator.document_client import (
-    HttpOrchestratorDocumentClient,
-)
-from infrastructure.adapters.orchestrator.response_client import (
-    HttpOrchestratorResponseClient,
-)
-from infrastructure.adapters.mongodb.client import build_mongo_database
-from infrastructure.adapters.mongodb.mongo_chat_gateway import MongoChatGateway
+from infrastructure.dependency_container import build_container
 from infrastructure.ports.external.orchestrator_response_port import (
-    OrchestratorAnonymizedPrompt,
-    OrchestratorStreamChunk,
-    OrchestratorStreamCompleted,
-    OrchestratorStreamEvent,
-    OrchestratorStreamFailed,
+    OrchestratorAnonymizationPreviewRequest,
+    OrchestratorAnonymizedResponseRequest,
+    OrchestratorDocumentAnonymizationPreviewRequest,
 )
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
-from domain.message import Message
 
 
 MODEL_PROVIDER_BASE_URL = os.getenv(
@@ -84,63 +57,8 @@ DOCUMENT_MODEL_NAME = os.getenv("DOCUMENT_MODEL_NAME", "document_extractor")
 MODEL_STATUS_TIMEOUT_SECONDS = 2.0
 
 
-@dataclass(frozen=True)
-class WebUiContainer:
-    """Group the use cases exposed by the API.
-
-    Attributes:
-        create_chat (CreateChatUseCase): The create chat use case.
-        list_chats (ListChatsUseCase): The list chats use case.
-        load_chat (LoadChatUseCase): The load chat use case.
-        attach_document (AttachDocumentUseCase): The attach document use case.
-        delete_chat (DeleteChatUseCase): The delete chat use case.
-        rename_chat (RenameChatUseCase): The rename chat use case.
-        stream_safe_response (StreamSafeResponseUseCase): The document response
-            stream use case through orchestrator.
-        stream_message_response (StreamMessageResponseUseCase): The message
-            response stream use case through orchestrator.
-    """
-
-    create_chat: CreateChatUseCase
-    list_chats: ListChatsUseCase
-    load_chat: LoadChatUseCase
-    attach_document: AttachDocumentUseCase
-    delete_chat: DeleteChatUseCase
-    rename_chat: RenameChatUseCase
-    stream_safe_response: StreamSafeResponseUseCase
-    stream_message_response: StreamMessageResponseUseCase
-    chat_repository: ChatRepositoryPort
-
-
-def build_container() -> WebUiContainer:
-    """Build the dependency graph for the web-ui backend.
-
-    Returns:
-        WebUiContainer: The configured use case container.
-    """
-    database = build_mongo_database()
-    gateway = MongoChatGateway(database)
-    orchestrator_response = HttpOrchestratorResponseClient()
-    orchestrator_document = HttpOrchestratorDocumentClient()
-    document_service = ConnectedDocumentService(gateway, orchestrator_document)
-
-    return WebUiContainer(
-        create_chat=CreateChatUseCase(gateway),
-        list_chats=ListChatsUseCase(gateway),
-        load_chat=LoadChatUseCase(gateway),
-        attach_document=AttachDocumentUseCase(document_service),
-        delete_chat=DeleteChatUseCase(gateway),
-        rename_chat=RenameChatUseCase(gateway),
-        stream_safe_response=StreamSafeResponseUseCase(orchestrator_response),
-        stream_message_response=StreamMessageResponseUseCase(
-            orchestrator_response
-        ),
-        chat_repository=gateway,
-    )
-
-
 container = build_container()
-processed_document_user_messages: dict[str, str] = {}
+api_state = WebUiApiState()
 
 app = FastAPI(
     title="GuardianAI Web UI Backend",
@@ -174,49 +92,7 @@ def model_readiness() -> dict[str, object]:
     Returns:
         dict[str, object]: The model readiness state consumed by the UI.
     """
-    model_names = [PRIVACY_MODEL_NAME]
-    if DOCUMENT_MODEL_NAME != PRIVACY_MODEL_NAME:
-        model_names.append(DOCUMENT_MODEL_NAME)
-
-    statuses: dict[str, str] = {}
-    try:
-        with httpx.Client(
-            base_url=MODEL_PROVIDER_BASE_URL,
-            timeout=MODEL_STATUS_TIMEOUT_SECONDS,
-        ) as client:
-            for model_name in model_names:
-                response = client.get(
-                    "/model_status",
-                    params={"name": model_name},
-                )
-                response.raise_for_status()
-                status_text = str(response.json())
-                statuses[model_name] = status_text
-    except httpx.HTTPError as error:
-        return {
-            "ready": False,
-            "message": "El proveedor de modelos aun no esta disponible.",
-            "detail": str(error),
-            "models": statuses,
-        }
-
-    missing_models = [
-        name
-        for name, status_text in statuses.items()
-        if " is loaded." not in status_text
-    ]
-    if missing_models:
-        return {
-            "ready": False,
-            "message": "Cargando modelos de GuardianAI...",
-            "models": statuses,
-        }
-
-    return {
-        "ready": True,
-        "message": "Modelos listos.",
-        "models": statuses,
-    }
+    return _get_model_readiness()
 
 
 @app.get("/api/chats", response_model=list[ChatSummaryResponse])
@@ -253,7 +129,7 @@ def create_chat(payload: CreateChatRequest) -> CreateChatResponse:
         CreateChatResponse: The created chat data.
     """
     result = container.create_chat.execute(
-        CreateChatCommand(title=payload.title)
+        CreateChatCommand(title=payload.title),
     )
     return CreateChatResponse(chat_id=result.chat_id, title=result.title)
 
@@ -295,7 +171,7 @@ def load_chat(chat_id: str) -> ChatDetailResponse:
 def stream_message_response(
     chat_id: str,
     payload: StreamMessageRequest,
-) -> StreamingResponse:
+):
     """Stream a safe assistant response for a user message.
 
     Args:
@@ -306,12 +182,7 @@ def stream_message_response(
         StreamingResponse: The NDJSON safe response stream.
     """
     content = payload.content.strip()
-    user_message = Message(
-        message_id=_generate_message_id(),
-        role="user",
-        content=content,
-        created_at=_now(),
-    )
+    user_message = make_message(role="user", content=content)
 
     try:
         container.chat_repository.append_message(chat_id, user_message)
@@ -319,7 +190,7 @@ def stream_message_response(
             StreamMessageResponseCommand(
                 chat_id=chat_id,
                 content=content,
-            )
+            ),
         )
     except ValueError as error:
         raise HTTPException(
@@ -332,10 +203,87 @@ def stream_message_response(
             detail="Chat not found.",
         ) from error
 
-    return _build_safe_streaming_response(
+    return build_safe_streaming_response(
         events,
+        chat_repository=container.chat_repository,
+        make_assistant_message=make_assistant_message,
         chat_id=chat_id,
         user_message_id=user_message.message_id,
+    )
+
+
+@app.post(
+    "/api/chats/{chat_id}/messages/anonymize-preview",
+    response_model=AnonymizedPreviewResponse,
+)
+def preview_message_anonymization(
+    chat_id: str,
+    payload: StreamMessageRequest,
+) -> AnonymizedPreviewResponse:
+    """Anonymize a user message before assistant processing.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        payload (StreamMessageRequest): The message request body.
+
+    Returns:
+        AnonymizedPreviewResponse: The anonymized text preview.
+    """
+    content = payload.content.strip()
+    user_message = make_message(role="user", content=content)
+
+    try:
+        container.chat_repository.append_message(chat_id, user_message)
+        preview = container.orchestrator_response.preview_message_anonymization(
+            OrchestratorAnonymizationPreviewRequest(
+                chat_id=chat_id,
+                content=content,
+            ),
+        )
+        container.chat_repository.update_message_anonymized_content(
+            user_message.message_id,
+            preview.anonymized_content,
+        )
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found.",
+        ) from error
+
+    return AnonymizedPreviewResponse(
+        message_id=user_message.message_id,
+        anonymized_content=preview.anonymized_content,
+        anonymization_id=preview.anonymization_id,
+        replacement_count=preview.replacement_count,
+    )
+
+
+@app.post("/api/chats/{chat_id}/anonymized/stream")
+def stream_approved_anonymized_response(
+    chat_id: str,
+    payload: ContinueAnonymizedRequest,
+):
+    """Stream a response after the user approves anonymized text.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        payload (ContinueAnonymizedRequest): The approved anonymized text.
+
+    Returns:
+        StreamingResponse: The NDJSON safe response stream.
+    """
+    events = container.orchestrator_response.stream_anonymized_response(
+        OrchestratorAnonymizedResponseRequest(
+            chat_id=chat_id,
+            anonymized_content=payload.anonymized_content,
+            anonymization_id=payload.anonymization_id,
+        ),
+    )
+    return build_safe_streaming_response(
+        events,
+        chat_repository=container.chat_repository,
+        make_assistant_message=make_assistant_message,
+        chat_id=chat_id,
     )
 
 
@@ -344,7 +292,7 @@ async def attach_document_stream(
     chat_id: str,
     file: UploadFile = File(...),
     prompt: str = Form(""),
-) -> StreamingResponse:
+):
     """Attach a PDF to a chat and stream progress as NDJSON.
 
     Args:
@@ -354,29 +302,17 @@ async def attach_document_stream(
 
     Returns:
         StreamingResponse: The NDJSON event stream.
-
-    Raises:
-        HTTPException: If the chat is missing or the document is invalid.
     """
     filename = file.filename or "document.pdf"
     content_type = file.content_type or ""
     content = await file.read()
 
-    user_message = Message(
-        message_id=_generate_message_id(),
+    user_message = make_message(
         role="user",
         content=prompt.strip() or f"Documento: {filename}",
-        created_at=_now(),
     )
     try:
         container.chat_repository.append_message(chat_id, user_message)
-    except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
-        ) from error
-
-    try:
         events = container.attach_document.stream(
             AttachDocumentCommand(
                 chat_id=chat_id,
@@ -384,7 +320,7 @@ async def attach_document_stream(
                 content_type=content_type,
                 content=content,
                 prompt=prompt,
-            )
+            ),
         )
     except KeyError as error:
         raise HTTPException(
@@ -397,46 +333,19 @@ async def attach_document_stream(
             detail=str(error),
         ) from error
 
-    def event_stream() -> Iterator[str]:
-        """Serialize attachment events as JSON lines.
+    def remember_user_message(document_id: str) -> None:
+        """Store the user message linked to a processed document.
 
-        Yields:
-            str: One JSON-encoded event followed by a newline.
+        Args:
+            document_id (str): The processed document identifier.
         """
-        try:
-            for event in events:
-                if isinstance(event, AttachDocumentProgress):
-                    payload = AttachDocumentProgressResponse(
-                        stage=event.stage,
-                        current=event.current,
-                        total=event.total,
-                        message=event.message,
-                    ).model_dump()
-                elif isinstance(event, AttachDocumentCompleted):
-                    processed_document_user_messages[event.document_id] = (
-                        user_message.message_id
-                    )
-                    payload = AttachDocumentCompletedResponse(
-                        document_id=event.document_id,
-                        filename=event.filename,
-                    ).model_dump()
-                elif isinstance(event, AttachDocumentFailed):
-                    payload = AttachDocumentErrorResponse(
-                        detail=event.detail,
-                    ).model_dump()
-                else:
-                    payload = AttachDocumentErrorResponse(
-                        detail="Unknown attach document event.",
-                    ).model_dump()
+        api_state.processed_document_user_messages[document_id] = (
+            user_message.message_id
+        )
 
-                yield json.dumps(payload, ensure_ascii=True) + "\n"
-        except RuntimeError as error:
-            payload = AttachDocumentErrorResponse(detail=str(error)).model_dump()
-            yield json.dumps(payload, ensure_ascii=True) + "\n"
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="application/x-ndjson",
+    return build_document_streaming_response(
+        events,
+        remember_user_message=remember_user_message,
     )
 
 
@@ -453,7 +362,7 @@ def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
     """
     try:
         container.rename_chat.execute(
-            RenameChatCommand(chat_id=chat_id, title=payload.title)
+            RenameChatCommand(chat_id=chat_id, title=payload.title),
         )
     except KeyError as error:
         raise HTTPException(
@@ -473,7 +382,7 @@ def delete_chat(chat_id: str) -> None:
 
 
 @app.get("/api/chats/{chat_id}/documents/{document_id}/safe-stream")
-def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
+def stream_safe_response(chat_id: str, document_id: str):
     """Stream safe response chunks for a processed document.
 
     Args:
@@ -488,7 +397,7 @@ def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
             StreamSafeResponseCommand(
                 chat_id=chat_id,
                 document_id=document_id,
-            )
+            ),
         )
     except ValueError as error:
         raise HTTPException(
@@ -496,115 +405,107 @@ def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
             detail=str(error),
         ) from error
 
-    return _build_safe_streaming_response(
+    return build_safe_streaming_response(
         events,
+        chat_repository=container.chat_repository,
+        make_assistant_message=make_assistant_message,
         chat_id=chat_id,
-        user_message_id=processed_document_user_messages.get(document_id),
-    )
-
-
-def _build_safe_streaming_response(
-    events: Iterator[OrchestratorStreamEvent],
-    chat_id: str | None = None,
-    user_message_id: str | None = None,
-) -> StreamingResponse:
-    """Build an NDJSON response from orchestrator stream events.
-
-    Args:
-        events (Iterator[OrchestratorStreamEvent]): The stream events.
-
-    Returns:
-        StreamingResponse: The serialized safe stream.
-    """
-    def event_stream() -> Iterator[str]:
-        """Serialize privacy-shield stream events as JSON lines.
-
-        Yields:
-            str: One JSON-encoded event followed by a newline.
-        """
-        assistant_chunks: list[str] = []
-        did_complete = False
-
-        try:
-            for event in events:
-                if isinstance(event, OrchestratorStreamChunk):
-                    assistant_chunks.append(event.content)
-                    payload = SafeStreamChunkResponse(
-                        content=event.content,
-                    ).model_dump()
-                elif isinstance(event, OrchestratorAnonymizedPrompt):
-                    if user_message_id is not None:
-                        container.chat_repository.update_message_anonymized_content(
-                            user_message_id,
-                            event.content,
-                        )
-                    payload = SafeStreamAnonymizedPromptResponse(
-                        content=event.content,
-                    ).model_dump()
-                elif isinstance(event, OrchestratorStreamCompleted):
-                    did_complete = True
-                    payload = SafeStreamCompletedResponse().model_dump()
-                elif isinstance(event, OrchestratorStreamFailed):
-                    payload = SafeStreamErrorResponse(
-                        detail=event.detail,
-                    ).model_dump()
-                else:
-                    payload = SafeStreamErrorResponse(
-                        detail="Unknown privacy-shield stream event.",
-                    ).model_dump()
-
-                yield json.dumps(payload, ensure_ascii=True) + "\n"
-
-            if did_complete:
-                _persist_assistant_message(chat_id, "".join(assistant_chunks))
-        except RuntimeError as error:
-            payload = SafeStreamErrorResponse(detail=str(error)).model_dump()
-            yield json.dumps(payload, ensure_ascii=True) + "\n"
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="application/x-ndjson",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-def _persist_assistant_message(chat_id: str | None, content: str) -> None:
-    """Persist the final assistant response when a stream finishes.
-
-    Args:
-        chat_id (str | None): The chat that owns the response.
-        content (str): The accumulated assistant content.
-    """
-    if chat_id is None or not content.strip():
-        return
-
-    container.chat_repository.append_message(
-        chat_id,
-        Message(
-            message_id=_generate_message_id(),
-            role="assistant",
-            content=content,
-            created_at=_now(),
+        user_message_id=api_state.processed_document_user_messages.get(
+            document_id,
         ),
     )
 
 
-def _generate_message_id() -> str:
-    """Generate a unique message identifier.
+@app.post(
+    "/api/chats/{chat_id}/documents/{document_id}/anonymize-preview",
+    response_model=AnonymizedPreviewResponse,
+)
+def preview_document_anonymization(
+    chat_id: str,
+    document_id: str,
+) -> AnonymizedPreviewResponse:
+    """Anonymize a processed document before assistant processing.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        document_id (str): The processed document identifier.
 
     Returns:
-        str: The generated message identifier.
+        AnonymizedPreviewResponse: The anonymized document preview.
     """
-    return f"msg-{uuid4().hex}"
+    user_message_id = api_state.processed_document_user_messages.get(
+        document_id,
+    )
+    if user_message_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processed document message not found.",
+        )
+
+    preview = container.orchestrator_response.preview_document_anonymization(
+        OrchestratorDocumentAnonymizationPreviewRequest(
+            chat_id=chat_id,
+            document_id=document_id,
+        ),
+    )
+    container.chat_repository.update_message_anonymized_content(
+        user_message_id,
+        preview.anonymized_content,
+    )
+
+    return AnonymizedPreviewResponse(
+        message_id=user_message_id,
+        anonymized_content=preview.anonymized_content,
+        anonymization_id=preview.anonymization_id,
+        replacement_count=preview.replacement_count,
+    )
 
 
-def _now() -> str:
-    """Return the current UTC timestamp.
+def _get_model_readiness() -> dict[str, object]:
+    """Return whether the required backend models are loaded.
 
     Returns:
-        str: The current timestamp.
+        dict[str, object]: The model readiness payload consumed by the UI.
     """
-    return datetime.now(timezone.utc).isoformat()
+    model_names = [PRIVACY_MODEL_NAME]
+    if DOCUMENT_MODEL_NAME != PRIVACY_MODEL_NAME:
+        model_names.append(DOCUMENT_MODEL_NAME)
+
+    statuses: dict[str, str] = {}
+    try:
+        with httpx.Client(
+            base_url=MODEL_PROVIDER_BASE_URL,
+            timeout=MODEL_STATUS_TIMEOUT_SECONDS,
+        ) as client:
+            for model_name in model_names:
+                response = client.get(
+                    "/model_status",
+                    params={"name": model_name},
+                )
+                response.raise_for_status()
+                statuses[model_name] = str(response.json())
+    except httpx.HTTPError as error:
+        return {
+            "ready": False,
+            "message": "El proveedor de modelos aun no esta disponible.",
+            "detail": str(error),
+            "models": statuses,
+        }
+
+    missing_models = [
+        name
+        for name, status_text in statuses.items()
+        if " is loaded." not in status_text
+    ]
+    if missing_models:
+        return {
+            "ready": False,
+            "message": "Cargando modelos de GuardianAI...",
+            "models": statuses,
+        }
+
+    return {
+        "ready": True,
+        "message": "Modelos listos.",
+        "models": statuses,
+    }

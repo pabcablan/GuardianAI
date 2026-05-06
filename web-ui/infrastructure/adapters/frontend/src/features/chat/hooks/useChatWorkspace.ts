@@ -300,6 +300,7 @@ export function useChatWorkspace() {
     chatId: string,
     messageId: string,
     anonymizedContent: string,
+    anonymizationId?: string,
   ): void {
     setSelectedChat((currentChat) => {
       if (!currentChat || currentChat.id !== chatId) {
@@ -313,6 +314,32 @@ export function useChatWorkspace() {
             ? {
                 ...message,
                 anonymizedContent,
+                pendingApproval: anonymizationId
+                  ? {
+                      anonymizationId,
+                      anonymizedContent,
+                    }
+                  : message.pendingApproval,
+              }
+            : message,
+        ),
+      };
+    });
+  }
+
+  function clearMessageApproval(chatId: string, messageId: string): void {
+    setSelectedChat((currentChat) => {
+      if (!currentChat || currentChat.id !== chatId) {
+        return currentChat;
+      }
+
+      return {
+        ...currentChat,
+        messages: currentChat.messages.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                pendingApproval: undefined,
               }
             : message,
         ),
@@ -403,6 +430,7 @@ export function useChatWorkspace() {
   async function sendMessage(
     content: string,
     pendingFile: File | null = null,
+    shouldPreviewAnonymizedText = false,
   ): Promise<boolean> {
     const normalizedContent = content.trim();
     if (!normalizedContent && !pendingFile) {
@@ -460,6 +488,22 @@ export function useChatWorkspace() {
           progress: null,
         });
 
+        if (shouldPreviewAnonymizedText) {
+          const preview =
+            await serviceRef.current.previewDocumentAnonymization(
+              activeChatId,
+              documentId,
+            );
+          updateUserAnonymizedContent(
+            activeChatId,
+            documentUserMessage.id,
+            preview.anonymized_content,
+            preview.anonymization_id,
+          );
+          setDocumentProcessingStatus(null);
+          return true;
+        }
+
         const assistantMessage = createAssistantMessage();
         appendAssistantMessage(activeChatId, assistantMessage);
 
@@ -475,10 +519,10 @@ export function useChatWorkspace() {
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
           },
           (anonymizedContent) => {
-            updateUserAnonymizedContent(
-              activeChatId,
-              documentUserMessage.id,
-              anonymizedContent,
+              updateUserAnonymizedContent(
+                activeChatId,
+                documentUserMessage.id,
+                anonymizedContent,
             );
           },
         );
@@ -487,6 +531,26 @@ export function useChatWorkspace() {
       if (!pendingFile) {
         const userMessage = createUserMessage(normalizedContent);
         appendChatMessage(activeChatId, userMessage);
+
+        if (shouldPreviewAnonymizedText) {
+          setResponseProcessingStatus({
+            title: "Mensaje del chat",
+            stage: "Anonimizando",
+            message: "Preparando el texto anonimizado para revisar...",
+          });
+          const preview = await serviceRef.current.previewMessageAnonymization(
+            activeChatId,
+            normalizedContent,
+          );
+          updateUserAnonymizedContent(
+            activeChatId,
+            userMessage.id,
+            preview.anonymized_content,
+            preview.anonymization_id,
+          );
+          setResponseProcessingStatus(null);
+          return true;
+        }
 
         const assistantMessage = createAssistantMessage();
         appendChatMessage(activeChatId, assistantMessage);
@@ -530,6 +594,46 @@ export function useChatWorkspace() {
     }
   }
 
+  async function approveAnonymizedMessage(message: ChatMessage): Promise<void> {
+    if (!selectedChatId || !message.pendingApproval) {
+      return;
+    }
+
+    setIsResponding(true);
+    setErrorMessage(null);
+    setResponseProcessingStatus({
+      title: "Texto anonimizado",
+      stage: "Enviando",
+      message: "Enviando el texto anonimizado al asistente...",
+    });
+    clearMessageApproval(selectedChatId, message.id);
+
+    const assistantMessage = createAssistantMessage();
+    appendChatMessage(selectedChatId, assistantMessage);
+
+    try {
+      let didReceiveFirstChunk = false;
+      await serviceRef.current.streamApprovedAnonymizedResponse(
+        selectedChatId,
+        message.pendingApproval.anonymizedContent,
+        message.pendingApproval.anonymizationId,
+        (chunk) => {
+          if (!didReceiveFirstChunk) {
+            didReceiveFirstChunk = true;
+            setResponseProcessingStatus(null);
+          }
+          appendAssistantChunk(selectedChatId, assistantMessage.id, chunk);
+        },
+      );
+      setResponseProcessingStatus(null);
+    } catch (error) {
+      setResponseProcessingStatus(null);
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsResponding(false);
+    }
+  }
+
   return {
     chats,
     selectedChat,
@@ -547,5 +651,6 @@ export function useChatWorkspace() {
     renameChat,
     deleteChat,
     sendMessage,
+    approveAnonymizedMessage,
   };
 }

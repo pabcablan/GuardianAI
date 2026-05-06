@@ -5,7 +5,13 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   anonymizedContent?: string;
+  pendingApproval?: AnonymizedContentApproval;
   createdAt: string;
+}
+
+export interface AnonymizedContentApproval {
+  anonymizationId: string;
+  anonymizedContent: string;
 }
 
 export interface ChatSummary {

@@ -34,6 +34,13 @@ interface ChatDetailResponse {
   messages: ChatMessageResponse[];
 }
 
+interface AnonymizedPreviewResponse {
+  message_id: string;
+  anonymized_content: string;
+  anonymization_id: string;
+  replacement_count: number;
+}
+
 interface AttachDocumentProgressResponse {
   event: "progress";
   stage: string;
@@ -185,6 +192,64 @@ export class ChatApplicationService {
     await this.ensure_success(response);
 
     await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
+  }
+
+  async previewMessageAnonymization(
+    chatId: string,
+    content: string,
+  ): Promise<AnonymizedPreviewResponse> {
+    const response = await fetch(
+      `${this.apiBaseUrl}/api/chats/${chatId}/messages/anonymize-preview`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      },
+    );
+    await this.ensure_success(response);
+
+    return (await response.json()) as AnonymizedPreviewResponse;
+  }
+
+  async previewDocumentAnonymization(
+    chatId: string,
+    documentId: string,
+  ): Promise<AnonymizedPreviewResponse> {
+    const response = await fetch(
+      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/anonymize-preview`,
+      {
+        method: "POST",
+      },
+    );
+    await this.ensure_success(response);
+
+    return (await response.json()) as AnonymizedPreviewResponse;
+  }
+
+  async streamApprovedAnonymizedResponse(
+    chatId: string,
+    anonymizedContent: string,
+    anonymizationId: string,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.apiBaseUrl}/api/chats/${chatId}/anonymized/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          anonymized_content: anonymizedContent,
+          anonymization_id: anonymizationId,
+        }),
+      },
+    );
+    await this.ensure_success(response);
+
+    await this.consumeSafeStream(response, onChunk);
   }
 
   async attachDocumentWithProgress(

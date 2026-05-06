@@ -84,6 +84,34 @@ class StreamMessageRequest(BaseModel):
     content: str = Field(min_length=1)
 
 
+class AnonymizedPreviewResponse(BaseModel):
+    """Represent anonymized content prepared for user approval.
+
+    Attributes:
+        message_id (str): The user message identifier.
+        anonymized_content (str): The anonymized content.
+        anonymization_id (str): The privacy-shield session identifier.
+        replacement_count (int): The number of replacements found.
+    """
+
+    message_id: str
+    anonymized_content: str
+    anonymization_id: str
+    replacement_count: int
+
+
+class ContinueAnonymizedRequest(BaseModel):
+    """Represent approved anonymized content ready for assistant processing.
+
+    Attributes:
+        anonymized_content (str): The approved anonymized content.
+        anonymization_id (str): The privacy-shield session identifier.
+    """
+
+    anonymized_content: str = Field(min_length=1)
+    anonymization_id: str = Field(min_length=1)
+
+
 class RenameChatRequest(BaseModel):
     """Represent the request body used to rename a chat.
 

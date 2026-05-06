@@ -58,6 +58,38 @@ class OrchestratorHttpClientBase:
                 "Orchestrator service is unavailable."
             ) from error
 
+    def _post_json(
+        self,
+        path: str,
+        payload: dict[str, str],
+    ) -> dict[str, object]:
+        """POST JSON to orchestrator and return a JSON object.
+
+        Args:
+            path (str): The orchestrator API path.
+            payload (dict[str, str]): The JSON request body.
+
+        Returns:
+            dict[str, object]: The parsed JSON response.
+        """
+        try:
+            with httpx.Client(timeout=self.timeout_seconds) as client:
+                response = client.post(
+                    f"{self.base_url}{path}",
+                    json=payload,
+                )
+                self._raise_for_status(response)
+                parsed = response.json()
+        except httpx.RequestError as error:
+            raise OrchestratorClientError(
+                "Orchestrator service is unavailable."
+            ) from error
+
+        if not isinstance(parsed, dict):
+            raise OrchestratorClientError("Invalid orchestrator response.")
+
+        return parsed
+
     def _stream_form_lines(
         self,
         path: str,
