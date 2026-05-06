@@ -5,6 +5,9 @@ import time
 from collections.abc import Iterator
 from typing import Any
 
+from application.services.anonymization_registry import AnonymizationRegistry
+from application.services.document_registry import DocumentRegistry
+from domain.anonymized_pdf_preview import AnonymizedPdfPreview
 from domain.processed_document import ProcessedDocumentContext
 from infrastructure.dependency_container import OrchestratorContainer
 from infrastructure.ports.ai_gateway_port import AssistantStreamRequest
@@ -22,8 +25,8 @@ class OrchestrationService:
             container (OrchestratorContainer): The orchestrator dependencies.
         """
         self._container = container
-        self._processed_documents: dict[str, ProcessedDocumentContext] = {}
-        self._anonymization_replacements: dict[str, dict[str, str]] = {}
+        self._document_registry = DocumentRegistry()
+        self._anonymization_registry = AnonymizationRegistry()
 
     def stream_message_response(
         self,
@@ -79,7 +82,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._store_replacements(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt)
         return anonymized_prompt
 
     def preview_document_anonymization(
@@ -105,7 +108,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._store_replacements(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt)
         return anonymized_prompt
 
     def stream_anonymized_response(
@@ -133,7 +136,7 @@ class OrchestrationService:
         )
         return self._stream_response_from_anonymized_chunks(
             assistant_chunks=assistant_chunks,
-            replacements=self._get_replacements(anonymization_id),
+            replacements=self._anonymization_registry.get(anonymization_id),
         )
 
     def stream_extract_document(
@@ -164,12 +167,18 @@ class OrchestrationService:
         self,
         event: dict[str, Any],
         prompt: str,
+        filename: str,
+        content_type: str,
+        content: bytes,
     ) -> None:
         """Store completed document extraction data.
 
         Args:
             event (dict[str, Any]): One document processing event.
             prompt (str): The prompt sent with the uploaded document.
+            filename (str): The original uploaded filename.
+            content_type (str): The original uploaded content type.
+            content (bytes): The original uploaded PDF bytes.
         """
         if event.get("event") != "completed":
             return
@@ -179,10 +188,50 @@ class OrchestrationService:
         if not document_id:
             return
 
-        self._processed_documents[document_id] = ProcessedDocumentContext(
-            extracted_text=extracted_text,
-            prompt=prompt.strip(),
+        self._document_registry.store(
+            document_id=document_id,
+            document=ProcessedDocumentContext(
+                extracted_text=extracted_text,
+                prompt=prompt.strip(),
+                filename=filename,
+                content_type=content_type,
+                content=content,
+            ),
         )
+
+    def build_anonymized_pdf_preview(
+        self,
+        document_id: str,
+        anonymization_id: str,
+    ) -> AnonymizedPdfPreview:
+        """Build a PDF preview with original values replaced by placeholders.
+
+        Args:
+            document_id (str): The processed document identifier.
+            anonymization_id (str): The anonymization session identifier.
+
+        Returns:
+            AnonymizedPdfPreview: The preview filename and PDF bytes.
+
+        Raises:
+            KeyError: If the document is unknown.
+            ValueError: If no visual replacement can be applied.
+        """
+        document_context = self._document_registry.get(document_id)
+        replacements = self._anonymization_registry.get(anonymization_id)
+        if not replacements:
+            raise ValueError("No hay campos anonimizados para pintar en el PDF.")
+        if not document_context.content:
+            raise ValueError("No se conserva el PDF original para esta vista.")
+
+        output = self._container.anonymized_pdf_builder.build(
+            pdf_content=document_context.content,
+            replacements=replacements,
+        )
+        filename = self._build_anonymized_pdf_filename(
+            document_context.filename,
+        )
+        return AnonymizedPdfPreview(filename=filename, content=output)
 
     def stream_document_response(
         self,
@@ -221,9 +270,7 @@ class OrchestrationService:
             KeyError: If the processed document is unknown.
             ValueError: If both prompt and extracted text are empty.
         """
-        document_context = self._processed_documents.get(document_id)
-        if document_context is None:
-            raise KeyError(document_id)
+        document_context = self._document_registry.get(document_id)
 
         text = self._build_document_prompt(document_context)
         if not text.strip():
@@ -255,7 +302,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._store_replacements(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt)
         print(
             f"{log_prefix} anonymize done "
             f"elapsed={time.perf_counter() - started_at:.3f}s "
@@ -331,32 +378,19 @@ class OrchestrationService:
             replacements=replacements,
         )
 
-    def _store_replacements(self, anonymized_prompt: AnonymizedPrompt) -> None:
-        """Store replacements returned by privacy-shield for later restore.
+    def _build_anonymized_pdf_filename(self, filename: str) -> str:
+        """Build the filename used for the anonymized PDF preview.
 
         Args:
-            anonymized_prompt (AnonymizedPrompt): The anonymization result.
-        """
-        self._anonymization_replacements[
-            anonymized_prompt.anonymization_id
-        ] = dict(anonymized_prompt.replacements)
-
-    def _get_replacements(self, anonymization_id: str) -> dict[str, str]:
-        """Return stored replacements for an anonymization session.
-
-        Args:
-            anonymization_id (str): The anonymization session identifier.
+            filename (str): The original filename.
 
         Returns:
-            dict[str, str]: The replacement mappings.
-
-        Raises:
-            ValueError: If the anonymization session is unknown.
+            str: The anonymized PDF filename.
         """
-        try:
-            return self._anonymization_replacements[anonymization_id]
-        except KeyError as error:
-            raise ValueError("Unknown anonymization id.") from error
+        if filename.lower().endswith(".pdf"):
+            return f"{filename[:-4]}_anonimizado.pdf"
+
+        return f"{filename}_anonimizado.pdf"
 
     def _build_document_prompt(
         self,

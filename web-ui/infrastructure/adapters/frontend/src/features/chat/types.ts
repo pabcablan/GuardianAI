@@ -43,6 +43,7 @@ export interface ChatMessage {
 export interface AnonymizedContentApproval {
   anonymizationId: string;
   anonymizedContent: string;
+  documentId?: string;
 }
 
 export interface ChatSummary {

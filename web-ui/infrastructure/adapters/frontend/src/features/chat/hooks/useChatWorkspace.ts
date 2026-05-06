@@ -303,6 +303,7 @@ export function useChatWorkspace() {
     messageId: string,
     anonymizedContent: string,
     anonymizationId?: string,
+    documentId?: string,
   ): void {
     setSelectedChat((currentChat) => {
       if (!currentChat || currentChat.id !== chatId) {
@@ -320,6 +321,7 @@ export function useChatWorkspace() {
                   ? {
                       anonymizationId,
                       anonymizedContent,
+                      documentId,
                     }
                   : message.pendingApproval,
               }
@@ -502,6 +504,7 @@ export function useChatWorkspace() {
             documentUserMessage.id,
             preview.anonymized_content,
             preview.anonymization_id,
+            documentId,
           );
           setDocumentProcessingStatus(null);
           return true;
@@ -644,6 +647,24 @@ export function useChatWorkspace() {
     }
   }
 
+  async function openAnonymizedPdfPreview(message: ChatMessage): Promise<void> {
+    if (!selectedChatId || !message.pendingApproval?.documentId) {
+      return;
+    }
+
+    setErrorMessage(null);
+
+    try {
+      await serviceRef.current.openAnonymizedPdfPreview(
+        selectedChatId,
+        message.pendingApproval.documentId,
+        message.pendingApproval.anonymizationId,
+      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  }
+
   return {
     chats,
     selectedChat,
@@ -662,5 +683,6 @@ export function useChatWorkspace() {
     deleteChat,
     sendMessage,
     approveAnonymizedMessage,
+    openAnonymizedPdfPreview,
   };
 }

@@ -10,6 +10,7 @@ import os
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from application.usecases.attach_document import AttachDocumentCommand
 from application.usecases.create_chat import CreateChatCommand
@@ -40,6 +41,7 @@ from infrastructure.adapters.api.streaming import (
     build_document_streaming_response,
     build_safe_streaming_response,
 )
+from infrastructure.adapters.orchestrator.base import OrchestratorClientError
 from infrastructure.dependency_container import build_container
 from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorAnonymizationPreviewRequest,
@@ -464,6 +466,50 @@ def preview_document_anonymization(
         anonymized_content=preview.anonymized_content,
         anonymization_id=preview.anonymization_id,
         replacement_count=preview.replacement_count,
+    )
+
+
+@app.get(
+    "/api/chats/{chat_id}/documents/{document_id}/anonymized-pdf-preview",
+)
+def download_anonymized_pdf_preview(
+    chat_id: str,
+    document_id: str,
+    anonymization_id: str,
+) -> Response:
+    """Return a visual anonymized PDF preview for a processed document.
+
+    Args:
+        chat_id (str): The identifier of the target chat.
+        document_id (str): The processed document identifier.
+        anonymization_id (str): The anonymization session identifier.
+
+    Returns:
+        Response: The anonymized PDF preview bytes.
+    """
+    if api_state.processed_document_user_messages.get(document_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processed document message not found.",
+        )
+
+    try:
+        preview = container.orchestrator_response.get_anonymized_pdf_preview(
+            document_id=document_id,
+            anonymization_id=anonymization_id,
+        )
+    except OrchestratorClientError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+
+    return Response(
+        content=preview.content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{preview.filename}"',
+        },
     )
 
 

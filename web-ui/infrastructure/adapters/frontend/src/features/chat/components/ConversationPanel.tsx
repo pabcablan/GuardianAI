@@ -25,6 +25,7 @@ interface ConversationPanelProps {
   onFileSelect: (file: File | null) => void;
   onClearFile: () => void;
   onApproveAnonymizedMessage: (message: ChatMessage) => void;
+  onOpenAnonymizedPdfPreview: (message: ChatMessage) => void;
   onSubmit: () => void;
 }
 
@@ -45,6 +46,7 @@ export function ConversationPanel({
   onFileSelect,
   onClearFile,
   onApproveAnonymizedMessage,
+  onOpenAnonymizedPdfPreview,
   onSubmit,
 }: ConversationPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -211,14 +213,26 @@ export function ConversationPanel({
                   </span>
                   <p>{message.anonymizedContent}</p>
                   {message.pendingApproval ? (
-                    <button
-                      className="message__approve-button"
-                      type="button"
-                      disabled={isResponding}
-                      onClick={() => onApproveAnonymizedMessage(message)}
-                    >
-                      Enviar a la IA
-                    </button>
+                    <div className="message__anonymized-actions">
+                      {message.pendingApproval.documentId ? (
+                        <button
+                          className="message__secondary-button"
+                          type="button"
+                          disabled={isResponding}
+                          onClick={() => onOpenAnonymizedPdfPreview(message)}
+                        >
+                          Ver PDF anonimizado
+                        </button>
+                      ) : null}
+                      <button
+                        className="message__approve-button"
+                        type="button"
+                        disabled={isResponding}
+                        onClick={() => onApproveAnonymizedMessage(message)}
+                      >
+                        Enviar a la IA
+                      </button>
+                    </div>
                   ) : null}
                 </div>
               ) : null}

@@ -39,6 +39,7 @@ export function ChatWorkspace() {
     deleteChat,
     sendMessage,
     approveAnonymizedMessage,
+    openAnonymizedPdfPreview,
   } = useChatWorkspace();
   const [draft, setDraft] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -131,6 +132,9 @@ export function ChatWorkspace() {
           onClearFile={() => setPendingFile(null)}
           onApproveAnonymizedMessage={(message) => {
             void approveAnonymizedMessage(message, selectedModel);
+          }}
+          onOpenAnonymizedPdfPreview={(message) => {
+            void openAnonymizedPdfPreview(message);
           }}
           onSubmit={() => {
             void handleSubmit();

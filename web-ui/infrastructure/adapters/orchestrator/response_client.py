@@ -5,11 +5,14 @@ import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+import httpx
+
 from infrastructure.adapters.orchestrator.base import (
     OrchestratorClientError,
     OrchestratorHttpClientBase,
 )
 from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorAnonymizedPdfPreview,
     OrchestratorAnonymizationPreview,
     OrchestratorAnonymizationPreviewRequest,
     OrchestratorAnonymizedPrompt,
@@ -60,6 +63,40 @@ class HttpOrchestratorResponseClient(
             },
         )
         return self._parse_preview_payload(payload)
+
+    def get_anonymized_pdf_preview(
+        self,
+        document_id: str,
+        anonymization_id: str,
+    ) -> OrchestratorAnonymizedPdfPreview:
+        """Return a visual anonymized PDF preview."""
+        try:
+            with httpx.Client(timeout=self.timeout_seconds) as client:
+                response = client.get(
+                    f"{self.base_url}/api/documents/"
+                    f"{document_id}/anonymized-pdf-preview",
+                    params={"anonymization_id": anonymization_id},
+                )
+                self._raise_for_status(response)
+        except httpx.RequestError as error:
+            raise OrchestratorClientError(
+                "Orchestrator service is unavailable."
+            ) from error
+
+        filename = "documento_anonimizado.pdf"
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            filename = (
+                content_disposition
+                .split("filename=", maxsplit=1)[1]
+                .strip()
+                .strip('"')
+            )
+
+        return OrchestratorAnonymizedPdfPreview(
+            filename=filename,
+            content=response.content,
+        )
 
     def stream_anonymized_response(
         self,

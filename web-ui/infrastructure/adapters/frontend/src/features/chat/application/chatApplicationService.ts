@@ -231,6 +231,27 @@ export class ChatApplicationService {
     return (await response.json()) as AnonymizedPreviewResponse;
   }
 
+  async openAnonymizedPdfPreview(
+    chatId: string,
+    documentId: string,
+    anonymizationId: string,
+  ): Promise<void> {
+    const query = new URLSearchParams({ anonymization_id: anonymizationId });
+    const response = await fetch(
+      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/anonymized-pdf-preview?${query.toString()}`,
+    );
+    await this.ensure_success(response);
+
+    const blob = await response.blob();
+    const fileUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60_000);
+  }
+
   async streamApprovedAnonymizedResponse(
     chatId: string,
     anonymizedContent: string,

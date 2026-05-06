@@ -101,6 +101,19 @@ class OrchestratorAnonymizationPreview:
 
 
 @dataclass(frozen=True)
+class OrchestratorAnonymizedPdfPreview:
+    """Represent a generated anonymized PDF preview.
+
+    Attributes:
+        filename (str): The suggested PDF filename.
+        content (bytes): The generated PDF bytes.
+    """
+
+    filename: str
+    content: bytes
+
+
+@dataclass(frozen=True)
 class OrchestratorStreamChunk:
     """Represent one safe text chunk emitted by orchestrator.
 
@@ -187,6 +200,21 @@ class OrchestratorResponsePort(Protocol):
 
         Returns:
             OrchestratorAnonymizationPreview: The anonymized text metadata.
+        """
+
+    def get_anonymized_pdf_preview(
+        self,
+        document_id: str,
+        anonymization_id: str,
+    ) -> OrchestratorAnonymizedPdfPreview:
+        """Return a visual anonymized PDF preview.
+
+        Args:
+            document_id (str): The processed document identifier.
+            anonymization_id (str): The anonymization session identifier.
+
+        Returns:
+            OrchestratorAnonymizedPdfPreview: The generated PDF preview.
         """
 
     def stream_anonymized_response(

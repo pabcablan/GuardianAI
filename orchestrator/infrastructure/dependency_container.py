@@ -14,6 +14,12 @@ from infrastructure.adapters.http.document_processor_client import (
 from infrastructure.adapters.http.privacy_shield_client import (
     HttpPrivacyShieldClient,
 )
+from infrastructure.adapters.pdf.pymupdf_anonymized_pdf_builder import (
+    PyMuPdfAnonymizedPdfBuilder,
+)
+from infrastructure.ports.anonymized_pdf_builder_port import (
+    AnonymizedPdfBuilderPort,
+)
 from infrastructure.ports.ai_gateway_port import AiGatewayPort
 from infrastructure.ports.document_processor_port import DocumentProcessorPort
 from infrastructure.ports.privacy_shield_port import PrivacyShieldPort
@@ -28,11 +34,14 @@ class OrchestratorContainer:
         document_processor (DocumentProcessorPort): The document processor
             client.
         ai_gateway (AiGatewayPort): The assistant stream gateway.
+        anonymized_pdf_builder (AnonymizedPdfBuilderPort): The visual PDF
+            preview builder.
     """
 
     privacy_shield: PrivacyShieldPort
     document_processor: DocumentProcessorPort
     ai_gateway: AiGatewayPort
+    anonymized_pdf_builder: AnonymizedPdfBuilderPort
 
 
 def build_container() -> OrchestratorContainer:
@@ -52,4 +61,5 @@ def build_container() -> OrchestratorContainer:
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
         ai_gateway=ai_gateway,
+        anonymized_pdf_builder=PyMuPdfAnonymizedPdfBuilder(),
     )

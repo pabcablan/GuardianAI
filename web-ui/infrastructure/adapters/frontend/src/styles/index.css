@@ -809,7 +809,15 @@ input {
   color: rgba(255, 255, 255, 0.66);
 }
 
-.message__approve-button {
+.message__anonymized-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.message__approve-button,
+.message__secondary-button {
   justify-self: end;
   min-height: 32px;
   padding: 0 12px;
@@ -821,7 +829,13 @@ input {
   font-size: 0.84rem;
 }
 
-.message__approve-button:disabled {
+.message__secondary-button {
+  color: #f8f2f2;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.message__approve-button:disabled,
+.message__secondary-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
