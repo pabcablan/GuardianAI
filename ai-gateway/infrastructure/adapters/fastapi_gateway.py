@@ -21,6 +21,10 @@ class FastAPIGateway:
         self._router = APIRouter()
         self._router.add_api_route("/handle", self.handle, methods=["POST"])
 
+    @property
+    def router(self):
+        return self._router
+
     async def handle(self, request: ChatRequest) -> StreamingResponse:
         try:
             messages = [

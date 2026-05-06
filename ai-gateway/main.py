@@ -29,4 +29,4 @@ send_to_llm = SendToLLM(
 
 fastapi_gateway= FastAPIGateway(send_to_llm=send_to_llm)
 
-app.include_router(fastapi_gateway._router)
+app.include_router(fastapi_gateway.router)

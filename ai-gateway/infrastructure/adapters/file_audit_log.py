@@ -5,6 +5,7 @@ import aiofiles
 from application.ports.audit_log import AuditLog
 from domain.entities.llm_request import LLMRequest
 from domain.entities.llm_response import LLMResponse
+from domain.value_objects import Role
 
 
 class FileAuditLog(AuditLog):
@@ -21,7 +22,8 @@ class FileAuditLog(AuditLog):
                 "model": request.model,
                 "status": request.status.value,
                 "created_at": request.created_at.isoformat(),
-                "failure_reason": request.failure_reason
+                "failure_reason": request.failure_reason,
+                "messages": [m.to_dict() for m in request.messages if m.role != Role.SYSTEM]
             },
             "response": {
                 "id": response.id,
