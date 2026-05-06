@@ -37,7 +37,10 @@ from infrastructure.ports.document_processor_port import (
     DocumentProcessorPort,
     DocumentUploadRequest,
 )
-from infrastructure.ports.privacy_shield_port import PrivacyShieldPort
+from infrastructure.ports.privacy_shield_port import (
+    AnonymizedPrompt,
+    PrivacyShieldPort,
+)
 
 
 class MessageStreamRequest(BaseModel):
@@ -269,7 +272,7 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
         )
 
     try:
-        events = _stream_safe_response_for_text(
+        anonymized_prompt, events = _stream_safe_response_for_text(
             chat_id=chat_id,
             text=text,
         )
@@ -279,7 +282,15 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
             detail=str(error),
         ) from error
 
-    return _build_streaming_response(events)
+    return _build_streaming_response(
+        events,
+        initial_events=[
+            {
+                "event": "anonymized_prompt",
+                "content": anonymized_prompt.text,
+            }
+        ],
+    )
 
 
 def _build_streaming_response(
@@ -330,7 +341,7 @@ def _build_streaming_response(
 def _stream_safe_response_for_text(
     chat_id: str,
     text: str,
-) -> Iterator[dict[str, Any]]:
+) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
     """Run the text through privacy-shield, fake assistant, and restoration.
 
     Args:
@@ -338,7 +349,8 @@ def _stream_safe_response_for_text(
         text (str): The original text to protect and answer.
 
     Returns:
-        Iterator[dict[str, Any]]: Safe response stream events.
+        tuple[AnonymizedPrompt, Iterator[dict[str, Any]]): The anonymized text
+            metadata and safe response stream events.
     """
     started_at = time.perf_counter()
     anonymized_prompt = container.privacy_shield.anonymize(
@@ -362,9 +374,12 @@ def _stream_safe_response_for_text(
         f"chunk_count={len(assistant_chunks)}",
         flush=True,
     )
-    return container.privacy_shield.deanonymize_stream(
-        chunks=assistant_chunks,
-        anonymization_id=anonymized_prompt.anonymization_id,
+    return (
+        anonymized_prompt,
+        container.privacy_shield.deanonymize_stream(
+            chunks=assistant_chunks,
+            anonymization_id=anonymized_prompt.anonymization_id,
+        ),
     )
 
 

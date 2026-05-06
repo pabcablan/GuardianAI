@@ -263,6 +263,7 @@ export class ChatApplicationService {
     chatId: string,
     documentId: string,
     onChunk: (chunk: string) => void,
+    onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
     const response = await fetch(
       `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream`,
@@ -273,7 +274,7 @@ export class ChatApplicationService {
       throw new Error("Safe response stream is unavailable.");
     }
 
-    await this.consumeSafeStream(response, onChunk);
+    await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
   }
 
   private async ensure_success(response: Response): Promise<void> {

@@ -428,10 +428,10 @@ export function useChatWorkspace() {
       }
 
       if (pendingFile) {
-        if (normalizedContent) {
-          const userMessage = createUserMessage(normalizedContent);
-          appendChatMessage(activeChatId, userMessage);
-        }
+        const documentUserMessage = createUserMessage(
+          normalizedContent || `Documento: ${pendingFile.name}`,
+        );
+        appendChatMessage(activeChatId, documentUserMessage);
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
@@ -473,6 +473,13 @@ export function useChatWorkspace() {
               setDocumentProcessingStatus(null);
             }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
+          },
+          (anonymizedContent) => {
+            updateUserAnonymizedContent(
+              activeChatId,
+              documentUserMessage.id,
+              anonymizedContent,
+            );
           },
         );
       }

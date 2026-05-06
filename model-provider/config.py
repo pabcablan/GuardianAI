@@ -6,7 +6,7 @@ import os
 
 DEFAULT_PRIVACY_MODEL_ID = os.getenv(
     "DEFAULT_PRIVACY_MODEL_ID",
-    "unsloth/Qwen3.5-2B",
+    "unsloth/Qwen3.5-9B",
 )
 DEFAULT_PRIVACY_MODEL_NAME = os.getenv(
     "DEFAULT_PRIVACY_MODEL_NAME",

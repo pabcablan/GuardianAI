@@ -140,6 +140,7 @@ def build_container() -> WebUiContainer:
 
 
 container = build_container()
+processed_document_user_messages: dict[str, str] = {}
 
 app = FastAPI(
     title="GuardianAI Web UI Backend",
@@ -361,22 +362,19 @@ async def attach_document_stream(
     content_type = file.content_type or ""
     content = await file.read()
 
-    if prompt.strip():
-        try:
-            container.chat_repository.append_message(
-                chat_id,
-                Message(
-                    message_id=_generate_message_id(),
-                    role="user",
-                    content=prompt.strip(),
-                    created_at=_now(),
-                ),
-            )
-        except KeyError as error:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Chat not found.",
-            ) from error
+    user_message = Message(
+        message_id=_generate_message_id(),
+        role="user",
+        content=prompt.strip() or f"Documento: {filename}",
+        created_at=_now(),
+    )
+    try:
+        container.chat_repository.append_message(chat_id, user_message)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found.",
+        ) from error
 
     try:
         events = container.attach_document.stream(
@@ -415,6 +413,9 @@ async def attach_document_stream(
                         message=event.message,
                     ).model_dump()
                 elif isinstance(event, AttachDocumentCompleted):
+                    processed_document_user_messages[event.document_id] = (
+                        user_message.message_id
+                    )
                     payload = AttachDocumentCompletedResponse(
                         document_id=event.document_id,
                         filename=event.filename,
@@ -495,7 +496,11 @@ def stream_safe_response(chat_id: str, document_id: str) -> StreamingResponse:
             detail=str(error),
         ) from error
 
-    return _build_safe_streaming_response(events, chat_id=chat_id)
+    return _build_safe_streaming_response(
+        events,
+        chat_id=chat_id,
+        user_message_id=processed_document_user_messages.get(document_id),
+    )
 
 
 def _build_safe_streaming_response(
