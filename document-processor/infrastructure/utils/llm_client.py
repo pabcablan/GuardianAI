@@ -17,7 +17,7 @@ class LLMClient:
             response = await client.post(
                 f"{self._base_url}/generate_response",
                 json={
-                "model_name": "juandi",
+                "model_name": self._model_name,
                 "prompt": prompt,
                 "document_base64": content_64
                 }
