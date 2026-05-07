@@ -8,7 +8,7 @@ from infrastructure.ports.text_generator import TextGenerator
 class ModelInferenceEngine(TextGenerator):
 
     def generate(self, system_prompt: str, prompt: str, model, processor,
-                 images_base64: list[str] | None = None) -> str:
+                 images_base64: str | None = None) -> str:
 
         pil_images = self._decode_images(images_base64) if images_base64 else None
 
