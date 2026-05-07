@@ -10,5 +10,5 @@ class FastAPIDocumentParser(DocumentParser):
         return ParsedDocument(
             document_id=str(uuid.uuid4()),
             filename=uploaded_file.filename,
-            content=await uploaded_file.file.read()
+            content=await uploaded_file.read()
         )

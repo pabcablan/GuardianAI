@@ -11,7 +11,7 @@ class ProcessDocument:
     #TODO add exception handling
     async def execute(self, document: Any) -> str:
 
-        parsed_doc = self._parser.parse(document)
+        parsed_doc = await self._parser.parse(document)
         extracted_doc = await self._text_extractor.extract_text(parsed_doc)
                 
         return extracted_doc.extracted_text
