@@ -6,7 +6,7 @@ It is responsible for loading models optimized for Unsloth given their identifie
 import threading
 from typing import Any
 
-from unsloth import FastLanguageModel
+from unsloth import FastVisionModel
 
 from infrastructure.ports.model_repository import ModelRepository
 
@@ -24,7 +24,7 @@ class UnslothLoader(ModelRepository):
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
                     cls._instance._models = {}
-                    cls._instance._tokenizers = {}
+                    cls._instance._processors = {}
                     cls._instance._model_ids = {}
         return cls._instance
 
@@ -50,20 +50,20 @@ class UnslothLoader(ModelRepository):
             dtype = kwargs.get("dtype", None)
             load_in_4bit = kwargs.get("load_in_4bit", True)
 
-            model, tokenizer = FastLanguageModel.from_pretrained(model_name=model_id, max_seq_length=max_seq_length, 
+            model, processor = FastVisionModel.from_pretrained(model_name=model_id, max_seq_length=max_seq_length, 
                                                                  dtype=dtype, load_in_4bit=load_in_4bit)
             
-            FastLanguageModel.for_inference(model)
+            FastVisionModel.for_inference(model)
             model.eval()
 
-            self._tokenizers[name] = tokenizer
+            self._processors[name] = processor
             self._models[name] = model
             self._model_ids[name] = model_id
             print(f"'{name}' ready on (Unsloth).")
         else:
             print(f"'{name}' already loaded, skipping.")
 
-        return self._models[name], self._tokenizers[name]
+        return self._models[name], self._processors[name]
 
     async def get(self, name: str) -> tuple[Any, Any]:
         """
@@ -77,7 +77,7 @@ class UnslothLoader(ModelRepository):
         """
         if name not in self._models:
             raise ValueError(f"'{name}' not loaded. Call load() first.")
-        return self._models[name], self._tokenizers[name]
+        return self._models[name], self._processors[name]
 
     async def unload(self, name: str):
         """
@@ -87,7 +87,7 @@ class UnslothLoader(ModelRepository):
             name (str): The name assigned to the loaded model to unload."""
         if name in self._models:
             del self._models[name]
-            del self._tokenizers[name]
+            del self._processors[name]
             del self._model_ids[name]
             print(f"'{name}' unloaded.")
 
