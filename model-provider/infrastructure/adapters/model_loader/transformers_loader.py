@@ -6,7 +6,7 @@ It is responsible for loading a model given its identifier and optional paramete
 import threading
 from typing import Any
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoProcessor, BitsAndBytesConfig
 
 from infrastructure.ports.model_repository import ModelRepository
 
@@ -24,7 +24,7 @@ class TransformersLoader(ModelRepository):
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
                     cls._instance._models = {}
-                    cls._instance._tokenizers = {}
+                    cls._instance._processors = {}
                     cls._instance._model_ids = {}
         return cls._instance
 
@@ -49,12 +49,12 @@ class TransformersLoader(ModelRepository):
             quantization_config = kwargs.get("quantization_config")
             device_map = {"": f"cuda:{gpu_index}"} if gpu_index is not None else "auto"
                 
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
+            processor = AutoProcessor.from_pretrained(model_id)
             model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config,
                                                               device_map=device_map)
             model.eval()
 
-            self._tokenizers[name] = tokenizer
+            self._processors[name] = processor
             self._models[name] = model
             self._model_ids[name] = model_id
 
@@ -62,7 +62,7 @@ class TransformersLoader(ModelRepository):
         else:
             print(f"'{name}' already loaded, skipping.")
 
-        return self._models[name], self._tokenizers[name]
+        return self._models[name], self._processors[name]
 
     async def get(self, name: str) -> tuple[Any, Any]:
         """
@@ -76,7 +76,7 @@ class TransformersLoader(ModelRepository):
         """
         if name not in self._models:
             raise ValueError(f"'{name}' not loaded. Call load() first.")
-        return self._models[name], self._tokenizers[name]
+        return self._models[name], self._processors[name]
 
     async def unload(self, name: str):
         """
@@ -87,7 +87,7 @@ class TransformersLoader(ModelRepository):
         """
         if name in self._models:
             del self._models[name]
-            del self._tokenizers[name]
+            del self._processors[name]
             del self._model_ids[name]
             print(f"'{name}' unloaded.")
 

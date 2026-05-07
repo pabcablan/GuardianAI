@@ -43,7 +43,7 @@ class Controller:
 
     async def generate_response(self, model_name: str, system_prompt: str | None, prompt: str, document_base64: str | None) -> str:
         try:
-            model, tokenizer = await self.model_loader.get(model_name)
-            return await run_in_threadpool(self.inference_engine.generate, system_prompt, prompt, model, tokenizer, document_base64)
+            model, processor = await self.model_loader.get(model_name)
+            return await run_in_threadpool(self.inference_engine.generate, system_prompt, prompt, model, processor, document_base64)
         except Exception as e:
             return f"Error generating response: {str(e)}"
