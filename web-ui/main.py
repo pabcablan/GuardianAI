@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -49,6 +50,7 @@ from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorDocumentAnonymizationPreviewRequest,
 )
 
+load_dotenv()
 
 MODEL_PROVIDER_BASE_URL = os.getenv(
     "MODEL_PROVIDER_BASE_URL",

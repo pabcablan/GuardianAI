@@ -1,5 +1,7 @@
-"""Adapter that loads and stores models through Unsloth."""
-from __future__ import annotations
+"""
+Defines an adapter to load models using the Unsloth library.
+It is responsible for loading models optimized for Unsloth given their identifier, managing the registry of loaded models and tokenizers.
+"""
 
 import threading
 from typing import Any
@@ -10,13 +12,13 @@ from infrastructure.ports.model_repository import ModelRepository
 
 
 class UnslothLoader(ModelRepository):
-    """Load Unsloth models and expose them by application names."""
-
     _instance = None
     _lock = threading.Lock()
 
     def __new__(cls):
-        """Ensure only one loader instance owns the loaded model registry."""
+        """
+        Handles the Singleton pattern to ensure only one instance of the Provider exists.
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -24,26 +26,25 @@ class UnslothLoader(ModelRepository):
                     cls._instance._models = {}
                     cls._instance._processors = {}
                     cls._instance._model_ids = {}
-
         return cls._instance
 
     async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
-        """Load a model or reuse an already loaded model with the same id.
+        """
+        Load a model given its identifier and optional parameters using Unsloth.
 
         Args:
-            model_id (str): The Unsloth model identifier.
-            name (str): The application name assigned to the loaded model.
-            **kwargs: Optional Unsloth loading parameters.
+            model_id (str): The identifier of the model to load (e.g., Unsloth repo name).
+            name (str): The name to assign to the loaded model.
+            **kwargs: Additional parameters for loading the model.
+                - max_seq_length (int, optional): The maximum sequence length for the model. Default is 4096.
+                - dtype (str, optional): The data type to load the model with (e.g., "float16", "int8"). If not provided, the model will be loaded with its default data type.
+                - load_in_4bit (bool, optional): Whether to load the model in 4-bit precision. Default is True.
 
         Returns:
-            tuple[Any, Any]: The loaded model and tokenizer.
-
-        Raises:
-            ValueError: If the model identifier is not an Unsloth model.
+            tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
         """
-        normalized_model_id = model_id.strip()
-        if not normalized_model_id.startswith("unsloth/"):
-            raise ValueError("UnslothLoader only supports unsloth/ model ids.")
+        if name not in self._models and model_id.startswith("unsloth/"):
+            print(f"Downloading/loading '{model_id}' ...")
 
             max_seq_length = kwargs.get("max_seq_length", 4096)
             dtype = kwargs.get("dtype", None)
@@ -61,52 +62,26 @@ class UnslothLoader(ModelRepository):
             print(f"'{name}' ready on (Unsloth).")
         else:
             print(f"'{name}' already loaded, skipping.")
-            return self._models[name], self._tokenizers[name]
-
-        existing_name = self._find_loaded_model_name(normalized_model_id)
-        if existing_name is not None:
-            self._models[name] = self._models[existing_name]
-            self._tokenizers[name] = self._tokenizers[existing_name]
-            self._model_ids[name] = normalized_model_id
-            print(f"'{name}' now reuses loaded model '{existing_name}'.")
-            return self._models[name], self._tokenizers[name]
-
-        print(f"Downloading/loading '{normalized_model_id}' ...")
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=normalized_model_id,
-            max_seq_length=kwargs.get("max_seq_length", 4096),
-            dtype=kwargs.get("dtype"),
-            load_in_4bit=kwargs.get("load_in_4bit", True),
-        )
-
-        FastLanguageModel.for_inference(model)
-        model.eval()
-
-        self._models[name] = model
-        self._tokenizers[name] = tokenizer
-        self._model_ids[name] = normalized_model_id
-        print(f"'{name}' ready on (Unsloth).")
 
         return self._models[name], self._processors[name]
 
     async def get(self, name: str) -> tuple[Any, Any]:
-        """Retrieve a loaded model and tokenizer by name.
+        """
+        Retrieve a loaded model and its tokenizer by name.
 
         Args:
-            name (str): The application model name.
+            name (str): The name assigned to the loaded model to retrieve.
 
         Returns:
-            tuple[Any, Any]: The loaded model and tokenizer.
-
-        Raises:
-            ValueError: If the requested model is not loaded.
+            tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
         """
         if name not in self._models:
             raise ValueError(f"'{name}' not loaded. Call load() first.")
         return self._models[name], self._processors[name]
 
-    async def unload(self, name: str) -> None:
-        """Unload one model name from the registry.
+    async def unload(self, name: str):
+        """
+        Unload a model and its tokenizer by name.
 
         Args:
             name (str): The name assigned to the loaded model to unload."""
@@ -117,27 +92,10 @@ class UnslothLoader(ModelRepository):
             print(f"'{name}' unloaded.")
 
     async def list_loaded_models(self) -> list[dict[str, str]]:
-        """List all loaded model names and identifiers.
+         """
+         List all currently loaded models.
 
-        Returns:
-            list[dict[str, str]]: The loaded model metadata.
-        """
-        return [
-            {"name": name, "model_id": self._model_ids[name]}
-            for name in self._models
-        ]
-
-    def _find_loaded_model_name(self, model_id: str) -> str | None:
-        """Find the first loaded name for a model identifier.
-
-        Args:
-            model_id (str): The normalized model identifier.
-
-        Returns:
-            str | None: The loaded model name, if it exists.
-        """
-        for loaded_name, loaded_model_id in self._model_ids.items():
-            if loaded_model_id == model_id:
-                return loaded_name
-
-        return None
+         Returns:
+             list[dict[str, str]]: A list of dictionaries containing information about each loaded model (e.g., name, identifier).
+         """
+         return [{"name": name, "model_id": self._model_ids[name]} for name in self._models.keys()]

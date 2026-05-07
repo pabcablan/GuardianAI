@@ -53,10 +53,11 @@ class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
                 if page_replacements:
                     page.apply_redactions()
                     for area, placeholder in page_replacements:
+                        text_area = self._expand_text_area(page, area)
                         page.insert_textbox(
-                            area,
+                            text_area,
                             placeholder,
-                            fontsize=max(6, min(10, area.height * 0.65)),
+                            fontsize=max(6, min(10, text_area.height * 0.65)),
                             color=(0, 0, 0),
                             align=fitz.TEXT_ALIGN_LEFT,
                         )
@@ -74,3 +75,20 @@ class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
             return output.getvalue()
         finally:
             document.close()
+
+    def _expand_text_area(self, page: fitz.Page, area: fitz.Rect) -> fitz.Rect:
+        """Expand the original text area so placeholders can fit visually.
+
+        Args:
+            page (fitz.Page): The page that contains the replacement area.
+            area (fitz.Rect): The exact original text rectangle.
+
+        Returns:
+            fitz.Rect: A wider rectangle clamped to the page boundaries.
+        """
+        return fitz.Rect(
+            area.x0,
+            max(page.rect.y0, area.y0 - 1),
+            min(page.rect.x1, area.x1 + 120),
+            min(page.rect.y1, area.y1 + 5),
+        )
