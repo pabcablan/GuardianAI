@@ -1,5 +1,6 @@
 import base64
 import torch
+import pymupdf
 from PIL import Image
 from io import BytesIO
 from infrastructure.ports.text_generator import TextGenerator
@@ -8,9 +9,9 @@ from infrastructure.ports.text_generator import TextGenerator
 class ModelInferenceEngine(TextGenerator):
 
     def generate(self, system_prompt: str, prompt: str, model, processor,
-                 images_base64: str | None = None) -> str:
+                 document_base64: str | None = None) -> str:
 
-        pil_images = self._decode_images(images_base64) if images_base64 else None
+        pil_images = self._decode_pdf_document(document_base64) if document_base64 else None
 
         messages = self._build_messages(system_prompt, prompt, has_images=bool(pil_images))
         input_text = processor.apply_chat_template(messages, add_generation_prompt=True)
@@ -58,5 +59,18 @@ class ModelInferenceEngine(TextGenerator):
         messages.append({"role": "user", "content": user_content})
         return messages
 
-    def _decode_images(self, images_base64: list[str]) -> list[Image.Image]:
-        return [Image.open(BytesIO(base64.b64decode(img))) for img in images_base64]
+    def _decode_pdf_document(self, document_base64: str) -> list[Image.Image]:
+        """Convierte un PDF base64 a una lista de imágenes (una por página)"""
+        pdf_bytes = base64.b64decode(document_base64)
+        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        
+        images = []
+        for page_num in range(len(pdf_document)):
+            page = pdf_document[page_num]
+            # Renderizar página a imagen con alta calidad
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))  # 2x zoom para mejor calidad
+            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            images.append(img)
+        
+        pdf_document.close()
+        return images
