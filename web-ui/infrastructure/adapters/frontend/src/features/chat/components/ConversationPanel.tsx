@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import type {
   ChatMessage,
@@ -27,6 +28,122 @@ interface ConversationPanelProps {
   onApproveAnonymizedMessage: (message: ChatMessage) => void;
   onOpenAnonymizedPdfPreview: (message: ChatMessage) => void;
   onSubmit: () => void;
+}
+
+interface HighlightedSegment {
+  content: string;
+  anonymizationId?: string;
+}
+
+const ANONYMIZATION_PLACEHOLDER_PATTERN = /\[[A-Z0-9_]+\]/g;
+
+function buildHighlightedSegments(
+  originalContent: string,
+  anonymizedContent?: string,
+): HighlightedSegment[] {
+  if (!anonymizedContent) {
+    return [{ content: originalContent }];
+  }
+
+  const matches = Array.from(
+    anonymizedContent.matchAll(ANONYMIZATION_PLACEHOLDER_PATTERN),
+  );
+
+  if (!matches.length) {
+    return [{ content: originalContent }];
+  }
+
+  const segments: HighlightedSegment[] = [];
+  let originalCursor = 0;
+  let anonymizedCursor = 0;
+
+  for (const [index, match] of matches.entries()) {
+    const anonymizationId = match[0];
+    const placeholderStart = match.index ?? 0;
+    const placeholderEnd = placeholderStart + anonymizationId.length;
+    const literalBefore = anonymizedContent.slice(
+      anonymizedCursor,
+      placeholderStart,
+    );
+    const beforeIndex = originalContent.indexOf(literalBefore, originalCursor);
+
+    if (beforeIndex === -1) {
+      return [{ content: originalContent }];
+    }
+
+    const normalStart = beforeIndex;
+    const normalEnd = beforeIndex + literalBefore.length;
+
+    if (normalStart > originalCursor) {
+      segments.push({
+        content: originalContent.slice(originalCursor, normalStart),
+      });
+    }
+
+    if (literalBefore) {
+      segments.push({ content: literalBefore });
+    }
+
+    const nextMatch = matches[index + 1];
+    const nextLiteral = anonymizedContent.slice(
+      placeholderEnd,
+      nextMatch?.index ?? anonymizedContent.length,
+    );
+    const sensitiveStart = normalEnd;
+    const sensitiveEnd = nextLiteral
+      ? originalContent.indexOf(nextLiteral, sensitiveStart)
+      : originalContent.length;
+
+    if (sensitiveEnd === -1 || sensitiveEnd < sensitiveStart) {
+      return [{ content: originalContent }];
+    }
+
+    const sensitiveContent = originalContent.slice(
+      sensitiveStart,
+      sensitiveEnd,
+    );
+
+    if (sensitiveContent) {
+      segments.push({
+        content: sensitiveContent,
+        anonymizationId,
+      });
+    }
+
+    originalCursor = sensitiveEnd;
+    anonymizedCursor = placeholderEnd;
+  }
+
+  if (originalCursor < originalContent.length) {
+    segments.push({ content: originalContent.slice(originalCursor) });
+  }
+
+  return segments.filter((segment) => segment.content.length > 0);
+}
+
+function renderMessageContent(message: ChatMessage): ReactNode {
+  if (message.role !== "user" || !message.anonymizedContent) {
+    return message.content;
+  }
+
+  return buildHighlightedSegments(
+    message.content,
+    message.anonymizedContent,
+  ).map((segment, index) => {
+    if (!segment.anonymizationId) {
+      return <span key={`${index}-${segment.content}`}>{segment.content}</span>;
+    }
+
+    return (
+      <mark
+        key={`${index}-${segment.anonymizationId}`}
+        className="message__anonymized-highlight"
+        data-anonymization-id={segment.anonymizationId}
+      >
+        {segment.content}
+      </mark>
+    );
+  });
 }
 
 export function ConversationPanel({
@@ -104,7 +221,7 @@ export function ConversationPanel({
         {!modelReadiness.ready ? (
           <section className="model-readiness-card" aria-live="polite" aria-atomic="true">
             <p className="model-readiness-card__eyebrow">Inicializando modelos</p>
-            <h2 className="model-readiness-card__title">GuardianAI se esta preparando</h2>
+            <h2 className="model-readiness-card__title">GuardianAI se está preparando</h2>
             <p className="model-readiness-card__copy">{modelReadiness.message}</p>
             <div className="model-readiness-card__bar" role="progressbar">
               <span />
@@ -185,7 +302,7 @@ export function ConversationPanel({
           <div className="conversation__welcome">
             <p className="conversation__welcome-title">Cargando conversaciones</p>
             <p className="conversation__welcome-copy">
-              Espera un momento mientras se prepara la sesion.
+              Espera un momento mientras se prepara la sesión.
             </p>
           </div>
         ) : chat?.messages.length ? (
@@ -205,13 +322,9 @@ export function ConversationPanel({
                   )}
                 </span>
               </div>
-              <p>{message.content}</p>
+              <p>{renderMessageContent(message)}</p>
               {message.role === "user" && message.anonymizedContent ? (
-                <div className="message__anonymized">
-                  <span className="message__anonymized-label">
-                    Texto anonimizado
-                  </span>
-                  <p>{message.anonymizedContent}</p>
+                <>
                   {message.pendingApproval ? (
                     <div className="message__anonymized-actions">
                       {message.pendingApproval.documentId ? (
@@ -234,13 +347,13 @@ export function ConversationPanel({
                       </button>
                     </div>
                   ) : null}
-                </div>
+                </>
               ) : null}
             </article>
           ))
         ) : (
           <div className="conversation__welcome">
-            <p className="conversation__welcome-title">Empieza una nueva conversacion</p>
+            <p className="conversation__welcome-title">Empieza una nueva conversación</p>
             <p className="conversation__welcome-copy">
               Escribe un mensaje o adjunta un PDF para comenzar a usar Guardian AI.
             </p>
@@ -312,7 +425,7 @@ export function ConversationPanel({
                 title="Activar para revisar el texto anonimizado antes de enviarlo"
                 data-tooltip={
                   shouldPreviewAnonymizedText
-                    ? "Previsualizacion activada"
+                    ? "Previsualización activada"
                     : "Enviar sin revisar"
                 }
               >

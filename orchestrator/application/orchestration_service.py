@@ -10,7 +10,10 @@ from application.services.document_registry import DocumentRegistry
 from domain.anonymized_pdf_preview import AnonymizedPdfPreview
 from domain.processed_document import ProcessedDocumentContext
 from infrastructure.dependency_container import OrchestratorContainer
-from infrastructure.ports.ai_gateway_port import AssistantStreamRequest
+from infrastructure.ports.ai_gateway_port import (
+    AssistantMessage,
+    AssistantStreamRequest,
+)
 from infrastructure.ports.document_processor_port import DocumentUploadRequest
 from infrastructure.ports.privacy_shield_port import AnonymizedPrompt
 
@@ -33,6 +36,7 @@ class OrchestrationService:
         chat_id: str,
         text: str,
         model: str,
+        history: list[AssistantMessage] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Anonymize a user prompt and stream a safe assistant response.
 
@@ -55,6 +59,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
             model=model,
+            history=history or [],
             log_prefix="ORCHESTRATOR",
         )
         print(
@@ -82,7 +87,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._anonymization_registry.store(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt, chat_id)
         return anonymized_prompt
 
     def preview_document_anonymization(
@@ -108,7 +113,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._anonymization_registry.store(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt, chat_id)
         return anonymized_prompt
 
     def stream_anonymized_response(
@@ -117,6 +122,7 @@ class OrchestrationService:
         anonymized_text: str,
         anonymization_id: str,
         model: str,
+        history: list[AssistantMessage] | None = None,
     ) -> Iterator[dict[str, Any]]:
         """Generate and restore an answer from already anonymized text.
 
@@ -133,10 +139,16 @@ class OrchestrationService:
             chat_id=chat_id,
             anonymized_prompt=anonymized_text,
             model=model,
+            history=history or [],
         )
         return self._stream_response_from_anonymized_chunks(
             assistant_chunks=assistant_chunks,
-            replacements=self._anonymization_registry.get(anonymization_id),
+            replacements=self._build_response_replacements(
+                chat_id=chat_id,
+                current_replacements=self._anonymization_registry.get(
+                    anonymization_id,
+                ),
+            ),
         )
 
     def stream_extract_document(
@@ -284,6 +296,7 @@ class OrchestrationService:
         text: str,
         model: str,
         log_prefix: str,
+        history: list[AssistantMessage] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Run text through privacy-shield, assistant, and restoration.
 
@@ -302,7 +315,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
         )
-        self._anonymization_registry.store(anonymized_prompt)
+        self._anonymization_registry.store(anonymized_prompt, chat_id)
         print(
             f"{log_prefix} anonymize done "
             f"elapsed={time.perf_counter() - started_at:.3f}s "
@@ -314,6 +327,7 @@ class OrchestrationService:
             chat_id=chat_id,
             anonymized_prompt=anonymized_prompt.text,
             model=model,
+            history=history or [],
         )
         print(
             f"{log_prefix} ai-gateway done "
@@ -325,15 +339,38 @@ class OrchestrationService:
             anonymized_prompt,
             self._stream_response_from_anonymized_chunks(
                 assistant_chunks=assistant_chunks,
-                replacements=anonymized_prompt.replacements,
+                replacements=self._build_response_replacements(
+                    chat_id=chat_id,
+                    current_replacements=anonymized_prompt.replacements,
+                ),
             ),
         )
+
+    def _build_response_replacements(
+        self,
+        chat_id: str,
+        current_replacements: dict[str, str],
+    ) -> dict[str, str]:
+        """Build replacements for deanonymizing a response.
+
+        Args:
+            chat_id (str): The chat that owns the response.
+            current_replacements (dict[str, str]): Replacements from the
+                current anonymization.
+
+        Returns:
+            dict[str, str]: Accumulated chat replacements plus current ones.
+        """
+        replacements = self._anonymization_registry.get_for_chat(chat_id)
+        replacements.update(current_replacements)
+        return replacements
 
     def _collect_ai_gateway_chunks(
         self,
         chat_id: str,
         anonymized_prompt: str,
         model: str,
+        history: list[AssistantMessage],
     ) -> list[str]:
         """Collect assistant chunks from the configured ai-gateway.
 
@@ -351,7 +388,13 @@ class OrchestrationService:
             for chunk in self._container.ai_gateway.stream_response(
                 AssistantStreamRequest(
                     chat_id=chat_id,
-                    prompt=anonymized_prompt,
+                    messages=[
+                        *history,
+                        AssistantMessage(
+                            role="user",
+                            content=anonymized_prompt,
+                        ),
+                    ],
                     model=model,
                 )
             )
@@ -373,10 +416,17 @@ class OrchestrationService:
         Returns:
             Iterator[dict[str, Any]]: Safe response stream events.
         """
-        return self._container.privacy_shield.deanonymize_stream(
-            chunks=assistant_chunks,
-            replacements=replacements,
-        )
+        def stream_events() -> Iterator[dict[str, Any]]:
+            yield {
+                "event": "anonymized_response",
+                "content": "".join(assistant_chunks),
+            }
+            yield from self._container.privacy_shield.deanonymize_stream(
+                chunks=assistant_chunks,
+                replacements=replacements,
+            )
+
+        return stream_events()
 
     def _build_anonymized_pdf_filename(self, filename: str) -> str:
         """Build the filename used for the anonymized PDF preview.

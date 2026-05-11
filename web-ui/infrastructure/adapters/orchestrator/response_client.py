@@ -16,6 +16,7 @@ from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorAnonymizationPreview,
     OrchestratorAnonymizationPreviewRequest,
     OrchestratorAnonymizedPrompt,
+    OrchestratorAnonymizedResponse,
     OrchestratorAnonymizedResponseRequest,
     OrchestratorDocumentAnonymizationPreviewRequest,
     OrchestratorDocumentResponseRequest,
@@ -110,6 +111,13 @@ class HttpOrchestratorResponseClient(
                 "anonymized_text": request.anonymized_content,
                 "anonymization_id": request.anonymization_id,
                 "model": request.model,
+                "history": [
+                    {
+                        "role": message.role,
+                        "content": message.content,
+                    }
+                    for message in request.history
+                ],
             },
         )
 
@@ -132,6 +140,13 @@ class HttpOrchestratorResponseClient(
                 "chat_id": request.chat_id,
                 "text": request.content,
                 "model": request.model,
+                "history": [
+                    {
+                        "role": message.role,
+                        "content": message.content,
+                    }
+                    for message in request.history
+                ],
             },
         )
 
@@ -160,7 +175,7 @@ class HttpOrchestratorResponseClient(
     def _consume_stream(
         self,
         path: str,
-        json_payload: dict[str, str],
+        json_payload: dict[str, object],
     ) -> Iterator[OrchestratorStreamEvent]:
         """Consume an NDJSON response stream.
 
@@ -195,6 +210,12 @@ class HttpOrchestratorResponseClient(
         if event_type == "anonymized_prompt":
             return OrchestratorAnonymizedPrompt(
                 event="anonymized_prompt",
+                content=parsed["content"],
+            )
+
+        if event_type == "anonymized_response":
+            return OrchestratorAnonymizedResponse(
+                event="anonymized_response",
                 content=parsed["content"],
             )
 

@@ -47,6 +47,7 @@ from infrastructure.dependency_container import build_container
 from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorAnonymizationPreviewRequest,
     OrchestratorAnonymizedResponseRequest,
+    OrchestratorChatHistoryMessage,
     OrchestratorDocumentAnonymizationPreviewRequest,
 )
 
@@ -67,7 +68,7 @@ api_state = WebUiApiState()
 app = FastAPI(
     title="GuardianAI Web UI Backend",
     version="0.1.0",
-    description="API propia del modulo web-ui para gestionar el chat.",
+    description="API propia del m?dulo web-ui para gestionar el chat.",
 )
 
 app.add_middleware(
@@ -187,6 +188,7 @@ def stream_message_response(
     """
     content = payload.content.strip()
     model = payload.model
+    history = _build_anonymized_history(chat_id)
     user_message = make_message(role="user", content=content)
 
     try:
@@ -196,6 +198,7 @@ def stream_message_response(
                 chat_id=chat_id,
                 content=content,
                 model=model,
+                history=history,
             ),
         )
     except ValueError as error:
@@ -206,7 +209,7 @@ def stream_message_response(
     except KeyError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            detail="Chat no encontrado.",
         ) from error
 
     return build_safe_streaming_response(
@@ -254,7 +257,7 @@ def preview_message_anonymization(
     except KeyError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            detail="Chat no encontrado.",
         ) from error
 
     return AnonymizedPreviewResponse(
@@ -285,6 +288,10 @@ def stream_approved_anonymized_response(
             anonymized_content=payload.anonymized_content,
             anonymization_id=payload.anonymization_id,
             model=payload.model,
+            history=_build_anonymized_history(
+                chat_id,
+                exclude_last_content=payload.anonymized_content,
+            ),
         ),
     )
     return build_safe_streaming_response(
@@ -333,7 +340,7 @@ async def attach_document_stream(
     except KeyError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            detail="Chat no encontrado.",
         ) from error
     except ValueError as error:
         raise HTTPException(
@@ -375,7 +382,7 @@ def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
     except KeyError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found.",
+            detail="Chat no encontrado.",
         ) from error
 
 
@@ -515,6 +522,47 @@ def download_anonymized_pdf_preview(
     )
 
 
+def _build_anonymized_history(
+    chat_id: str,
+    exclude_last_content: str | None = None,
+) -> list[OrchestratorChatHistoryMessage]:
+    """Build a chat history that is safe to send to ai-gateway.
+
+    Args:
+        chat_id (str): The chat whose messages should be inspected.
+        exclude_last_content (str | None): Optional anonymized content to
+            exclude from the end of the history because it will be sent as the
+            current prompt.
+
+    Returns:
+        list[OrchestratorChatHistoryMessage]: Previous messages containing only
+            anonymized content.
+    """
+    chat = container.chat_repository.load_chat(chat_id)
+    if chat is None:
+        raise KeyError(chat_id)
+
+    messages = [
+        message
+        for message in chat.messages
+        if message.anonymized_content and message.anonymized_content.strip()
+    ]
+    if (
+        exclude_last_content is not None
+        and messages
+        and messages[-1].anonymized_content == exclude_last_content
+    ):
+        messages = messages[:-1]
+
+    return [
+        OrchestratorChatHistoryMessage(
+            role=message.role,
+            content=message.anonymized_content or "",
+        )
+        for message in messages
+    ]
+
+
 def _get_model_readiness() -> dict[str, object]:
     """Return whether the required backend models are loaded.
 
@@ -541,7 +589,7 @@ def _get_model_readiness() -> dict[str, object]:
     except httpx.HTTPError as error:
         return {
             "ready": False,
-            "message": "El proveedor de modelos aun no esta disponible.",
+            "message": "El proveedor de modelos aún no está disponible.",
             "detail": str(error),
             "models": statuses,
         }

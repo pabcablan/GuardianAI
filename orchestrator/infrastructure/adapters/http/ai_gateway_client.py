@@ -50,7 +50,13 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
             ) as client:
                 yield from self._stream_completion(
                     client=client,
-                    prompt=request.prompt,
+                    messages=[
+                        {
+                            "role": message.role,
+                            "content": message.content,
+                        }
+                        for message in request.messages
+                    ],
                     model=request.model,
                 )
         except httpx.RequestError as error:
@@ -61,26 +67,22 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
     def _stream_completion(
         self,
         client: httpx.Client,
-        prompt: str,
+        messages: list[dict[str, str]],
         model: str,
     ) -> Iterator[str]:
         """Stream a completion from ai-gateway.
 
         Args:
             client (httpx.Client): The configured HTTP client.
-            prompt (str): The anonymized prompt sent to the model.
+            messages (list[dict[str, str]]): The anonymized messages sent to
+                the model.
             model (str): The AI model selected by the user.
 
         Yields:
             str: Assistant response chunks.
         """
         payload = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ],
+            "messages": messages,
             "model": model,
         }
 

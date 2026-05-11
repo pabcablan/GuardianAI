@@ -295,7 +295,7 @@ export class ChatApplicationService {
     await this.ensure_success(response);
 
     if (!response.body) {
-      throw new Error("Document progress stream is unavailable.");
+      throw new Error("El flujo de progreso del documento no está disponible.");
     }
 
     const reader = response.body.getReader();
@@ -347,7 +347,7 @@ export class ChatApplicationService {
       return completedDocumentId;
     }
 
-    throw new Error("Document processing completed without a document id.");
+    throw new Error("El procesamiento del documento finalizó sin un identificador.");
   }
 
   async streamSafeResponse(
@@ -364,7 +364,7 @@ export class ChatApplicationService {
     await this.ensure_success(response);
 
     if (!response.body) {
-      throw new Error("Safe response stream is unavailable.");
+      throw new Error("El flujo de respuesta segura no está disponible.");
     }
 
     await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
@@ -375,7 +375,7 @@ export class ChatApplicationService {
       return;
     }
 
-    const fallbackMessage = `Request failed with status ${response.status}.`;
+    const fallbackMessage = `La petición falló con estado ${response.status}.`;
     let detailMessage = fallbackMessage;
 
     try {
@@ -415,7 +415,7 @@ export class ChatApplicationService {
     if (payload.event === "completed") {
       onProgress({
         filename,
-        stage: "completed",
+        stage: "Completado",
         message: "Documento procesado. Generando respuesta segura...",
         current: 1,
         total: 1,
@@ -466,7 +466,7 @@ export class ChatApplicationService {
     onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
     if (!response.body) {
-      throw new Error("Safe response stream is unavailable.");
+      throw new Error("El flujo de respuesta segura no está disponible.");
     }
 
     const reader = response.body.getReader();

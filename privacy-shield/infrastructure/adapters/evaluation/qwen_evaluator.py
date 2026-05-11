@@ -48,7 +48,12 @@ class QwenEvaluator(AnonymizationEvaluator):
              "content": f"Analiza el siguiente contenido y determina si requiere anonimización:\n\n{text}"}
         ]
 
-        input_text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        input_text = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        )
         inputs = self.tokenizer(text=input_text, return_tensors="pt").to(self.model.device)
 
         with torch.inference_mode():

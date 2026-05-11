@@ -43,7 +43,12 @@ class LlmAnonymizer(Anonymizer):
             }
         ]
 
-        input_text = self.tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+        input_text = self.tokenizer.apply_chat_template(
+            message,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        )
         inputs = self.tokenizer(text=input_text, return_tensors="pt").to(self.model.device)
         
         with torch.no_grad():

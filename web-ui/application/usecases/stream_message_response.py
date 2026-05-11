@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorChatHistoryMessage,
     OrchestratorMessageResponseRequest,
     OrchestratorResponsePort,
     OrchestratorStreamEvent,
@@ -19,11 +20,14 @@ class StreamMessageResponseCommand:
         chat_id (str): The chat that will display the response.
         content (str): The user message content.
         model (str): The AI model selected by the user.
+        history (list[OrchestratorChatHistoryMessage]): Previous anonymized
+            conversation messages.
     """
 
     chat_id: str
     content: str
     model: str
+    history: list[OrchestratorChatHistoryMessage]
 
 class StreamMessageResponseUseCase:
     """Consume a safe streamed answer for a user chat message."""
@@ -63,5 +67,6 @@ class StreamMessageResponseUseCase:
                 chat_id=command.chat_id,
                 content=content,
                 model=model,
+                history=command.history,
             )
         )

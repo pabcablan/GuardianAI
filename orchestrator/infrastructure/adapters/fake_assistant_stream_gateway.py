@@ -32,9 +32,10 @@ class FakeAssistantStreamGateway(AiGatewayPort):
         Returns:
             Iterator[str]: The fake assistant response chunks.
         """
+        prompt = request.messages[-1].content if request.messages else ""
         response = (
             "Respuesta fake generada para el prompt anonimizado: "
-            f"{request.prompt}"
+            f"{prompt}"
         )
         for index in range(0, len(response), self.chunk_size):
             yield response[index:index + self.chunk_size]

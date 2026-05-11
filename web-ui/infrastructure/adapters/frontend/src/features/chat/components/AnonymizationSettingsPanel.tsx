@@ -18,7 +18,7 @@ const SETTING_OPTIONS: Array<{
   {
     key: "personNames",
     label: "Nombres propios",
-    description: "Personas fisicas mencionadas en documentos y mensajes.",
+    description: "Personas físicas mencionadas en documentos y mensajes.",
   },
   {
     key: "identityDocuments",
@@ -28,7 +28,7 @@ const SETTING_OPTIONS: Array<{
   {
     key: "emails",
     label: "Correos",
-    description: "Direcciones de correo electronico personales o corporativas.",
+    description: "Direcciones de correo electrónico personales o corporativas.",
   },
   {
     key: "addresses",
@@ -37,8 +37,8 @@ const SETTING_OPTIONS: Array<{
   },
   {
     key: "phones",
-    label: "Telefonos",
-    description: "Numeros fijos, moviles y otros datos de contacto telefonico.",
+    label: "Teléfonos",
+    description: "Números fijos, móviles y otros datos de contacto telefónico.",
   },
   {
     key: "organizations",
@@ -47,8 +47,8 @@ const SETTING_OPTIONS: Array<{
   },
   {
     key: "relevantCodes",
-    label: "Codigos relevantes",
-    description: "Expedientes, referencias, cuentas u otros codigos sensibles.",
+    label: "Códigos relevantes",
+    description: "Expedientes, referencias, cuentas u otros códigos sensibles.",
   },
 ];
 
@@ -58,24 +58,24 @@ export function AnonymizationSettingsPanel({
   onClose,
 }: AnonymizationSettingsPanelProps) {
   return (
-    <aside className="settings-panel" aria-label="Configuracion de anonimizacion">
+    <aside className="settings-panel" aria-label="Configuración de anonimización">
       <div className="settings-panel__header">
         <div>
-          <p className="settings-panel__eyebrow">Configuracion</p>
-          <h2>Anonimizacion</h2>
+          <p className="settings-panel__eyebrow">Configuración</p>
+          <h2>Anonimización</h2>
         </div>
         <button
           className="settings-panel__close"
           type="button"
           onClick={onClose}
-          aria-label="Cerrar configuracion"
+          aria-label="Cerrar configuración"
         >
           x
         </button>
       </div>
 
       <p className="settings-panel__copy">
-        Elige que tipos de informacion sensible debe ocultar Guardian AI antes
+        Elige qué tipos de información sensible debe ocultar Guardian AI antes
         de continuar el flujo.
       </p>
 
@@ -96,13 +96,12 @@ export function AnonymizationSettingsPanel({
                 )
               }
             />
-            <span className="settings-control__indicator" aria-hidden="true" />
             <span className="settings-control__copy">
-              <strong>{option.label}</strong>
+              <span className="settings-control__title">
+                <span className="settings-control__indicator" aria-hidden="true" />
+                <strong>{option.label}</strong>
+              </span>
               <span>{option.description}</span>
-            </span>
-            <span className="settings-control__state">
-              {settings[option.key] === "anonymize" ? "Anonimizar" : "Conservar"}
             </span>
           </label>
         ))}

@@ -7,17 +7,31 @@ from typing import Protocol
 
 
 @dataclass(frozen=True)
+class AssistantMessage:
+    """Represent one message sent to the assistant gateway.
+
+    Attributes:
+        role (str): The message role accepted by ai-gateway.
+        content (str): The anonymized message content.
+    """
+
+    role: str
+    content: str
+
+
+@dataclass(frozen=True)
 class AssistantStreamRequest:
     """Represent a request sent to the assistant gateway.
 
     Attributes:
         chat_id (str): The chat that owns the request.
-        prompt (str): The anonymized prompt sent to the assistant.
+        messages (list[AssistantMessage]): The anonymized chat history plus
+            the current anonymized prompt.
         model (str): The AI model selected by the user.
     """
 
     chat_id: str
-    prompt: str
+    messages: list[AssistantMessage]
     model: str
 
 

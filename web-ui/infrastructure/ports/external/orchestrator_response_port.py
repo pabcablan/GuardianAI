@@ -7,6 +7,19 @@ from typing import Literal, Protocol
 
 
 @dataclass(frozen=True)
+class OrchestratorChatHistoryMessage:
+    """Represent one anonymized history message sent to orchestrator.
+
+    Attributes:
+        role (str): The message role.
+        content (str): The anonymized message content.
+    """
+
+    role: str
+    content: str
+
+
+@dataclass(frozen=True)
 class OrchestratorDocumentResponseRequest:
     """Represent the data needed to request a document response stream.
 
@@ -33,11 +46,14 @@ class OrchestratorMessageResponseRequest:
         chat_id (str): The chat that will display the response stream.
         content (str): The original user prompt.
         model (str): The AI model selected by the user.
+        history (list[OrchestratorChatHistoryMessage]): Previous anonymized
+            conversation messages.
     """
 
     chat_id: str
     content: str
     model: str
+    history: list[OrchestratorChatHistoryMessage]
 
 
 @dataclass(frozen=True)
@@ -77,12 +93,15 @@ class OrchestratorAnonymizedResponseRequest:
         anonymized_content (str): The anonymized text.
         anonymization_id (str): The privacy-shield session identifier.
         model (str): The AI model selected by the user.
+        history (list[OrchestratorChatHistoryMessage]): Previous anonymized
+            conversation messages.
     """
 
     chat_id: str
     anonymized_content: str
     anonymization_id: str
     model: str
+    history: list[OrchestratorChatHistoryMessage]
 
 
 @dataclass(frozen=True)
@@ -140,6 +159,19 @@ class OrchestratorAnonymizedPrompt:
 
 
 @dataclass(frozen=True)
+class OrchestratorAnonymizedResponse:
+    """Represent the anonymized assistant response.
+
+    Attributes:
+        event (Literal["anonymized_response"]): The stream event type.
+        content (str): The assistant response before deanonymization.
+    """
+
+    event: Literal["anonymized_response"]
+    content: str
+
+
+@dataclass(frozen=True)
 class OrchestratorStreamCompleted:
     """Represent the successful end of an orchestrator stream.
 
@@ -166,6 +198,7 @@ class OrchestratorStreamFailed:
 OrchestratorStreamEvent = (
     OrchestratorStreamChunk
     | OrchestratorAnonymizedPrompt
+    | OrchestratorAnonymizedResponse
     | OrchestratorStreamCompleted
     | OrchestratorStreamFailed
 )

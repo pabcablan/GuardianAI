@@ -14,7 +14,11 @@ class ModelInferenceEngine(TextGenerator):
         pil_images = self._decode_pdf_document(document_base64) if document_base64 else None
 
         messages = self._build_messages(system_prompt, prompt, has_images=bool(pil_images))
-        input_text = processor.apply_chat_template(messages, add_generation_prompt=True)
+        input_text = processor.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        )
 
         if pil_images:
             inputs = processor(

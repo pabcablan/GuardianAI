@@ -34,6 +34,7 @@ from infrastructure.adapters.http.privacy_shield_client import (
     PrivacyShieldClientError,
 )
 from infrastructure.dependency_container import build_container
+from infrastructure.ports.ai_gateway_port import AssistantMessage
 
 
 container = build_container()
@@ -80,6 +81,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
                 chat_id=payload.chat_id,
                 text=payload.text,
                 model=payload.model,
+                history=_build_assistant_history(payload.history),
             )
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
@@ -163,6 +165,7 @@ def stream_anonymized_response(
             anonymized_text=payload.anonymized_text,
             anonymization_id=payload.anonymization_id,
             model=payload.model,
+            history=_build_assistant_history(payload.history),
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise bad_gateway(error) from error
@@ -301,6 +304,24 @@ def _unprocessable_entity(error: Exception) -> HTTPException:
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=str(error),
     )
+
+
+def _build_assistant_history(history: list[Any]) -> list[AssistantMessage]:
+    """Convert API history payloads into assistant messages.
+
+    Args:
+        history (list[Any]): The Pydantic history items received by the API.
+
+    Returns:
+        list[AssistantMessage]: Messages safe to forward to ai-gateway.
+    """
+    return [
+        AssistantMessage(
+            role=item.role,
+            content=item.content,
+        )
+        for item in history
+    ]
 
 
 if __name__ == "__main__":

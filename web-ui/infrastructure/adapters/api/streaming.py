@@ -17,6 +17,7 @@ from infrastructure.adapters.api.schemas import (
     SafeStreamErrorResponse,
 )
 from infrastructure.ports.external.orchestrator_response_port import (
+    OrchestratorAnonymizedResponse,
     OrchestratorAnonymizedPrompt,
     OrchestratorStreamChunk,
     OrchestratorStreamCompleted,
@@ -28,7 +29,7 @@ from infrastructure.ports.internal.chat_repository_port import (
 )
 
 
-AssistantMessageFactory = Callable[[str], Message]
+AssistantMessageFactory = Callable[[str, str | None], Message]
 
 
 def build_safe_streaming_response(
@@ -60,6 +61,7 @@ def build_safe_streaming_response(
             str: One JSON-encoded event followed by a newline.
         """
         assistant_chunks: list[str] = []
+        assistant_anonymized_content: str | None = None
         did_complete = False
 
         try:
@@ -78,6 +80,9 @@ def build_safe_streaming_response(
                     payload = SafeStreamAnonymizedPromptResponse(
                         content=event.content,
                     ).model_dump()
+                elif isinstance(event, OrchestratorAnonymizedResponse):
+                    assistant_anonymized_content = event.content
+                    continue
                 elif isinstance(event, OrchestratorStreamCompleted):
                     did_complete = True
                     payload = SafeStreamCompletedResponse().model_dump()
@@ -98,6 +103,7 @@ def build_safe_streaming_response(
                     make_assistant_message=make_assistant_message,
                     chat_id=chat_id,
                     content="".join(assistant_chunks),
+                    anonymized_content=assistant_anonymized_content,
                 )
         except RuntimeError as error:
             payload = SafeStreamErrorResponse(detail=str(error)).model_dump()
@@ -180,6 +186,7 @@ def _persist_assistant_message(
     make_assistant_message: AssistantMessageFactory,
     chat_id: str | None,
     content: str,
+    anonymized_content: str | None,
 ) -> None:
     """Persist the final assistant response when a stream finishes.
 
@@ -189,11 +196,13 @@ def _persist_assistant_message(
             create an assistant message.
         chat_id (str | None): The chat that owns the response.
         content (str): The accumulated assistant content.
+        anonymized_content (str | None): The accumulated assistant content
+            before deanonymization.
     """
     if chat_id is None or not content.strip():
         return
 
     chat_repository.append_message(
         chat_id,
-        make_assistant_message(content),
+        make_assistant_message(content, anonymized_content),
     )

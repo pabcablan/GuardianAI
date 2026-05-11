@@ -17,24 +17,38 @@ class WebUiApiState:
     )
 
 
-def make_assistant_message(content: str) -> Message:
+def make_assistant_message(
+    content: str,
+    anonymized_content: str | None = None,
+) -> Message:
     """Create an assistant message for persistence.
 
     Args:
         content (str): The assistant message content.
+        anonymized_content (str | None): The assistant response before
+            deanonymization.
 
     Returns:
         Message: The assistant message.
     """
-    return make_message(role="assistant", content=content)
+    return make_message(
+        role="assistant",
+        content=content,
+        anonymized_content=anonymized_content,
+    )
 
 
-def make_message(role: str, content: str) -> Message:
+def make_message(
+    role: str,
+    content: str,
+    anonymized_content: str | None = None,
+) -> Message:
     """Create a chat message.
 
     Args:
         role (str): The message sender role.
         content (str): The message content.
+        anonymized_content (str | None): The anonymized message content.
 
     Returns:
         Message: The created message.
@@ -44,6 +58,7 @@ def make_message(role: str, content: str) -> Message:
         role=role,
         content=content,
         created_at=now(),
+        anonymized_content=anonymized_content,
     )
 
 

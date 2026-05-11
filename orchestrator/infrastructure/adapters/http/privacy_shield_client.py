@@ -66,15 +66,23 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         if not isinstance(replacements, dict):
             replacements = {}
 
+        anonymization_id = str(uuid.uuid4())
         normalized_replacements = {
             str(key): str(value)
             for key, value in replacements.items()
         }
+        anonymized_text, normalized_replacements = (
+            self._namespace_replacements(
+                anonymized_text=str(response.get("anonymized_text", "")),
+                replacements=normalized_replacements,
+                anonymization_id=anonymization_id,
+            )
+        )
 
         return AnonymizedPrompt(
-            text=str(response.get("anonymized_text", "")),
+            text=anonymized_text,
             replacements=normalized_replacements,
-            anonymization_id=str(uuid.uuid4()),
+            anonymization_id=anonymization_id,
             replacement_count=len(normalized_replacements),
         )
 
@@ -143,3 +151,55 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             raise PrivacyShieldClientError(
                 "Privacy-shield service is unavailable."
             ) from error
+
+    def _namespace_replacements(
+        self,
+        anonymized_text: str,
+        replacements: dict[str, str],
+        anonymization_id: str,
+    ) -> tuple[str, dict[str, str]]:
+        """Make placeholders unique for one anonymization session.
+
+        Args:
+            anonymized_text (str): The text returned by privacy-shield.
+            replacements (dict[str, str]): The original replacement mapping.
+            anonymization_id (str): The generated anonymization identifier.
+
+        Returns:
+            tuple[str, dict[str, str]]: The namespaced text and mappings.
+        """
+        namespace = anonymization_id.replace("-", "")[:8].upper()
+        namespaced_text = anonymized_text
+        namespaced_replacements: dict[str, str] = {}
+
+        for placeholder, original_value in replacements.items():
+            namespaced_placeholder = self._build_namespaced_placeholder(
+                placeholder,
+                namespace,
+            )
+            namespaced_text = namespaced_text.replace(
+                placeholder,
+                namespaced_placeholder,
+            )
+            namespaced_replacements[namespaced_placeholder] = original_value
+
+        return namespaced_text, namespaced_replacements
+
+    def _build_namespaced_placeholder(
+        self,
+        placeholder: str,
+        namespace: str,
+    ) -> str:
+        """Build a unique placeholder while preserving bracket syntax.
+
+        Args:
+            placeholder (str): The placeholder returned by privacy-shield.
+            namespace (str): The anonymization namespace.
+
+        Returns:
+            str: A placeholder unique for this anonymization.
+        """
+        if placeholder.startswith("[") and placeholder.endswith("]"):
+            return f"[{namespace}_{placeholder[1:-1]}]"
+
+        return f"[{namespace}_{placeholder}]"

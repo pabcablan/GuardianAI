@@ -146,7 +146,7 @@ export function Sidebar({
           <input
             id="chat-search"
             type="search"
-            placeholder="Search"
+            placeholder="Buscar"
             value={searchTerm}
             disabled={isInteractionLocked}
             onChange={(event) => setSearchTerm(event.target.value)}
@@ -249,7 +249,7 @@ export function Sidebar({
                   <span className="model-dropdown__trigger-copy">
                     <span className="model-dropdown__name">{selectedModel}</span>
                     <span className="model-dropdown__price">
-                      Input: {selectedModelPricing.input} | Output:{" "}
+                      Entrada: {selectedModelPricing.input} | Salida:{" "}
                       {selectedModelPricing.output}
                     </span>
                   </span>
@@ -278,7 +278,7 @@ export function Sidebar({
                         >
                           <span className="model-dropdown__name">{model}</span>
                           <span className="model-dropdown__price">
-                            Input: {pricing.input} | Output: {pricing.output}
+                            Entrada: {pricing.input} | Salida: {pricing.output}
                           </span>
                         </li>
                       );
@@ -295,7 +295,7 @@ export function Sidebar({
               onClick={onOpenSettings}
             >
               <span className="icon icon--settings" aria-hidden="true" />
-              Configuracion
+              Configuración
             </button>
           </>
         ) : (
@@ -304,7 +304,7 @@ export function Sidebar({
             type="button"
             disabled={isInteractionLocked}
             onClick={onOpenSettings}
-            aria-label="Abrir configuracion"
+            aria-label="Abrir configuración"
           >
             <span className="icon icon--settings" aria-hidden="true" />
           </button>

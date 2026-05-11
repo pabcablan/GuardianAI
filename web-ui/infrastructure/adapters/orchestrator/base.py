@@ -33,13 +33,13 @@ class OrchestratorHttpClientBase:
     def _stream_json_lines(
         self,
         path: str,
-        payload: dict[str, str],
+        payload: dict[str, object],
     ) -> Iterator[str]:
         """POST JSON to orchestrator and yield NDJSON response lines.
 
         Args:
             path (str): The orchestrator API path.
-            payload (dict[str, str]): The JSON request body.
+            payload (dict[str, object]): The JSON request body.
 
         Yields:
             str: One non-empty NDJSON line.
@@ -61,13 +61,13 @@ class OrchestratorHttpClientBase:
     def _post_json(
         self,
         path: str,
-        payload: dict[str, str],
+        payload: dict[str, object],
     ) -> dict[str, object]:
         """POST JSON to orchestrator and return a JSON object.
 
         Args:
             path (str): The orchestrator API path.
-            payload (dict[str, str]): The JSON request body.
+            payload (dict[str, object]): The JSON request body.
 
         Returns:
             dict[str, object]: The parsed JSON response.
