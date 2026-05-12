@@ -27,12 +27,19 @@ class AnonymizedPrompt:
 class PrivacyShieldPort(Protocol):
     """Define how orchestrator consumes privacy-shield operations."""
 
-    def anonymize(self, chat_id: str, text: str) -> AnonymizedPrompt:
+    def anonymize(
+        self,
+        chat_id: str,
+        text: str,
+        settings: dict[str, str] | None = None,
+    ) -> AnonymizedPrompt:
         """Anonymize text through privacy-shield.
 
         Args:
             chat_id (str): The chat that owns the prompt.
             text (str): The original prompt.
+            settings (dict[str, str] | None): The selected anonymization
+                categories from the UI.
 
         Returns:
             AnonymizedPrompt: The anonymized text and privacy-shield session.

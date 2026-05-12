@@ -14,6 +14,8 @@ class ProcessedDocumentContext:
         filename (str): The original uploaded filename.
         content_type (str): The original uploaded content type.
         content (bytes): The original uploaded document bytes.
+        extraction_method (str): Whether the text came from a library-based
+            extractor or from the model fallback.
     """
 
     extracted_text: str
@@ -21,3 +23,4 @@ class ProcessedDocumentContext:
     filename: str = "document.pdf"
     content_type: str = "application/pdf"
     content: bytes = b""
+    extraction_method: str = "library"

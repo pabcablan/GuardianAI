@@ -6,5 +6,9 @@ class AnonymizeDocumentOptimized:
     def __init__(self, anonymizer: Anonymizer):
         self.anonymizer = anonymizer
     
-    async def execute(self, text: str) -> dict:
-        return await self.anonymizer.anonymize(text)
+    async def execute(
+        self,
+        text: str,
+        settings: dict[str, str] | None = None,
+    ) -> dict:
+        return await self.anonymizer.anonymize(text, settings=settings)

@@ -25,6 +25,7 @@ def build_anonymized_prompt_event(
 
 def build_anonymized_preview_payload(
     anonymized_prompt: AnonymizedPrompt,
+    extraction_method: str | None = None,
 ) -> dict[str, Any]:
     """Build the API payload for anonymization previews.
 
@@ -38,4 +39,5 @@ def build_anonymized_preview_payload(
         "anonymized_text": anonymized_prompt.text,
         "anonymization_id": anonymized_prompt.anonymization_id,
         "replacement_count": anonymized_prompt.replacement_count,
+        "extraction_method": extraction_method,
     }

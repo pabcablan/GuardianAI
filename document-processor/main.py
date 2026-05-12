@@ -30,8 +30,14 @@ def main():
     )
 
     @app.post("/extract")
-    async def extract_document(file: UploadFile = File(...)) -> str:
-        return await process_doc.execute(file)
+    async def extract_document(file: UploadFile = File(...)) -> dict[str, str]:
+        extracted = await process_doc.execute(file)
+        return {
+            "document_id": extracted.document_id,
+            "filename": extracted.filename,
+            "extracted_text": extracted.extracted_text,
+            "extraction_method": extracted.extraction_method,
+        }
 
     uvicorn.run(app, host="0.0.0.0", port=8001)
 

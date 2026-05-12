@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { createChatApplicationService } from "../application/chatApplicationService";
 import { DEFAULT_AI_MODEL } from "../types";
 import type {
+  AnonymizationSettings,
   ChatMessage,
   ChatSummary,
   ChatThread,
@@ -303,7 +304,9 @@ export function useChatWorkspace() {
     messageId: string,
     anonymizedContent: string,
     anonymizationId?: string,
+    replacementCount?: number,
     documentId?: string,
+    extractionMethod?: string,
   ): void {
     setSelectedChat((currentChat) => {
       if (!currentChat || currentChat.id !== chatId) {
@@ -321,7 +324,9 @@ export function useChatWorkspace() {
                   ? {
                       anonymizationId,
                       anonymizedContent,
+                      replacementCount,
                       documentId,
+                      extractionMethod,
                     }
                   : message.pendingApproval,
               }
@@ -436,6 +441,7 @@ export function useChatWorkspace() {
     pendingFile: File | null = null,
     shouldPreviewAnonymizedText = false,
     model: AiModel = DEFAULT_AI_MODEL,
+    settings: AnonymizationSettings,
   ): Promise<boolean> {
     const normalizedContent = content.trim();
     if (!normalizedContent && !pendingFile) {
@@ -498,13 +504,16 @@ export function useChatWorkspace() {
             await serviceRef.current.previewDocumentAnonymization(
               activeChatId,
               documentId,
+              settings,
             );
           updateUserAnonymizedContent(
             activeChatId,
             documentUserMessage.id,
             preview.anonymized_content,
             preview.anonymization_id,
+            preview.replacement_count,
             documentId,
+            preview.extraction_method ?? undefined,
           );
           setDocumentProcessingStatus(null);
           return true;
@@ -527,6 +536,7 @@ export function useChatWorkspace() {
           activeChatId,
           documentId,
           model,
+          settings,
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
@@ -557,6 +567,7 @@ export function useChatWorkspace() {
                 activeChatId,
                 documentUserMessage.id,
                 anonymizedContent,
+                undefined,
             );
           },
         );
@@ -576,12 +587,14 @@ export function useChatWorkspace() {
             activeChatId,
             normalizedContent,
             model,
+            settings,
           );
           updateUserAnonymizedContent(
             activeChatId,
             userMessage.id,
             preview.anonymized_content,
             preview.anonymization_id,
+            preview.replacement_count,
           );
           setResponseProcessingStatus(null);
           return true;
@@ -601,6 +614,7 @@ export function useChatWorkspace() {
           activeChatId,
           normalizedContent,
           model,
+          settings,
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
@@ -625,6 +639,7 @@ export function useChatWorkspace() {
               activeChatId,
               userMessage.id,
               anonymizedContent,
+              undefined,
             );
           },
         );

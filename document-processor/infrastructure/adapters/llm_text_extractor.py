@@ -20,4 +20,5 @@ class LLMTextExtractor(TextExtractor):
 
         return ExtractedDocument(document_id=document.document_id, 
                                  filename=document.filename,
-                                 extracted_text=extracted_text)
+                                 extracted_text=extracted_text,
+                                 extraction_method="model")

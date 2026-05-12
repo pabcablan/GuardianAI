@@ -36,6 +36,7 @@ class OrchestrationService:
         chat_id: str,
         text: str,
         model: str,
+        settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Anonymize a user prompt and stream a safe assistant response.
@@ -59,6 +60,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=text,
             model=model,
+            settings=settings,
             history=history or [],
             log_prefix="ORCHESTRATOR",
         )
@@ -73,6 +75,7 @@ class OrchestrationService:
         self,
         chat_id: str,
         text: str,
+        settings: dict[str, str] | None = None,
     ) -> AnonymizedPrompt:
         """Anonymize a message without calling the assistant.
 
@@ -86,6 +89,7 @@ class OrchestrationService:
         anonymized_prompt = self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
+            settings=settings,
         )
         self._anonymization_registry.store(anonymized_prompt, chat_id)
         return anonymized_prompt
@@ -94,7 +98,8 @@ class OrchestrationService:
         self,
         chat_id: str,
         document_id: str,
-    ) -> AnonymizedPrompt:
+        settings: dict[str, str] | None = None,
+    ) -> tuple[AnonymizedPrompt, str]:
         """Anonymize a processed document without calling the assistant.
 
         Args:
@@ -112,9 +117,12 @@ class OrchestrationService:
         anonymized_prompt = self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
+            settings=settings,
         )
         self._anonymization_registry.store(anonymized_prompt, chat_id)
-        return anonymized_prompt
+        return anonymized_prompt, self._document_registry.get(
+            document_id,
+        ).extraction_method
 
     def stream_anonymized_response(
         self,
@@ -208,6 +216,9 @@ class OrchestrationService:
                 filename=filename,
                 content_type=content_type,
                 content=content,
+                extraction_method=str(
+                    event.get("extraction_method", "library"),
+                ),
             ),
         )
 
@@ -233,6 +244,11 @@ class OrchestrationService:
         replacements = self._anonymization_registry.get(anonymization_id)
         if not replacements:
             raise ValueError("No hay campos anonimizados para pintar en el PDF.")
+        if document_context.extraction_method == "model":
+            raise ValueError(
+                "No se puede reconstruir una vista visual del PDF cuando el "
+                "texto se extrajo mediante OCR/modelo."
+            )
         if not document_context.content:
             raise ValueError("No se conserva el PDF original para esta vista.")
 
@@ -250,6 +266,7 @@ class OrchestrationService:
         chat_id: str,
         document_id: str,
         model: str,
+        settings: dict[str, str] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Generate a safe response for a processed document.
 
@@ -266,6 +283,7 @@ class OrchestrationService:
             chat_id=chat_id,
             text=self.build_document_text(document_id),
             model=model,
+            settings=settings,
             log_prefix="ORCHESTRATOR document",
         )
 
@@ -296,6 +314,7 @@ class OrchestrationService:
         text: str,
         model: str,
         log_prefix: str,
+        settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Run text through privacy-shield, assistant, and restoration.
@@ -314,6 +333,7 @@ class OrchestrationService:
         anonymized_prompt = self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
+            settings=settings,
         )
         self._anonymization_registry.store(anonymized_prompt, chat_id)
         print(

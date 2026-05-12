@@ -28,6 +28,7 @@ class StreamMessageResponseCommand:
     content: str
     model: str
     history: list[OrchestratorChatHistoryMessage]
+    settings: dict[str, str]
 
 class StreamMessageResponseUseCase:
     """Consume a safe streamed answer for a user chat message."""
@@ -68,5 +69,6 @@ class StreamMessageResponseUseCase:
                 content=content,
                 model=model,
                 history=command.history,
+                settings=command.settings,
             )
         )

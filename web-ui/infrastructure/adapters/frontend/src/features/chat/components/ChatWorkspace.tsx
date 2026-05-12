@@ -78,6 +78,7 @@ export function ChatWorkspace() {
       pendingFile,
       shouldPreviewAnonymizedText,
       selectedModel,
+      anonymizationSettings,
     );
     if (!didSend) {
       return;

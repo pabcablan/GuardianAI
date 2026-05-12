@@ -43,7 +43,9 @@ export interface ChatMessage {
 export interface AnonymizedContentApproval {
   anonymizationId: string;
   anonymizedContent: string;
+  replacementCount?: number;
   documentId?: string;
+  extractionMethod?: string;
 }
 
 export interface ChatSummary {

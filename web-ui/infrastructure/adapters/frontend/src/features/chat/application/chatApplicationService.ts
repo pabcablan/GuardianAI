@@ -1,4 +1,5 @@
 import type {
+  AnonymizationSettings,
   ChatSummary,
   ChatThread,
   AiModel,
@@ -40,6 +41,7 @@ interface AnonymizedPreviewResponse {
   anonymized_content: string;
   anonymization_id: string;
   replacement_count: number;
+  extraction_method?: string | null;
 }
 
 interface AttachDocumentProgressResponse {
@@ -181,6 +183,7 @@ export class ChatApplicationService {
     chatId: string,
     content: string,
     model: AiModel,
+    settings: AnonymizationSettings,
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt: (content: string) => void,
   ): Promise<void> {
@@ -189,7 +192,7 @@ export class ChatApplicationService {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ content, model }),
+      body: JSON.stringify({ content, model, settings }),
     });
     await this.ensure_success(response);
 
@@ -200,6 +203,7 @@ export class ChatApplicationService {
     chatId: string,
     content: string,
     model: AiModel,
+    settings: AnonymizationSettings,
   ): Promise<AnonymizedPreviewResponse> {
     const response = await fetch(
       `${this.apiBaseUrl}/api/chats/${chatId}/messages/anonymize-preview`,
@@ -208,7 +212,7 @@ export class ChatApplicationService {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content, model }),
+        body: JSON.stringify({ content, model, settings }),
       },
     );
     await this.ensure_success(response);
@@ -219,11 +223,16 @@ export class ChatApplicationService {
   async previewDocumentAnonymization(
     chatId: string,
     documentId: string,
+    settings: AnonymizationSettings,
   ): Promise<AnonymizedPreviewResponse> {
     const response = await fetch(
       `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/anonymize-preview`,
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ settings }),
       },
     );
     await this.ensure_success(response);
@@ -354,12 +363,19 @@ export class ChatApplicationService {
     chatId: string,
     documentId: string,
     model: AiModel,
+    settings: AnonymizationSettings,
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
-    const query = new URLSearchParams({ model });
     const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream?${query.toString()}`,
+      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model, settings }),
+      },
     );
     await this.ensure_success(response);
 

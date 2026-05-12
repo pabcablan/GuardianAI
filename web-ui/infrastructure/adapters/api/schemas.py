@@ -84,6 +84,20 @@ class StreamMessageRequest(BaseModel):
 
     content: str = Field(min_length=1)
     model: str = Field(min_length=1)
+    settings: dict[str, str] = Field(default_factory=dict)
+
+
+class DocumentAnonymizationRequest(BaseModel):
+    """Represent anonymization preferences for a processed document."""
+
+    settings: dict[str, str] = Field(default_factory=dict)
+
+
+class DocumentSafeStreamRequest(BaseModel):
+    """Represent a safe response request for a processed document."""
+
+    model: str = Field(min_length=1)
+    settings: dict[str, str] = Field(default_factory=dict)
 
 
 class AnonymizedPreviewResponse(BaseModel):
@@ -94,12 +108,15 @@ class AnonymizedPreviewResponse(BaseModel):
         anonymized_content (str): The anonymized content.
         anonymization_id (str): The privacy-shield session identifier.
         replacement_count (int): The number of replacements found.
+        extraction_method (str | None): How the document text was extracted,
+            when the preview belongs to a document.
     """
 
     message_id: str
     anonymized_content: str
     anonymization_id: str
     replacement_count: int
+    extraction_method: str | None = None
 
 
 class ContinueAnonymizedRequest(BaseModel):

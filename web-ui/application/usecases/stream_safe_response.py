@@ -24,6 +24,7 @@ class StreamSafeResponseCommand:
     chat_id: str
     document_id: str
     model: str
+    settings: dict[str, str]
 
 
 class StreamSafeResponseUseCase:
@@ -62,5 +63,6 @@ class StreamSafeResponseUseCase:
                 chat_id=command.chat_id,
                 document_id=command.document_id,
                 model=command.model,
+                settings=command.settings,
             )
         )

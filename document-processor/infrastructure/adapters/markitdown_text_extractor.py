@@ -17,7 +17,8 @@ class MarkitdownTextExtractor(TextExtractor):
 
         return ExtractedDocument(document_id=document.document_id,
                                  filename=document.filename,
-                                 extracted_text=mitd_text)
+                                 extracted_text=mitd_text,
+                                 extraction_method="library")
 
     def bytes_to_bytesio(self, content: bytes) -> BytesIO:
         return BytesIO(content)

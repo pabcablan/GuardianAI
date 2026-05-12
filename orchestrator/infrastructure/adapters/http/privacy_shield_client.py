@@ -33,7 +33,12 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         "http://127.0.0.1:8002",
     )
 
-    def anonymize(self, chat_id: str, text: str) -> AnonymizedPrompt:
+    def anonymize(
+        self,
+        chat_id: str,
+        text: str,
+        settings: dict[str, str] | None = None,
+    ) -> AnonymizedPrompt:
         """Anonymize text through privacy-shield.
 
         Args:
@@ -46,6 +51,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         payload = {
             "chat_id": chat_id,
             "text": text,
+            "settings": settings or {},
         }
         response = self._post_json("/anonymize/optimized", payload)
 

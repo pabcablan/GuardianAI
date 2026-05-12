@@ -40,11 +40,17 @@ async def main():
 
     @app.post("/anonymize")
     async def anonymize_route(request: AnonymizeRequest):
-        return await anonymize_usecase.execute(request.text)
+        return await anonymize_usecase.execute(
+            request.text,
+            settings=request.settings,
+        )
     
     @app.post("/anonymize/optimized")
     async def anonymize_optimized_route(request: AnonymizeRequest):
-        return await anonymize_optimized_usecase.execute(request.text)
+        return await anonymize_optimized_usecase.execute(
+            request.text,
+            settings=request.settings,
+        )
 
     @app.post("/deanonymize/stream")
     async def deanonymize_route(request: DeanonymizeRequest):

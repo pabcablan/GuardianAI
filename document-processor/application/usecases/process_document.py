@@ -1,6 +1,7 @@
 from inspect import isawaitable
 from typing import Any
 
+from domain.extracted_document import ExtractedDocument
 from infrastructure.ports.document_parser import DocumentParser
 from infrastructure.ports.text_extractor import TextExtractor
 
@@ -11,12 +12,12 @@ class ProcessDocument:
         self._text_extractor = text_extractor
 
     #TODO add exception handling
-    async def execute(self, document: Any) -> str:
+    async def execute(self, document: Any) -> ExtractedDocument:
 
         parsed_doc = await self._parser.parse(document)
         extracted_doc = await self._text_extractor.extract_text(parsed_doc)
 
-        return extracted_doc.extracted_text
+        return extracted_doc
 
     async def _parse_document(self, document: Any):
         parsed_doc = self._parser.parse(document)

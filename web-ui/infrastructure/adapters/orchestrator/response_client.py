@@ -47,6 +47,7 @@ class HttpOrchestratorResponseClient(
                 "chat_id": request.chat_id,
                 "text": request.content,
                 "model": request.model,
+                "settings": request.settings,
             },
         )
         return self._parse_preview_payload(payload)
@@ -61,6 +62,7 @@ class HttpOrchestratorResponseClient(
             payload={
                 "chat_id": request.chat_id,
                 "document_id": request.document_id,
+                "settings": request.settings,
             },
         )
         return self._parse_preview_payload(payload)
@@ -140,6 +142,7 @@ class HttpOrchestratorResponseClient(
                 "chat_id": request.chat_id,
                 "text": request.content,
                 "model": request.model,
+                "settings": request.settings,
                 "history": [
                     {
                         "role": message.role,
@@ -169,6 +172,7 @@ class HttpOrchestratorResponseClient(
                 "chat_id": request.chat_id,
                 "document_id": request.document_id,
                 "model": request.model,
+                "settings": request.settings,
             },
         )
 
@@ -246,4 +250,9 @@ class HttpOrchestratorResponseClient(
             anonymized_content=str(payload["anonymized_text"]),
             anonymization_id=str(payload["anonymization_id"]),
             replacement_count=int(payload.get("replacement_count", 0)),
+            extraction_method=(
+                str(payload["extraction_method"])
+                if payload.get("extraction_method") is not None
+                else None
+            ),
         )

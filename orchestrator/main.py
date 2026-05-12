@@ -19,6 +19,7 @@ from infrastructure.adapters.api.payloads import (
 )
 from infrastructure.adapters.api.schemas import (
     AnonymizedStreamRequest,
+    DocumentStreamRequest,
     DocumentPreviewRequest,
     MessageStreamRequest,
 )
@@ -81,6 +82,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
                 chat_id=payload.chat_id,
                 text=payload.text,
                 model=payload.model,
+                settings=payload.settings,
                 history=_build_assistant_history(payload.history),
             )
         )
@@ -110,6 +112,7 @@ def preview_message_anonymization(
             orchestration_service.preview_message_anonymization(
                 chat_id=payload.chat_id,
                 text=payload.text,
+                settings=payload.settings,
             )
         )
     except PrivacyShieldClientError as error:
@@ -131,10 +134,11 @@ def preview_document_anonymization(
         dict[str, Any]: The anonymized document prompt metadata.
     """
     try:
-        anonymized_prompt = (
+        anonymized_prompt, extraction_method = (
             orchestration_service.preview_document_anonymization(
                 chat_id=payload.chat_id,
                 document_id=payload.document_id,
+                settings=payload.settings,
             )
         )
     except KeyError as error:
@@ -144,7 +148,10 @@ def preview_document_anonymization(
     except PrivacyShieldClientError as error:
         raise bad_gateway(error) from error
 
-    return build_anonymized_preview_payload(anonymized_prompt)
+    return build_anonymized_preview_payload(
+        anonymized_prompt,
+        extraction_method=extraction_method,
+    )
 
 
 @app.post("/api/anonymized/stream")
@@ -219,7 +226,9 @@ async def extract_document_stream(
 
 
 @app.post("/api/documents/safe-stream")
-def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
+def stream_document_response(
+    payload: DocumentStreamRequest,
+) -> StreamingResponse:
     """Generate a safe response for a processed document.
 
     Args:
@@ -228,21 +237,13 @@ def stream_document_response(payload: dict[str, str]) -> StreamingResponse:
     Returns:
         StreamingResponse: The safe NDJSON stream consumed by web-ui.
     """
-    chat_id = payload.get("chat_id", "").strip()
-    document_id = payload.get("document_id", "").strip()
-    model = payload.get("model", "").strip()
-    if not chat_id or not document_id or not model:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="chat_id, document_id, and model are required.",
-        )
-
     try:
         anonymized_prompt, events = (
             orchestration_service.stream_document_response(
-                chat_id=chat_id,
-                document_id=document_id,
-                model=model,
+                chat_id=payload.chat_id,
+                document_id=payload.document_id,
+                model=payload.model,
+                settings=payload.settings,
             )
         )
     except KeyError as error:

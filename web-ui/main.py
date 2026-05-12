@@ -35,6 +35,8 @@ from infrastructure.adapters.api.schemas import (
     ContinueAnonymizedRequest,
     CreateChatRequest,
     CreateChatResponse,
+    DocumentAnonymizationRequest,
+    DocumentSafeStreamRequest,
     RenameChatRequest,
     StreamMessageRequest,
 )
@@ -199,6 +201,7 @@ def stream_message_response(
                 content=content,
                 model=model,
                 history=history,
+                settings=payload.settings,
             ),
         )
     except ValueError as error:
@@ -248,6 +251,7 @@ def preview_message_anonymization(
                 chat_id=chat_id,
                 content=content,
                 model=payload.model,
+                settings=payload.settings,
             ),
         )
         container.chat_repository.update_message_anonymized_content(
@@ -265,6 +269,7 @@ def preview_message_anonymization(
         anonymized_content=preview.anonymized_content,
         anonymization_id=preview.anonymization_id,
         replacement_count=preview.replacement_count,
+        extraction_method=preview.extraction_method,
     )
 
 
@@ -396,8 +401,12 @@ def delete_chat(chat_id: str) -> None:
     container.delete_chat.execute(chat_id)
 
 
-@app.get("/api/chats/{chat_id}/documents/{document_id}/safe-stream")
-def stream_safe_response(chat_id: str, document_id: str, model: str):
+@app.post("/api/chats/{chat_id}/documents/{document_id}/safe-stream")
+def stream_safe_response(
+    chat_id: str,
+    document_id: str,
+    payload: DocumentSafeStreamRequest,
+):
     """Stream safe response chunks for a processed document.
 
     Args:
@@ -413,7 +422,8 @@ def stream_safe_response(chat_id: str, document_id: str, model: str):
             StreamSafeResponseCommand(
                 chat_id=chat_id,
                 document_id=document_id,
-                model=model,
+                model=payload.model,
+                settings=payload.settings,
             ),
         )
     except ValueError as error:
@@ -440,6 +450,7 @@ def stream_safe_response(chat_id: str, document_id: str, model: str):
 def preview_document_anonymization(
     chat_id: str,
     document_id: str,
+    payload: DocumentAnonymizationRequest,
 ) -> AnonymizedPreviewResponse:
     """Anonymize a processed document before assistant processing.
 
@@ -463,6 +474,7 @@ def preview_document_anonymization(
         OrchestratorDocumentAnonymizationPreviewRequest(
             chat_id=chat_id,
             document_id=document_id,
+            settings=payload.settings,
         ),
     )
     container.chat_repository.update_message_anonymized_content(
@@ -475,6 +487,7 @@ def preview_document_anonymization(
         anonymized_content=preview.anonymized_content,
         anonymization_id=preview.anonymization_id,
         replacement_count=preview.replacement_count,
+        extraction_method=preview.extraction_method,
     )
 
 

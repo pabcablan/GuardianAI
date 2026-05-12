@@ -32,6 +32,7 @@ class OrchestratorDocumentResponseRequest:
     chat_id: str
     document_id: str
     model: str
+    settings: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class OrchestratorMessageResponseRequest:
     content: str
     model: str
     history: list[OrchestratorChatHistoryMessage]
+    settings: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,7 @@ class OrchestratorAnonymizationPreviewRequest:
     chat_id: str
     content: str
     model: str
+    settings: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,7 @@ class OrchestratorDocumentAnonymizationPreviewRequest:
 
     chat_id: str
     document_id: str
+    settings: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -117,6 +121,7 @@ class OrchestratorAnonymizationPreview:
     anonymized_content: str
     anonymization_id: str
     replacement_count: int
+    extraction_method: str | None = None
 
 
 @dataclass(frozen=True)

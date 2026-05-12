@@ -842,6 +842,27 @@ input {
   margin-top: 10px;
 }
 
+.message__document-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.message__document-preview-label,
+.message__document-preview-note {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.76rem;
+}
+
+.message__document-preview p {
+  max-height: 260px;
+  overflow: auto;
+}
+
 .message__approve-button,
 .message__secondary-button {
   justify-self: end;

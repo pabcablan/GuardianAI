@@ -96,6 +96,7 @@ class HttpDocumentProcessingClient(
             "document_id": f"doc-{uuid.uuid4().hex}",
             "filename": request.filename,
             "extracted_text": extracted_text,
+            "extraction_method": self._parse_extraction_method(raw_body),
             "page_count": 0,
         }
 
@@ -137,3 +138,20 @@ class HttpDocumentProcessingClient(
                 return value
 
         return str(payload)
+
+    def _parse_extraction_method(self, raw_body: str) -> str:
+        """Parse the extraction method returned by document-processor."""
+        if not raw_body:
+            return "library"
+
+        try:
+            payload = json.loads(raw_body)
+        except json.JSONDecodeError:
+            return "library"
+
+        if isinstance(payload, dict):
+            value = payload.get("extraction_method")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        return "library"

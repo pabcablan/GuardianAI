@@ -122,7 +122,14 @@ function buildHighlightedSegments(
 }
 
 function renderMessageContent(message: ChatMessage): ReactNode {
-  if (message.role !== "user" || !message.anonymizedContent) {
+  if (
+    message.role !== "user" ||
+    !message.anonymizedContent ||
+    (
+      message.pendingApproval?.documentId &&
+      message.pendingApproval.extractionMethod === "model"
+    )
+  ) {
     return message.content;
   }
 
@@ -144,6 +151,40 @@ function renderMessageContent(message: ChatMessage): ReactNode {
       </mark>
     );
   });
+}
+
+function renderAnonymizedDocumentContent(content: string): ReactNode {
+  const segments: ReactNode[] = [];
+  let cursor = 0;
+
+  for (const match of content.matchAll(ANONYMIZATION_PLACEHOLDER_PATTERN)) {
+    const anonymizationId = match[0];
+    const index = match.index ?? 0;
+
+    if (index > cursor) {
+      segments.push(
+        <span key={`text-${cursor}`}>{content.slice(cursor, index)}</span>,
+      );
+    }
+
+    segments.push(
+      <mark
+        key={`placeholder-${index}-${anonymizationId}`}
+        className="message__anonymized-highlight"
+        data-anonymization-id={anonymizationId}
+      >
+        {anonymizationId}
+      </mark>,
+    );
+
+    cursor = index + anonymizationId.length;
+  }
+
+  if (cursor < content.length) {
+    segments.push(<span key={`text-${cursor}`}>{content.slice(cursor)}</span>);
+  }
+
+  return segments.length ? segments : content;
 }
 
 export function ConversationPanel({
@@ -325,9 +366,27 @@ export function ConversationPanel({
               <p>{renderMessageContent(message)}</p>
               {message.role === "user" && message.anonymizedContent ? (
                 <>
+                  {(
+                    message.pendingApproval?.documentId &&
+                    message.pendingApproval.extractionMethod === "model"
+                  ) ? (
+                    <div className="message__document-preview">
+                      <span className="message__document-preview-label">
+                        Texto extraído anonimizado
+                      </span>
+                      <p>{renderAnonymizedDocumentContent(message.anonymizedContent)}</p>
+                      <span className="message__document-preview-note">
+                        Vista textual generada a partir del contenido extraído del PDF.
+                      </span>
+                    </div>
+                  ) : null}
                   {message.pendingApproval ? (
                     <div className="message__anonymized-actions">
-                      {message.pendingApproval.documentId ? (
+                      {(
+                        message.pendingApproval.documentId &&
+                        message.pendingApproval.extractionMethod !== "model" &&
+                        (message.pendingApproval.replacementCount ?? 0) > 0
+                      ) ? (
                         <button
                           className="message__secondary-button"
                           type="button"

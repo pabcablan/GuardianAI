@@ -106,7 +106,7 @@ class MongoChatGateway(ChatRepositoryPort):
         )
 
     def delete_chat(self, chat_id: str) -> None:
-        """Soft-delete a chat."""
+        """Soft-delete a chat and remove its stored messages."""
         self._chats.update_one(
             {"chat_id": chat_id},
             {
@@ -116,6 +116,7 @@ class MongoChatGateway(ChatRepositoryPort):
                 }
             },
         )
+        self._messages.delete_many({"chat_id": chat_id})
 
     def rename_chat(self, chat_id: str, title: str) -> None:
         """Rename an existing chat."""

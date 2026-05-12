@@ -7,12 +7,18 @@ from abc import ABC, abstractmethod
 
 class Anonymizer(ABC):
     @abstractmethod
-    async def anonymize(self, text:str) -> dict:
+    async def anonymize(
+        self,
+        text: str,
+        settings: dict[str, str] | None = None,
+    ) -> dict:
         """
         Anonymizes the given text and returns the anonymized version.
 
         Args:
             text (str): The input text to be anonymized.
+            settings (dict[str, str] | None): UI-selected anonymization
+                categories and modes.
         
         Returns:
             dict: The anonymized version of the input text with the anonymized fields.

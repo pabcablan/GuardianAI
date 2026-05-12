@@ -9,7 +9,10 @@ from fastapi.concurrency import run_in_threadpool
 import torch
 
 from infrastructure.ports.anonymizer import Anonymizer
-from resources.prompts import ANONYMIZATION_SYSTEM_PROMPT
+from resources.prompts import (
+    build_standard_anonymization_system_prompt,
+    should_anonymize_anything,
+)
 from utils.json_utils import extract_json_safely
 from utils.anonymization_utils import redact_text
 
@@ -17,9 +20,12 @@ class LlmAnonymizer(Anonymizer):
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
-        self.system_prompt = ANONYMIZATION_SYSTEM_PROMPT
     
-    async def anonymize(self, text: str) -> dict:
+    async def anonymize(
+        self,
+        text: str,
+        settings: dict[str, str] | None = None,
+    ) -> dict:
         """
         Anonymizes the input text by extracting sensitive information using a language model and replacing it with placeholders.
 
@@ -30,15 +36,22 @@ class LlmAnonymizer(Anonymizer):
             dict: The anonymized version of the input text with the anonymized fields.
         """
 
+        if not should_anonymize_anything(settings):
+            return {"anonymized_text": text, "replacements": {}}
 
-        return await run_in_threadpool(None, self._run_anonymization, text)
+        return await run_in_threadpool(
+            None,
+            self._run_anonymization,
+            text,
+            build_standard_anonymization_system_prompt(settings),
+        )
     
-    def _run_anonymization(self, text: str) -> dict:
+    def _run_anonymization(self, text: str, system_prompt: str) -> dict:
         message = [
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": self.system_prompt + "\n\nExtrae los datos sensibles del siguiente texto:\n\n" + text}
+                    {"type": "text", "text": system_prompt + "\n\nExtrae los datos sensibles del siguiente texto:\n\n" + text}
                 ]
             }
         ]
