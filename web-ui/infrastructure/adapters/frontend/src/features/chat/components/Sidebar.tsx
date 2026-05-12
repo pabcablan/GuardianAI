@@ -8,11 +8,13 @@ interface SidebarProps {
   isExpanded: boolean;
   isInteractionLocked: boolean;
   selectedModel: AiModel;
+  theme: "dark" | "light";
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
   onRenameChat: (chatId: string, title: string) => Promise<boolean>;
   onDeleteChat: (chatId: string) => Promise<boolean>;
   onModelChange: (model: AiModel) => void;
+  onThemeToggle: () => void;
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
 }
@@ -23,11 +25,13 @@ export function Sidebar({
   isExpanded,
   isInteractionLocked,
   selectedModel,
+  theme,
   onChatSelect,
   onCreateChat,
   onRenameChat,
   onDeleteChat,
   onModelChange,
+  onThemeToggle,
   onToggleSidebar,
   onOpenSettings,
 }: SidebarProps) {
@@ -44,7 +48,9 @@ export function Sidebar({
     }
 
     return chats.filter((chat) =>
-      `${chat.title} ${chat.lastMessagePreview}`.toLowerCase().includes(normalizedSearch),
+      `${chat.title} ${chat.lastMessagePreview}`
+        .toLowerCase()
+        .includes(normalizedSearch),
     );
   }, [chats, searchTerm]);
 
@@ -114,31 +120,37 @@ export function Sidebar({
   return (
     <aside className={`sidebar ${isExpanded ? "" : "sidebar--collapsed"}`.trim()}>
       <div className="sidebar__header">
-        <div className="sidebar__brand">
-          <button
-            className="icon-button"
-            type="button"
-            aria-label={isExpanded ? "Comprimir panel lateral" : "Expandir panel lateral"}
-            disabled={isInteractionLocked}
-            onClick={onToggleSidebar}
-          >
-            <img className="icon-image" src="/icons/brand-mark.svg" alt="" aria-hidden="true" />
-          </button>
-          <div className="sidebar__title-wrap">
-            <h1>Guardian AI</h1>
-          </div>
-        </div>
         <button
           className="icon-button sidebar__panel-button"
           type="button"
-          aria-label="Comprimir panel lateral"
-          aria-hidden={!isExpanded}
-          tabIndex={isExpanded ? 0 : -1}
+          aria-label={isExpanded ? "Comprimir panel lateral" : "Expandir panel lateral"}
           disabled={isInteractionLocked}
           onClick={onToggleSidebar}
         >
           <img className="icon-image" src="/icons/sidebar-toggle.svg" alt="" aria-hidden="true" />
         </button>
+        <div className="sidebar__brand">
+          <img
+            className="sidebar__brand-mark"
+            src={
+              theme === "light"
+                ? "/icons/brand-mark-light.svg"
+                : "/icons/brand-mark.svg"
+            }
+            alt="Guardian AI"
+          />
+          <div className="sidebar__title-wrap">
+            <img
+              className="sidebar__brand-logo"
+              src={
+                theme === "light"
+                  ? "/icons/guardianai-brand-light.svg"
+                  : "/icons/guardianai-brand.svg"
+              }
+              alt="Guardian AI Anonymization"
+            />
+          </div>
+        </div>
       </div>
 
       {isExpanded ? (
@@ -172,8 +184,13 @@ export function Sidebar({
             disabled={isInteractionLocked}
             onClick={onCreateChat}
           >
-            <img className="sidebar__add-icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
-            Añadir Chat
+            <img
+              className="sidebar__add-icon-image"
+              src="/icons/add-chat.svg"
+              alt=""
+              aria-hidden="true"
+            />
+            Añadir chat
           </button>
         ) : (
           <button
@@ -237,7 +254,10 @@ export function Sidebar({
             <div className="sidebar__model-select">
               <span className="sidebar__model-label">Modelo IA</span>
 
-              <div ref={modelDropdownRef} className={`model-dropdown ${isInteractionLocked ? "is-disabled" : ""}`}>
+              <div
+                ref={modelDropdownRef}
+                className={`model-dropdown ${isInteractionLocked ? "is-disabled" : ""}`}
+              >
                 <button
                   className="model-dropdown__trigger"
                   type="button"
@@ -289,6 +309,18 @@ export function Sidebar({
             </div>
 
             <button
+              className="sidebar__settings sidebar__theme-toggle"
+              type="button"
+              disabled={isInteractionLocked}
+              onClick={onThemeToggle}
+            >
+              <span className="sidebar__theme-icon" aria-hidden="true">
+                {theme === "dark" ? "☀" : "☾"}
+              </span>
+              {theme === "dark" ? "Tema claro" : "Tema oscuro"}
+            </button>
+
+            <button
               className="sidebar__settings"
               type="button"
               disabled={isInteractionLocked}
@@ -299,15 +331,32 @@ export function Sidebar({
             </button>
           </>
         ) : (
-          <button
-            className="sidebar__compact-action"
-            type="button"
-            disabled={isInteractionLocked}
-            onClick={onOpenSettings}
-            aria-label="Abrir configuración"
-          >
-            <span className="icon icon--settings" aria-hidden="true" />
-          </button>
+          <>
+            <button
+              className="sidebar__compact-action"
+              type="button"
+              disabled={isInteractionLocked}
+              onClick={onThemeToggle}
+              aria-label={
+                theme === "dark"
+                  ? "Cambiar a tema claro"
+                  : "Cambiar a tema oscuro"
+              }
+            >
+              <span className="sidebar__theme-icon" aria-hidden="true">
+                {theme === "dark" ? "☀" : "☾"}
+              </span>
+            </button>
+            <button
+              className="sidebar__compact-action"
+              type="button"
+              disabled={isInteractionLocked}
+              onClick={onOpenSettings}
+              aria-label="Abrir configuración"
+            >
+              <span className="icon icon--settings" aria-hidden="true" />
+            </button>
+          </>
         )}
       </div>
 

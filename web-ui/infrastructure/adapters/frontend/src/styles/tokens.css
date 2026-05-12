@@ -1,0 +1,92 @@
+:root {
+  --font-family-sans: "Lora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Neutral scale: más fría, menos rosada */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f3f6ff;
+  --color-neutral-150: #eef4ff;
+  --color-neutral-200: #e8eefc;
+  --color-neutral-250: #dfe8f7;
+  --color-neutral-300: #d7e2f2;
+  --color-neutral-350: #cbd8ea;
+  --color-neutral-400: #b8c6da;
+  --color-neutral-450: #a9b8cc;
+  --color-neutral-500: #94a3b8;
+  --color-neutral-600: #7f8ea3;
+  --color-neutral-700: #64748b;
+  --color-neutral-750: #56657a;
+  --color-neutral-800: #475569;
+  --color-neutral-850: #334155;
+  --color-neutral-900: #1f2937;
+
+  /* Slates */
+  --color-slate-900: #111827;
+  --color-slate-950: #0b1120;
+  --color-gray-950: #0a0f1a;
+  --color-gray-975: #060a12;
+
+  /* Surfaces */
+  --color-surface-950: #172033;
+  --color-surface-925: #141d2f;
+  --color-surface-900: #111827;
+  --color-surface-875: #0d1626;
+  --color-surface-825: #0a1220;
+
+  /* Accent */
+  --color-orange-450: #f6a94a;
+  --color-orange-950: #2f2112;
+
+  --color-danger-300: #ffd3d3;
+
+  /* Alphas */
+  --alpha-white-03: rgba(255, 255, 255, 0.03);
+  --alpha-white-04: rgba(255, 255, 255, 0.04);
+  --alpha-white-05: rgba(255, 255, 255, 0.05);
+  --alpha-white-06: rgba(255, 255, 255, 0.06);
+  --alpha-white-08: rgba(255, 255, 255, 0.08);
+  --alpha-white-09: rgba(255, 255, 255, 0.09);
+  --alpha-white-10: rgba(255, 255, 255, 0.10);
+  --alpha-white-12: rgba(255, 255, 255, 0.12);
+  --alpha-white-18: rgba(255, 255, 255, 0.18);
+  --alpha-white-22: rgba(255, 255, 255, 0.22);
+  --alpha-white-32: rgba(255, 255, 255, 0.32);
+  --alpha-white-34: rgba(255, 255, 255, 0.34);
+  --alpha-white-42: rgba(255, 255, 255, 0.42);
+  --alpha-white-44: rgba(255, 255, 255, 0.44);
+  --alpha-white-50: rgba(255, 255, 255, 0.50);
+  --alpha-white-52: rgba(255, 255, 255, 0.52);
+  --alpha-white-55: rgba(255, 255, 255, 0.55);
+  --alpha-white-58: rgba(255, 255, 255, 0.58);
+  --alpha-white-62: rgba(255, 255, 255, 0.62);
+  --alpha-white-64: rgba(255, 255, 255, 0.64);
+  --alpha-white-68: rgba(255, 255, 255, 0.68);
+  --alpha-white-72: rgba(255, 255, 255, 0.72);
+  --alpha-white-74: rgba(255, 255, 255, 0.74);
+  --alpha-white-75: rgba(255, 255, 255, 0.75);
+  --alpha-white-76: rgba(255, 255, 255, 0.76);
+  --alpha-white-78: rgba(255, 255, 255, 0.78);
+  --alpha-white-82: rgba(255, 255, 255, 0.82);
+  --alpha-white-84: rgba(255, 255, 255, 0.84);
+  --alpha-white-86: rgba(255, 255, 255, 0.86);
+  --alpha-white-88: rgba(255, 255, 255, 0.88);
+  --alpha-white-90: rgba(255, 255, 255, 0.90);
+  --alpha-white-92: rgba(255, 255, 255, 0.92);
+
+  --alpha-black-08: rgba(0, 0, 0, 0.08);
+  --alpha-dark-16: rgba(15, 23, 42, 0.16);
+  --alpha-dark-32: rgba(15, 23, 42, 0.32);
+  --alpha-gray-445: rgba(147, 148, 150, 0.445);
+  --alpha-red-70: rgba(255, 126, 126, 0.7);
+  --alpha-red-18: rgba(178, 40, 40, 0.18);
+
+  --shadow-dark-22: rgba(0, 0, 0, 0.22);
+  --shadow-dark-28: rgba(0, 0, 0, 0.28);
+  --shadow-dark-35: rgba(0, 0, 0, 0.35);
+  --shadow-dark-38: rgba(0, 0, 0, 0.38);
+  --shadow-dark-42: rgba(0, 0, 0, 0.42);
+
+  --focus-ring: rgba(47, 128, 237, 0.28);
+}

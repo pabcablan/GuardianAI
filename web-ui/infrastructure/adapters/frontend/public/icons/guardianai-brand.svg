@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 240" fill="none">
+  <g transform="translate(28 20)">
+    <path
+      d="M62 10C79 21 99 28 118 32V63C118 103 89 136 62 148C35 136 6 103 6 63V32C25 28 45 21 62 10Z"
+      stroke="#F8FAFC"
+      stroke-width="7"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M30 74C38 63 48.5 57 62 57C75.5 57 86 63 94 74C86 85 75.5 91 62 91C48.5 91 38 85 30 74Z"
+      stroke="#F8FAFC"
+      stroke-width="7"
+      stroke-linejoin="round"
+    />
+    <circle cx="62" cy="74" r="10" fill="#1D7BFF" />
+    <circle cx="62" cy="74" r="18" stroke="#1D7BFF" stroke-width="4" />
+    <circle cx="62" cy="10" r="4.2" fill="#02050B" stroke="#1D7BFF" stroke-width="3.2" />
+    <circle cx="6" cy="63" r="4.2" fill="#02050B" stroke="#1D7BFF" stroke-width="3.2" />
+    <circle cx="118" cy="63" r="4.2" fill="#02050B" stroke="#1D7BFF" stroke-width="3.2" />
+    <circle cx="62" cy="148" r="4.2" fill="#02050B" stroke="#1D7BFF" stroke-width="3.2" />
+  </g>
+
+  <text
+    x="90"
+    y="192"
+    text-anchor="middle"
+    fill="#F8FAFC"
+    font-family="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+    font-size="28"
+    font-weight="700"
+  >
+    Guardian<tspan fill="#1D7BFF">AI</tspan>
+  </text>
+
+  <path d="M22 210H46" stroke="#1D7BFF" stroke-width="3" stroke-linecap="round" />
+  <path d="M134 210H158" stroke="#1D7BFF" stroke-width="3" stroke-linecap="round" />
+  <text
+    x="90"
+    y="214"
+    text-anchor="middle"
+    fill="#F8FAFC"
+    fill-opacity="0.92"
+    font-family="Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+    font-size="8"
+    font-weight="600"
+    letter-spacing="0.42em"
+  >
+    ANONYMIZATION
+  </text>
+</svg>

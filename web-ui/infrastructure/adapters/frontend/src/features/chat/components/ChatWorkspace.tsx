@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   AnonymizationMode,
   AnonymizationOption,
@@ -53,6 +53,22 @@ export function ChatWorkspace() {
   const [anonymizationSettings, setAnonymizationSettings] = useState(
     DEFAULT_ANONYMIZATION_SETTINGS,
   );
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("guardianai-theme");
+    const nextTheme =
+      storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : "dark";
+
+    setTheme(nextTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("guardianai-theme", theme);
+  }, [theme]);
 
   function handleFileSelect(file: File | null) {
     if (isInteractionLocked) {
@@ -107,11 +123,17 @@ export function ChatWorkspace() {
           isExpanded={isSidebarOpen}
           isInteractionLocked={isInteractionLocked}
           selectedModel={selectedModel}
+          theme={theme}
           onChatSelect={selectChat}
           onCreateChat={createChat}
           onRenameChat={renameChat}
           onDeleteChat={deleteChat}
           onModelChange={setSelectedModel}
+          onThemeToggle={() =>
+            setTheme((currentTheme) =>
+              currentTheme === "dark" ? "light" : "dark",
+            )
+          }
           onToggleSidebar={() => setIsSidebarOpen((current) => !current)}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />

@@ -1,0 +1,156 @@
+:root,
+[data-theme="dark"] {
+  --color-scheme: dark;
+  color-scheme: dark;
+
+  /* Base */
+  --app-bg: #070b12;
+  --app-text: #e8eefc;
+
+  /* Layout */
+  --sidebar-bg: #0b111c;
+
+  /* Surfaces */
+  --surface-bg: #101b2e;
+  --surface-muted-bg: #0c1626;
+  --surface-elevated-bg: #13233d;
+  --surface-hover-bg: #18345c;
+  --surface-contrast-bg: #111827;
+  --surface-contrast-text: #f3f6ff;
+
+  /* Selected / active */
+  --surface-selected-bg: rgba(47, 128, 237, 0.24);
+  --surface-selected-text: #f3f6ff;
+
+  /* Ghost / buttons */
+  --surface-ghost-bg: rgba(255, 255, 255, 0.045);
+  --surface-ghost-strong-bg: rgba(47, 128, 237, 0.16);
+  --surface-button-bg: rgba(47, 128, 237, 0.18);
+  --search-surface-bg: #111827;
+  --search-surface-text: #f3f6ff;
+  --search-border-color: rgba(180, 205, 255, 0.18);
+  --input-placeholder-color: rgba(232, 238, 252, 0.92);
+  --functional-icon-filter: none;
+
+  /* Overlay */
+  --surface-modal-backdrop: rgba(7, 11, 18, 0.78);
+  --surface-tooltip-bg: rgba(10, 18, 32, 0.98);
+
+  /* Text */
+  --text-primary: #eef4ff;
+  --text-secondary: rgba(232, 238, 252, 0.86);
+  --text-tertiary: rgba(232, 238, 252, 0.74);
+  --text-muted: rgba(232, 238, 252, 0.64);
+  --text-faint: rgba(232, 238, 252, 0.52);
+  --text-disabled: rgba(232, 238, 252, 0.38);
+
+  --text-on-solid: #06111f;
+  --text-on-selection: #f3f6ff;
+  --text-on-accent: #06111f;
+
+  /* Borders */
+  --border-subtle: rgba(180, 205, 255, 0.10);
+  --border-soft: rgba(180, 205, 255, 0.16);
+  --border-muted: rgba(180, 205, 255, 0.24);
+  --border-default: rgba(180, 205, 255, 0.34);
+  --border-strong: rgba(180, 205, 255, 0.48);
+  --border-stronger: rgba(180, 205, 255, 0.62);
+  --border-heavy: rgba(180, 205, 255, 0.76);
+
+  /* Highlights */
+  --highlight-anonymized-bg: #2f80ed;
+  --highlight-anonymized-text: #f8fbff;
+
+  /* Danger */
+  --danger-border: rgba(255, 126, 126, 0.58);
+  --danger-bg: rgba(178, 40, 40, 0.16);
+  --danger-text: #ffd3d3;
+
+  /* Shadows */
+  --shadow-menu: 0 16px 34px rgba(0, 0, 0, 0.38);
+  --shadow-tooltip: 0 12px 28px rgba(0, 0, 0, 0.32);
+  --shadow-card: 0 14px 32px rgba(0, 0, 0, 0.24);
+  --shadow-panel: 0 22px 52px rgba(0, 0, 0, 0.36);
+  --shadow-modal: 0 24px 56px rgba(0, 0, 0, 0.46);
+
+  /* Focus */
+  --focus-ring: rgba(47, 128, 237, 0.28);
+}
+
+[data-theme="light"] {
+  --color-scheme: light;
+  color-scheme: light;
+
+  /* Base */
+  --app-bg: #f8fdff;
+  --app-text: #10202a;
+
+  /* Layout */
+  --sidebar-bg: #ffffff;
+
+  /* Surfaces */
+  --surface-bg: #b3ebf2;
+  --surface-muted-bg: #e8fbfd;
+  --surface-elevated-bg: #ffffff;
+  --surface-hover-bg: #d8f6fa;
+  --surface-contrast-bg: #10202a;
+  --surface-contrast-text: #ffffff;
+
+  /* Selected / active */
+  --surface-selected-bg: #b3ebf2;
+  --surface-selected-text: #10202a;
+
+  /* Ghost / buttons */
+  --surface-ghost-bg: rgba(16, 32, 42, 0.045);
+  --surface-ghost-strong-bg: rgba(16, 32, 42, 0.08);
+  --surface-button-bg: #b3ebf2;
+  --search-surface-bg: #ffffff;
+  --search-surface-text: #10202a;
+  --search-border-color: rgba(16, 32, 42, 0.22);
+  --input-placeholder-color: rgba(16, 32, 42, 0.42);
+  --functional-icon-filter: brightness(0) saturate(100%) invert(11%) sepia(16%) saturate(1169%) hue-rotate(165deg) brightness(95%) contrast(93%);
+
+  /* Overlay */
+  --surface-modal-backdrop: rgba(16, 32, 42, 0.28);
+  --surface-tooltip-bg: #10202a;
+
+  /* Text */
+  --text-primary: #10202a;
+  --text-secondary: rgba(16, 32, 42, 0.82);
+  --text-tertiary: rgba(16, 32, 42, 0.68);
+  --text-muted: rgba(16, 32, 42, 0.56);
+  --text-faint: rgba(16, 32, 42, 0.42);
+  --text-disabled: rgba(16, 32, 42, 0.34);
+
+  --text-on-solid: #ffffff;
+  --text-on-selection: #10202a;
+  --text-on-accent: #10202a;
+
+  /* Borders */
+  --border-subtle: rgba(16, 32, 42, 0.07);
+  --border-soft: rgba(16, 32, 42, 0.11);
+  --border-muted: rgba(16, 32, 42, 0.17);
+  --border-default: rgba(16, 32, 42, 0.24);
+  --border-strong: rgba(16, 32, 42, 0.34);
+  --border-stronger: rgba(16, 32, 42, 0.48);
+  --border-heavy: rgba(16, 32, 42, 0.62);
+
+  /* Highlights */
+  --highlight-anonymized-bg: #7ddcea;
+  --highlight-anonymized-text: #10202a;
+
+  /* Danger */
+  --danger-border: rgba(210, 70, 70, 0.45);
+  --danger-bg: rgba(255, 120, 120, 0.14);
+  --danger-text: #8f1d1d;
+
+  /* Shadows */
+  --shadow-menu: 0 16px 34px rgba(16, 32, 42, 0.10);
+  --shadow-tooltip: 0 12px 28px rgba(16, 32, 42, 0.16);
+  --shadow-card: 0 14px 32px rgba(16, 32, 42, 0.08);
+  --shadow-panel: 0 22px 52px rgba(16, 32, 42, 0.12);
+  --shadow-modal: 0 24px 56px rgba(16, 32, 42, 0.18);
+
+  /* Focus */
+  --focus-ring: rgba(0, 145, 170, 0.22);
+}
