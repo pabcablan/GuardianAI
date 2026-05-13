@@ -30,6 +30,7 @@ class StreamMessageResponseCommand:
     history: list[OrchestratorChatHistoryMessage]
     settings: dict[str, str]
 
+
 class StreamMessageResponseUseCase:
     """Consume a safe streamed answer for a user chat message."""
 

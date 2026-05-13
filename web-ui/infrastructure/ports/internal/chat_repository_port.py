@@ -56,9 +56,13 @@ class ChatRepositoryPort(Protocol):
             title (str): The normalized chat title.
         """
 
-
     def append_message(self, chat_id: str, message: Message) -> None:
-        """Append one message to a chat."""
+        """Append one message to a chat.
+
+        Args:
+            chat_id (str): The identifier of the chat that owns the message.
+            message (Message): The message to persist.
+        """
 
     def update_message_anonymized_content(
         self,

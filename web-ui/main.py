@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import os
-
-import httpx
-from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from application.services.anonymized_history import AnonymizedHistoryBuilder
+from application.services.model_readiness import ModelReadinessService
+from application.services.processed_document_registry import (
+    ProcessedDocumentRegistry,
+)
 from application.usecases.attach_document import AttachDocumentCommand
 from application.usecases.create_chat import CreateChatCommand
 from application.usecases.rename_chat import RenameChatCommand
@@ -17,15 +18,24 @@ from application.usecases.stream_message_response import (
 from application.usecases.stream_safe_response import (
     StreamSafeResponseCommand,
 )
+from config import (
+    DOCUMENT_MODEL_NAME,
+    MODEL_PROVIDER_BASE_URL,
+    MODEL_STATUS_TIMEOUT_SECONDS,
+    PRIVACY_MODEL_NAME,
+)
 from infrastructure.adapters.api.context import (
-    WebUiApiState,
     make_assistant_message,
     make_message,
+)
+from infrastructure.adapters.api.mappers import (
+    to_chat_detail_response,
+    to_chat_summary_response,
+    to_create_chat_response,
 )
 from infrastructure.adapters.api.schemas import (
     AnonymizedPreviewResponse,
     ChatDetailResponse,
-    ChatMessageResponse,
     ChatSummaryResponse,
     ContinueAnonymizedRequest,
     CreateChatRequest,
@@ -44,28 +54,26 @@ from infrastructure.dependency_container import build_container
 from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorAnonymizationPreviewRequest,
     OrchestratorAnonymizedResponseRequest,
-    OrchestratorChatHistoryMessage,
     OrchestratorDocumentAnonymizationPreviewRequest,
 )
 
-load_dotenv()
-
-MODEL_PROVIDER_BASE_URL = os.getenv(
-    "MODEL_PROVIDER_BASE_URL",
-    "http://127.0.0.1:8010",
-)
-PRIVACY_MODEL_NAME = os.getenv("PRIVACY_MODEL_NAME", "qwen3.5")
-DOCUMENT_MODEL_NAME = os.getenv("DOCUMENT_MODEL_NAME", "qwen3.5")
-MODEL_STATUS_TIMEOUT_SECONDS = 2.0
-
 
 container = build_container()
-api_state = WebUiApiState()
+processed_document_registry = ProcessedDocumentRegistry()
+anonymized_history_builder = AnonymizedHistoryBuilder(
+    container.chat_repository,
+)
+model_readiness_service = ModelReadinessService(
+    base_url=MODEL_PROVIDER_BASE_URL,
+    privacy_model_name=PRIVACY_MODEL_NAME,
+    document_model_name=DOCUMENT_MODEL_NAME,
+    timeout_seconds=MODEL_STATUS_TIMEOUT_SECONDS,
+)
 
 app = FastAPI(
     title="GuardianAI Web UI Backend",
     version="0.1.0",
-    description="API propia del m?dulo web-ui para gestionar el chat.",
+    description="API propia del módulo web-ui para gestionar el chat.",
 )
 
 app.add_middleware(
@@ -79,41 +87,21 @@ app.add_middleware(
 
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
-    """Return the API health status.
-
-    Returns:
-        dict[str, str]: A simple status payload.
-    """
+    """Return the API health status."""
     return {"status": "ok"}
 
 
 @app.get("/api/system/model-readiness")
 def model_readiness() -> dict[str, object]:
-    """Return whether the required backend models are loaded.
-
-    Returns:
-        dict[str, object]: The model readiness state consumed by the UI.
-    """
-    return _get_model_readiness()
+    """Return whether the required backend models are loaded."""
+    return model_readiness_service.get_readiness()
 
 
 @app.get("/api/chats", response_model=list[ChatSummaryResponse])
 def list_chats() -> list[ChatSummaryResponse]:
-    """List the chats available to the UI.
-
-    Returns:
-        list[ChatSummaryResponse]: The available chat summaries.
-    """
+    """List the chats available to the UI."""
     chats = container.list_chats.execute()
-    return [
-        ChatSummaryResponse(
-            chat_id=chat.chat_id,
-            title=chat.title,
-            last_message_preview=chat.last_message_preview,
-            updated_at=chat.updated_at,
-        )
-        for chat in chats
-    ]
+    return [to_chat_summary_response(chat) for chat in chats]
 
 
 @app.post(
@@ -122,51 +110,21 @@ def list_chats() -> list[ChatSummaryResponse]:
     status_code=status.HTTP_201_CREATED,
 )
 def create_chat(payload: CreateChatRequest) -> CreateChatResponse:
-    """Create a new chat.
-
-    Args:
-        payload (CreateChatRequest): The chat creation request body.
-
-    Returns:
-        CreateChatResponse: The created chat data.
-    """
+    """Create a new chat."""
     result = container.create_chat.execute(
         CreateChatCommand(title=payload.title),
     )
-    return CreateChatResponse(chat_id=result.chat_id, title=result.title)
+    return to_create_chat_response(result)
 
 
 @app.get("/api/chats/{chat_id}", response_model=ChatDetailResponse)
 def load_chat(chat_id: str) -> ChatDetailResponse:
-    """Load a complete chat conversation.
-
-    Args:
-        chat_id (str): The identifier of the chat to load.
-
-    Returns:
-        ChatDetailResponse: The chat detail and message history.
-
-    Raises:
-        HTTPException: If the chat does not exist.
-    """
+    """Load a complete chat conversation."""
     chat = container.load_chat.execute(chat_id)
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return ChatDetailResponse(
-        chat_id=chat.chat_id,
-        title=chat.title,
-        messages=[
-            ChatMessageResponse(
-                message_id=message.message_id,
-                role=message.role,
-                content=message.content,
-                anonymized_content=message.anonymized_content,
-                created_at=message.created_at,
-            )
-            for message in chat.messages
-        ],
-    )
+    return to_chat_detail_response(chat)
 
 
 @app.post("/api/chats/{chat_id}/messages/stream")
@@ -174,27 +132,18 @@ def stream_message_response(
     chat_id: str,
     payload: StreamMessageRequest,
 ):
-    """Stream a safe assistant response for a user message.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        payload (StreamMessageRequest): The message request body.
-
-    Returns:
-        StreamingResponse: The NDJSON safe response stream.
-    """
+    """Stream a safe assistant response for a user message."""
     content = payload.content.strip()
-    model = payload.model
-    history = _build_anonymized_history(chat_id)
     user_message = make_message(role="user", content=content)
 
     try:
+        history = anonymized_history_builder.build(chat_id)
         container.chat_repository.append_message(chat_id, user_message)
         events = container.stream_message_response.execute(
             StreamMessageResponseCommand(
                 chat_id=chat_id,
                 content=content,
-                model=model,
+                model=payload.model,
                 history=history,
                 settings=payload.settings,
             ),
@@ -227,15 +176,7 @@ def preview_message_anonymization(
     chat_id: str,
     payload: StreamMessageRequest,
 ) -> AnonymizedPreviewResponse:
-    """Anonymize a user message before assistant processing.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        payload (StreamMessageRequest): The message request body.
-
-    Returns:
-        AnonymizedPreviewResponse: The anonymized text preview.
-    """
+    """Anonymize a user message before assistant processing."""
     content = payload.content.strip()
     user_message = make_message(role="user", content=content)
 
@@ -273,22 +214,14 @@ def stream_approved_anonymized_response(
     chat_id: str,
     payload: ContinueAnonymizedRequest,
 ):
-    """Stream a response after the user approves anonymized text.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        payload (ContinueAnonymizedRequest): The approved anonymized text.
-
-    Returns:
-        StreamingResponse: The NDJSON safe response stream.
-    """
+    """Stream a response after the user approves anonymized text."""
     events = container.orchestrator_response.stream_anonymized_response(
         OrchestratorAnonymizedResponseRequest(
             chat_id=chat_id,
             anonymized_content=payload.anonymized_content,
             anonymization_id=payload.anonymization_id,
             model=payload.model,
-            history=_build_anonymized_history(
+            history=anonymized_history_builder.build(
                 chat_id,
                 exclude_last_content=payload.anonymized_content,
             ),
@@ -308,16 +241,7 @@ async def attach_document_stream(
     file: UploadFile = File(...),
     prompt: str = Form(""),
 ):
-    """Attach a PDF to a chat and stream progress as NDJSON.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        file (UploadFile): The uploaded PDF file.
-        prompt (str): The optional prompt to combine with the document text.
-
-    Returns:
-        StreamingResponse: The NDJSON event stream.
-    """
+    """Attach a PDF to a chat and stream progress as NDJSON."""
     filename = file.filename or "document.pdf"
     content_type = file.content_type or ""
     content = await file.read()
@@ -349,13 +273,9 @@ async def attach_document_stream(
         ) from error
 
     def remember_user_message(document_id: str) -> None:
-        """Store the user message linked to a processed document.
-
-        Args:
-            document_id (str): The processed document identifier.
-        """
-        api_state.processed_document_user_messages[document_id] = (
-            user_message.message_id
+        processed_document_registry.remember_user_message(
+            document_id=document_id,
+            user_message_id=user_message.message_id,
         )
 
     return build_document_streaming_response(
@@ -366,15 +286,7 @@ async def attach_document_stream(
 
 @app.patch("/api/chats/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
-    """Rename an existing chat.
-
-    Args:
-        chat_id (str): The identifier of the chat to rename.
-        payload (RenameChatRequest): The rename request body.
-
-    Raises:
-        HTTPException: If the target chat does not exist.
-    """
+    """Rename an existing chat."""
     try:
         container.rename_chat.execute(
             RenameChatCommand(chat_id=chat_id, title=payload.title),
@@ -388,11 +300,7 @@ def rename_chat(chat_id: str, payload: RenameChatRequest) -> None:
 
 @app.delete("/api/chats/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chat(chat_id: str) -> None:
-    """Delete a chat by identifier.
-
-    Args:
-        chat_id (str): The identifier of the chat to delete.
-    """
+    """Delete a chat by identifier."""
     container.delete_chat.execute(chat_id)
 
 
@@ -402,16 +310,7 @@ def stream_safe_response(
     document_id: str,
     payload: DocumentSafeStreamRequest,
 ):
-    """Stream safe response chunks for a processed document.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        document_id (str): The identifier of the processed document.
-        model (str): The AI model selected by the user.
-
-    Returns:
-        StreamingResponse: The NDJSON safe response stream.
-    """
+    """Stream safe response chunks for a processed document."""
     try:
         events = container.stream_safe_response.execute(
             StreamSafeResponseCommand(
@@ -432,7 +331,7 @@ def stream_safe_response(
         chat_repository=container.chat_repository,
         make_assistant_message=make_assistant_message,
         chat_id=chat_id,
-        user_message_id=api_state.processed_document_user_messages.get(
+        user_message_id=processed_document_registry.get_user_message_id(
             document_id,
         ),
     )
@@ -447,16 +346,8 @@ def preview_document_anonymization(
     document_id: str,
     payload: DocumentAnonymizationRequest,
 ) -> AnonymizedPreviewResponse:
-    """Anonymize a processed document before assistant processing.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        document_id (str): The processed document identifier.
-
-    Returns:
-        AnonymizedPreviewResponse: The anonymized document preview.
-    """
-    user_message_id = api_state.processed_document_user_messages.get(
+    """Anonymize a processed document before assistant processing."""
+    user_message_id = processed_document_registry.get_user_message_id(
         document_id,
     )
     if user_message_id is None:
@@ -494,17 +385,8 @@ def download_anonymized_pdf_preview(
     document_id: str,
     anonymization_id: str,
 ) -> Response:
-    """Return a visual anonymized PDF preview for a processed document.
-
-    Args:
-        chat_id (str): The identifier of the target chat.
-        document_id (str): The processed document identifier.
-        anonymization_id (str): The anonymization session identifier.
-
-    Returns:
-        Response: The anonymized PDF preview bytes.
-    """
-    if api_state.processed_document_user_messages.get(document_id) is None:
+    """Return a visual anonymized PDF preview for a processed document."""
+    if processed_document_registry.get_user_message_id(document_id) is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Processed document message not found.",
@@ -528,94 +410,3 @@ def download_anonymized_pdf_preview(
             "Content-Disposition": f'inline; filename="{preview.filename}"',
         },
     )
-
-
-def _build_anonymized_history(
-    chat_id: str,
-    exclude_last_content: str | None = None,
-) -> list[OrchestratorChatHistoryMessage]:
-    """Build a chat history that is safe to send to ai-gateway.
-
-    Args:
-        chat_id (str): The chat whose messages should be inspected.
-        exclude_last_content (str | None): Optional anonymized content to
-            exclude from the end of the history because it will be sent as the
-            current prompt.
-
-    Returns:
-        list[OrchestratorChatHistoryMessage]: Previous messages containing only
-            anonymized content.
-    """
-    chat = container.chat_repository.load_chat(chat_id)
-    if chat is None:
-        raise KeyError(chat_id)
-
-    messages = [
-        message
-        for message in chat.messages
-        if message.anonymized_content and message.anonymized_content.strip()
-    ]
-    if (
-        exclude_last_content is not None
-        and messages
-        and messages[-1].anonymized_content == exclude_last_content
-    ):
-        messages = messages[:-1]
-
-    return [
-        OrchestratorChatHistoryMessage(
-            role=message.role,
-            content=message.anonymized_content or "",
-        )
-        for message in messages
-    ]
-
-
-def _get_model_readiness() -> dict[str, object]:
-    """Return whether the required backend models are loaded.
-
-    Returns:
-        dict[str, object]: The model readiness payload consumed by the UI.
-    """
-    model_names = [PRIVACY_MODEL_NAME]
-    if DOCUMENT_MODEL_NAME != PRIVACY_MODEL_NAME:
-        model_names.append(DOCUMENT_MODEL_NAME)
-
-    statuses: dict[str, str] = {}
-    try:
-        with httpx.Client(
-            base_url=MODEL_PROVIDER_BASE_URL,
-            timeout=MODEL_STATUS_TIMEOUT_SECONDS,
-        ) as client:
-            for model_name in model_names:
-                response = client.get(
-                    "/model_status",
-                    params={"name": model_name},
-                )
-                response.raise_for_status()
-                statuses[model_name] = str(response.json())
-    except httpx.HTTPError as error:
-        return {
-            "ready": False,
-            "message": "El proveedor de modelos aún no está disponible.",
-            "detail": str(error),
-            "models": statuses,
-        }
-
-    missing_models = [
-        name
-        for name, status_text in statuses.items()
-        if " is loaded." not in status_text
-    ]
-    if missing_models:
-        return {
-            "ready": False,
-            "message": "Cargando modelos de GuardianAI...",
-            "models": statuses,
-        }
-
-    return {
-        "ready": True,
-        "message": "Modelos listos.",
-        "models": statuses,
-    }

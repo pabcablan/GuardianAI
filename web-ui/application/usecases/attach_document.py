@@ -91,7 +91,10 @@ class AttachDocumentUseCase:
         """
         self._gateway = gateway
 
-    def stream(self, command: AttachDocumentCommand) -> Iterator[AttachDocumentStreamEvent]:
+    def stream(
+        self,
+        command: AttachDocumentCommand,
+    ) -> Iterator[AttachDocumentStreamEvent]:
         """Attach a document and stream processing events.
 
         Args:

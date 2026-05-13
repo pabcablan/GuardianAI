@@ -6,177 +6,69 @@ import type {
   DocumentProcessingStatus,
   ModelReadinessStatus,
 } from "../types";
+import {
+  mapChatDetailResponse,
+  mapChatSummaryResponse,
+  mapModelReadinessResponse,
+} from "./chatApiMappers";
+import type {
+  AnonymizedPreviewResponse,
+  ChatDetailResponse,
+  ChatSummaryResponse,
+  CreateChatResponse,
+  ModelReadinessResponse,
+} from "./chatApiTypes";
+import { ChatHttpClient } from "./chatHttpClient";
+import {
+  consumeNdjsonStream,
+  handleDocumentStreamLine,
+  handleSafeStreamLine,
+} from "./chatStreamUtils";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
-const SAFE_STREAM_CHUNK_DELAY_MS = 180;
-
-interface CreateChatResponse {
-  chat_id: string;
-  title: string;
-}
-
-interface ChatSummaryResponse {
-  chat_id: string;
-  title: string;
-  last_message_preview: string;
-  updated_at: string;
-}
-
-interface ChatMessageResponse {
-  message_id: string;
-  role: "user" | "assistant";
-  content: string;
-  anonymized_content?: string | null;
-  created_at: string;
-}
-
-interface ChatDetailResponse {
-  chat_id: string;
-  title: string;
-  messages: ChatMessageResponse[];
-}
-
-interface AnonymizedPreviewResponse {
-  message_id: string;
-  anonymized_content: string;
-  anonymization_id: string;
-  replacement_count: number;
-  extraction_method?: string | null;
-}
-
-interface AttachDocumentProgressResponse {
-  event: "progress";
-  stage: string;
-  current: number;
-  total: number;
-  message: string;
-}
-
-interface AttachDocumentCompletedResponse {
-  event: "completed";
-  document_id: string;
-  filename: string;
-}
-
-interface AttachDocumentErrorResponse {
-  event: "error";
-  detail: string;
-}
-
-type AttachDocumentStreamResponse =
-  | AttachDocumentProgressResponse
-  | AttachDocumentCompletedResponse
-  | AttachDocumentErrorResponse;
-
-interface SafeStreamChunkResponse {
-  event: "chunk";
-  content: string;
-}
-
-interface SafeStreamAnonymizedPromptResponse {
-  event: "anonymized_prompt";
-  content: string;
-}
-
-interface SafeStreamCompletedResponse {
-  event: "completed";
-}
-
-interface SafeStreamErrorResponse {
-  event: "error";
-  detail: string;
-}
-
-type SafeStreamResponse =
-  | SafeStreamChunkResponse
-  | SafeStreamAnonymizedPromptResponse
-  | SafeStreamCompletedResponse
-  | SafeStreamErrorResponse;
-
-interface ModelReadinessResponse {
-  ready: boolean;
-  message: string;
-}
 
 export class ChatApplicationService {
-  constructor(private readonly apiBaseUrl: string = DEFAULT_API_BASE_URL) {}
+  private readonly httpClient: ChatHttpClient;
+
+  constructor(private readonly apiBaseUrl: string = DEFAULT_API_BASE_URL) {
+    this.httpClient = new ChatHttpClient(apiBaseUrl);
+  }
 
   async getModelReadiness(): Promise<ModelReadinessStatus> {
-    const response = await fetch(`${this.apiBaseUrl}/api/system/model-readiness`);
-    await this.ensure_success(response);
-
-    const payload = (await response.json()) as ModelReadinessResponse;
-    return {
-      ready: payload.ready,
-      message: payload.message,
-    };
+    const payload = await this.httpClient.getJson<ModelReadinessResponse>(
+      "/api/system/model-readiness",
+    );
+    return mapModelReadinessResponse(payload);
   }
 
   async listChats(): Promise<ChatSummary[]> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats`);
-    await this.ensure_success(response);
-
-    const payload = (await response.json()) as ChatSummaryResponse[];
-    return payload.map((chat) => ({
-      id: chat.chat_id,
-      title: chat.title,
-      lastMessagePreview: chat.last_message_preview,
-      updatedAt: chat.updated_at,
-    }));
+    const payload = await this.httpClient.getJson<ChatSummaryResponse[]>(
+      "/api/chats",
+    );
+    return payload.map(mapChatSummaryResponse);
   }
 
   async createChat(title: string | null = null): Promise<string> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title }),
-    });
-    await this.ensure_success(response);
-
-    const payload = (await response.json()) as CreateChatResponse;
+    const payload = await this.httpClient.postJson<CreateChatResponse>(
+      "/api/chats",
+      { title },
+    );
     return payload.chat_id;
   }
 
   async loadChat(chatId: string): Promise<ChatThread> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}`);
-    await this.ensure_success(response);
-
-    const payload = (await response.json()) as ChatDetailResponse;
-    return {
-      id: payload.chat_id,
-      title: payload.title,
-      lastMessagePreview:
-        payload.messages[payload.messages.length - 1]?.content ?? "",
-      updatedAt:
-        payload.messages[payload.messages.length - 1]?.created_at ?? "Ahora",
-      messages: payload.messages.map((message) => ({
-        id: message.message_id,
-        role: message.role,
-        content: message.content,
-        anonymizedContent: message.anonymized_content ?? undefined,
-        createdAt: message.created_at,
-      })),
-    };
+    const payload = await this.httpClient.getJson<ChatDetailResponse>(
+      `/api/chats/${chatId}`,
+    );
+    return mapChatDetailResponse(payload);
   }
 
   async renameChat(chatId: string, title: string): Promise<void> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title }),
-    });
-    await this.ensure_success(response);
+    await this.httpClient.patchJson(`/api/chats/${chatId}`, { title });
   }
 
   async deleteChat(chatId: string): Promise<void> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}`, {
-      method: "DELETE",
-    });
-    await this.ensure_success(response);
+    await this.httpClient.delete(`/api/chats/${chatId}`);
   }
 
   async streamMessage(
@@ -187,15 +79,10 @@ export class ChatApplicationService {
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt: (content: string) => void,
   ): Promise<void> {
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/messages/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ content, model, settings }),
-    });
-    await this.ensure_success(response);
-
+    const response = await this.httpClient.postJsonForResponse(
+      `/api/chats/${chatId}/messages/stream`,
+      { content, model, settings },
+    );
     await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
   }
 
@@ -205,19 +92,10 @@ export class ChatApplicationService {
     model: AiModel,
     settings: AnonymizationSettings,
   ): Promise<AnonymizedPreviewResponse> {
-    const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/messages/anonymize-preview`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content, model, settings }),
-      },
+    return await this.httpClient.postJson<AnonymizedPreviewResponse>(
+      `/api/chats/${chatId}/messages/anonymize-preview`,
+      { content, model, settings },
     );
-    await this.ensure_success(response);
-
-    return (await response.json()) as AnonymizedPreviewResponse;
   }
 
   async previewDocumentAnonymization(
@@ -225,19 +103,10 @@ export class ChatApplicationService {
     documentId: string,
     settings: AnonymizationSettings,
   ): Promise<AnonymizedPreviewResponse> {
-    const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/anonymize-preview`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ settings }),
-      },
+    return await this.httpClient.postJson<AnonymizedPreviewResponse>(
+      `/api/chats/${chatId}/documents/${documentId}/anonymize-preview`,
+      { settings },
     );
-    await this.ensure_success(response);
-
-    return (await response.json()) as AnonymizedPreviewResponse;
   }
 
   async openAnonymizedPdfPreview(
@@ -246,12 +115,9 @@ export class ChatApplicationService {
     anonymizationId: string,
   ): Promise<void> {
     const query = new URLSearchParams({ anonymization_id: anonymizationId });
-    const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/anonymized-pdf-preview?${query.toString()}`,
+    const blob = await this.httpClient.getBlob(
+      `/api/chats/${chatId}/documents/${documentId}/anonymized-pdf-preview?${query.toString()}`,
     );
-    await this.ensure_success(response);
-
-    const blob = await response.blob();
     const fileUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = fileUrl;
@@ -268,22 +134,14 @@ export class ChatApplicationService {
     model: AiModel,
     onChunk: (chunk: string) => void,
   ): Promise<void> {
-    const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/anonymized/stream`,
+    const response = await this.httpClient.postJsonForResponse(
+      `/api/chats/${chatId}/anonymized/stream`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          anonymized_content: anonymizedContent,
-          anonymization_id: anonymizationId,
-          model,
-        }),
+        anonymized_content: anonymizedContent,
+        anonymization_id: anonymizationId,
+        model,
       },
     );
-    await this.ensure_success(response);
-
     await this.consumeSafeStream(response, onChunk);
   }
 
@@ -297,60 +155,22 @@ export class ChatApplicationService {
     formData.append("file", file);
     formData.append("prompt", prompt);
 
-    const response = await fetch(`${this.apiBaseUrl}/api/chats/${chatId}/documents/stream`, {
-      method: "POST",
-      body: formData,
-    });
-    await this.ensure_success(response);
+    const response = await this.httpClient.postFormForResponse(
+      `/api/chats/${chatId}/documents/stream`,
+      formData,
+    );
 
-    if (!response.body) {
-      throw new Error("El flujo de progreso del documento no está disponible.");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
     let completedDocumentId: string | null = null;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value, { stream: !done });
-
-      let lineBreakIndex = buffer.indexOf("\n");
-      while (lineBreakIndex >= 0) {
-        const rawLine = buffer.slice(0, lineBreakIndex).trim();
-        buffer = buffer.slice(lineBreakIndex + 1);
-
-        if (rawLine) {
-          const documentId = this.handleDocumentStreamLine(
-            rawLine,
-            file.name,
-            onProgress,
-          );
-          if (documentId) {
-            completedDocumentId = documentId;
-          }
-        }
-
-        lineBreakIndex = buffer.indexOf("\n");
-      }
-
-      if (done) {
-        break;
-      }
-    }
-
-    const lastLine = buffer.trim();
-    if (lastLine) {
-      const documentId = this.handleDocumentStreamLine(
-        lastLine,
+    await consumeNdjsonStream(response, (rawLine) => {
+      const documentId = handleDocumentStreamLine(
+        rawLine,
         file.name,
         onProgress,
       );
       if (documentId) {
         completedDocumentId = documentId;
       }
-    }
+    });
 
     if (completedDocumentId) {
       return completedDocumentId;
@@ -367,113 +187,11 @@ export class ChatApplicationService {
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
-    const response = await fetch(
-      `${this.apiBaseUrl}/api/chats/${chatId}/documents/${documentId}/safe-stream`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model, settings }),
-      },
+    const response = await this.httpClient.postJsonForResponse(
+      `/api/chats/${chatId}/documents/${documentId}/safe-stream`,
+      { model, settings },
     );
-    await this.ensure_success(response);
-
-    if (!response.body) {
-      throw new Error("El flujo de respuesta segura no está disponible.");
-    }
-
     await this.consumeSafeStream(response, onChunk, onAnonymizedPrompt);
-  }
-
-  private async ensure_success(response: Response): Promise<void> {
-    if (response.ok) {
-      return;
-    }
-
-    const fallbackMessage = `La petición falló con estado ${response.status}.`;
-    let detailMessage = fallbackMessage;
-
-    try {
-      const payload = (await response.json()) as { detail?: string };
-      detailMessage = payload.detail ?? fallbackMessage;
-    } catch {
-      detailMessage = fallbackMessage;
-    }
-
-    throw new Error(detailMessage);
-  }
-
-  private handleDocumentStreamLine(
-    rawLine: string,
-    filename: string,
-    onProgress: (status: DocumentProcessingStatus) => void,
-  ): string | null {
-    const payload = JSON.parse(rawLine) as AttachDocumentStreamResponse;
-
-    if (payload.event === "progress") {
-      const progress =
-        payload.total > 0
-          ? Math.max(0, Math.min(1, payload.current / payload.total))
-          : null;
-
-      onProgress({
-        filename,
-        stage: payload.stage,
-        message: payload.message,
-        current: payload.current,
-        total: payload.total,
-        progress,
-      });
-      return null;
-    }
-
-    if (payload.event === "completed") {
-      onProgress({
-        filename,
-        stage: "Completado",
-        message: "Documento procesado. Generando respuesta segura...",
-        current: 1,
-        total: 1,
-        progress: 1,
-      });
-      return payload.document_id;
-    }
-
-    if (payload.event === "error") {
-      throw new Error(payload.detail);
-    }
-
-    return null;
-  }
-
-  private async handleSafeStreamLine(
-    rawLine: string,
-    onChunk: (chunk: string) => void,
-    onAnonymizedPrompt?: (content: string) => void,
-  ): Promise<void> {
-    const payload = JSON.parse(rawLine) as SafeStreamResponse;
-
-    if (payload.event === "anonymized_prompt") {
-      onAnonymizedPrompt?.(payload.content);
-      return;
-    }
-
-    if (payload.event === "chunk") {
-      onChunk(payload.content);
-      await this.wait(SAFE_STREAM_CHUNK_DELAY_MS);
-      return;
-    }
-
-    if (payload.event === "error") {
-      throw new Error(payload.detail);
-    }
-  }
-
-  private wait(milliseconds: number): Promise<void> {
-    return new Promise((resolve) => {
-      window.setTimeout(resolve, milliseconds);
-    });
   }
 
   private async consumeSafeStream(
@@ -481,43 +199,9 @@ export class ChatApplicationService {
     onChunk: (chunk: string) => void,
     onAnonymizedPrompt?: (content: string) => void,
   ): Promise<void> {
-    if (!response.body) {
-      throw new Error("El flujo de respuesta segura no está disponible.");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value, { stream: !done });
-
-      let lineBreakIndex = buffer.indexOf("\n");
-      while (lineBreakIndex >= 0) {
-        const rawLine = buffer.slice(0, lineBreakIndex).trim();
-        buffer = buffer.slice(lineBreakIndex + 1);
-
-        if (rawLine) {
-          await this.handleSafeStreamLine(
-            rawLine,
-            onChunk,
-            onAnonymizedPrompt,
-          );
-        }
-
-        lineBreakIndex = buffer.indexOf("\n");
-      }
-
-      if (done) {
-        break;
-      }
-    }
-
-    const lastLine = buffer.trim();
-    if (lastLine) {
-      await this.handleSafeStreamLine(lastLine, onChunk, onAnonymizedPrompt);
-    }
+    await consumeNdjsonStream(response, async (rawLine) => {
+      await handleSafeStreamLine(rawLine, onChunk, onAnonymizedPrompt);
+    });
   }
 }
 

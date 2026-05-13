@@ -97,3 +97,6 @@ class ConnectedDocumentService(DocumentServicePort):
                     event=event.event,
                     detail=event.detail,
                 )
+                continue
+
+            raise ValueError("Unknown document processor event received.")

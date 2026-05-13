@@ -1,20 +1,10 @@
 """Shared API context and factories for web-ui routes."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from domain.message import Message
-
-
-@dataclass
-class WebUiApiState:
-    """Hold API state that does not belong to domain entities."""
-
-    processed_document_user_messages: dict[str, str] = field(
-        default_factory=dict,
-    )
 
 
 def make_assistant_message(
