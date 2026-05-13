@@ -35,6 +35,8 @@
   /* Overlay */
   --surface-modal-backdrop: rgba(7, 11, 18, 0.78);
   --surface-tooltip-bg: rgba(10, 18, 32, 0.98);
+  --tooltip-text-color: #eef4ff;
+  --tooltip-border-color: rgba(180, 205, 255, 0.22);
 
   /* Text */
   --text-primary: #eef4ff;
@@ -113,6 +115,8 @@
   /* Overlay */
   --surface-modal-backdrop: rgba(16, 32, 42, 0.28);
   --surface-tooltip-bg: #10202a;
+  --tooltip-text-color: #ffffff;
+  --tooltip-border-color: rgba(16, 32, 42, 0.16);
 
   /* Text */
   --text-primary: #10202a;

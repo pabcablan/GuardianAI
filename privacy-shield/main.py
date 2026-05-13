@@ -23,8 +23,8 @@ async def main():
 
     client = httpx.AsyncClient(timeout=None)
 
-    MODEL_PROVIDER_URL = os.getenv("MODEL_PROVIDER_URL", "http://localhost:8006/generate_response")
-    MODEL_NAME = os.getenv("PRIVACY_MODEL_NAME", "privacy_anonymizer")
+    MODEL_PROVIDER_URL = os.getenv("MODEL_PROVIDER_URL", "http://localhost:8010/generate_response")
+    MODEL_NAME = os.getenv("PRIVACY_MODEL_NAME", "qwen3.5")
 
     evaluator_provider = EvaluatorProvider(use_api=True, api_url=MODEL_PROVIDER_URL, client=client)
     evaluator = evaluator_provider.get_evaluator(model_alias=MODEL_NAME)

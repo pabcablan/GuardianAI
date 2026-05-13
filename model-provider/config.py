@@ -6,11 +6,11 @@ import os
 
 DEFAULT_PRIVACY_MODEL_ID = os.getenv(
     "DEFAULT_PRIVACY_MODEL_ID",
-    "unsloth/Qwen3.5-2B",
+    "unsloth/Qwen3.5-9B",
 )
 DEFAULT_PRIVACY_MODEL_NAME = os.getenv(
     "DEFAULT_PRIVACY_MODEL_NAME",
-    "privacy_anonymizer",
+    "qwen3.5",
 )
 DEFAULT_DOCUMENT_MODEL_ID = os.getenv(
     "DEFAULT_DOCUMENT_MODEL_ID",
@@ -18,5 +18,5 @@ DEFAULT_DOCUMENT_MODEL_ID = os.getenv(
 )
 DEFAULT_DOCUMENT_MODEL_NAME = os.getenv(
     "DEFAULT_DOCUMENT_MODEL_NAME",
-    "document_extractor",
+    DEFAULT_PRIVACY_MODEL_NAME,
 )

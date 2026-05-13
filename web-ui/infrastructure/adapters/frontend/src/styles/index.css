@@ -853,9 +853,9 @@ input {
   width: max-content;
   max-width: 220px;
   padding: 6px 9px;
-  border: 1px solid var(--alpha-white-22);
+  border: 1px solid var(--tooltip-border-color);
   border-radius: 8px;
-  color: var(--text-primary);
+  color: var(--tooltip-text-color);
   background: var(--surface-tooltip-bg);
   box-shadow: var(--shadow-tooltip);
   font-size: 0.76rem;
@@ -1441,9 +1441,9 @@ input {
   width: max-content;
   max-width: 220px;
   padding: 6px 9px;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--tooltip-border-color);
   border-radius: 8px;
-  color: var(--text-primary);
+  color: var(--tooltip-text-color);
   background: var(--surface-tooltip-bg);
   box-shadow: var(--shadow-tooltip);
   font-size: 0.76rem;

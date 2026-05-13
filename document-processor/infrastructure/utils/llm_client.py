@@ -8,7 +8,7 @@ import httpx
 class LLMClient:
     def __init__(self, base_url) -> None:
         self._base_url = base_url                       # TODO put it in config or .env
-        self._model_name = os.getenv("DOCUMENT_MODEL_NAME", "document_extractor")
+        self._model_name = os.getenv("DOCUMENT_MODEL_NAME", "qwen3.5")
 
     async def generate(self, prompt: str, content: bytes) -> str:
         async with httpx.AsyncClient(timeout=6000.0) as client:
@@ -17,7 +17,7 @@ class LLMClient:
             response = await client.post(
                 f"{self._base_url}/generate_response",
                 json={
-                "model_name": "juandi",
+                "model_name": self._model_name,
                 "prompt": prompt,
                 "document_base64": content_64
                 }

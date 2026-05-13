@@ -15,8 +15,8 @@ services:
     ports:
       - "8002:8002"
     environment:
-      MODEL_PROVIDER_URL: ${MODEL_PROVIDER_URL:-http://host.docker.internal:8006/generate_response}
-      MODEL_PROVIDER_BASE_URL: ${MODEL_PROVIDER_BASE_URL:-http://host.docker.internal:8006}
+      MODEL_PROVIDER_URL: ${MODEL_PROVIDER_URL:-http://host.docker.internal:8010/generate_response}
+      MODEL_PROVIDER_BASE_URL: ${MODEL_PROVIDER_BASE_URL:-http://host.docker.internal:8010}
       PRIVACY_MODEL_NAME: ${PRIVACY_MODEL_NAME:-privacy_anonymizer}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -32,7 +32,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8006}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8010}
       DOCUMENT_MODEL_NAME: ${DOCUMENT_MODEL_NAME:-document_extractor}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -81,7 +81,7 @@ services:
       - "8000:8000"
     environment:
       ORCHESTRATOR_BASE_URL: http://orchestrator:8003
-      MODEL_PROVIDER_BASE_URL: ${MODEL_PROVIDER_BASE_URL:-http://host.docker.internal:8006}
+      MODEL_PROVIDER_BASE_URL: ${MODEL_PROVIDER_BASE_URL:-http://host.docker.internal:8010}
       PRIVACY_MODEL_NAME: ${PRIVACY_MODEL_NAME:-privacy_anonymizer}
       DOCUMENT_MODEL_NAME: ${DOCUMENT_MODEL_NAME:-document_extractor}
       MONGODB_URI: mongodb://mongodb:27017
