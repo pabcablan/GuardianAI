@@ -1,6 +1,7 @@
 """HTTP client for consuming the ai-gateway service."""
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -129,5 +130,10 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
             raise AiGatewayClientError(
                 f"Ai-gateway stream failed with {payload}."
             )
+
+        if payload.startswith("{"):
+            parsed = json.loads(payload)
+            if parsed.get("type") == "chunk":
+                return str(parsed.get("content", ""))
 
         return payload

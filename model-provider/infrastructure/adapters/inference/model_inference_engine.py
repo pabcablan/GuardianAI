@@ -135,9 +135,9 @@ class ModelInferenceEngine(TextGenerator):
         with torch.inference_mode():
             output_ids = model.generate(
                 **inputs,
-                max_new_tokens=600,
+                max_new_tokens=1200,
                 temperature=0.01,
-                do_sample=True,
+                do_sample=False,
                 repetition_penalty=1.1,
                 pad_token_id=pad_token_id,
             )

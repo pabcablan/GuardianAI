@@ -254,6 +254,7 @@ REGLAS:
 - Si una categoria activada no aparece, devuelve una lista vacia.
 - No repitas valores: si el mismo dato aparece varias veces, devuelvelo una sola vez.
 - No incluyas fechas, URLs, hashes tecnicos, numeros de pagina, codigos de verificacion repetidos ni texto administrativo que no identifique por si solo a una persona o entidad.
+- En "CODIGO", devuelve como maximo 5 valores unicos y prioriza los mas relevantes.
 - El primer caracter de tu respuesta debe ser '{{' y el ultimo '}}'.
 """.strip()
 
@@ -279,6 +280,7 @@ REGLAS:
 - Si una categoria activada no aparece, devuelve una lista vacia.
 - No repitas valores: si el mismo dato aparece varias veces, devuelvelo una sola vez.
 - No incluyas fechas, URLs, hashes tecnicos, numeros de pagina, codigos de verificacion repetidos ni texto administrativo que no identifique por si solo a una persona o entidad.
+- En "CODIGO", devuelve como maximo 5 valores unicos y prioriza los mas relevantes.
 - El primer caracter de tu respuesta debe ser '{{' y el ultimo '}}'.
 """.strip()
 
@@ -321,7 +323,7 @@ def _build_enabled_rules(normalized: dict[str, str]) -> str:
 
     if normalized["relevantCodes"] == "anonymize":
         rules.append(
-            '"CODIGO": Solo expedientes, localizadores, CSV y numeros de registro realmente identificativos. No incluyas fechas, URLs, hashes tecnicos ni codigos repetidos.'
+            '"CODIGO": Solo expedientes, localizadores, CSV y numeros de registro realmente identificativos. No incluyas fechas, URLs, hashes tecnicos ni codigos repetidos. Devuelve como maximo 5 codigos unicos y prioriza los mas relevantes.'
         )
 
     return "\n".join(
@@ -378,11 +380,14 @@ def _describe_name_rule(normalized: dict[str, str]) -> str:
     if include_people and include_organizations:
         return (
             "Personas fisicas completas e instituciones, organizaciones o entidades. "
-            "No dividas los nombres."
+            "No dividas los nombres. Si en tablas aparecen nombre y apellidos en celdas o lineas consecutivas, reconstruye el nombre completo."
         )
 
     if include_people:
-        return "Solo personas fisicas completas. No incluyas organizaciones ni entidades."
+        return (
+            "Solo personas fisicas completas. No incluyas organizaciones ni entidades. "
+            "Si en tablas aparecen nombre y apellidos en celdas o lineas consecutivas, reconstruye el nombre completo."
+        )
 
     if include_organizations:
         return "Solo instituciones, organizaciones o entidades. No incluyas personas fisicas."
@@ -404,4 +409,3 @@ def _describe_contact_rule(normalized: dict[str, str]) -> str:
         return "Solo numeros de telefono. No incluyas correos electronicos."
 
     return ""
-

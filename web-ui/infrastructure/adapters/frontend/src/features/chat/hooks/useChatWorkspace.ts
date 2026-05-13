@@ -46,6 +46,8 @@ export function useChatWorkspace() {
     service: serviceRef.current,
     onError: setErrorMessage,
   });
+  const isSendLocked =
+    !modelReadiness.ready || isResponding || documentProcessingStatus !== null;
 
   async function createChat(): Promise<void> {
     await createChatInternal();
@@ -351,8 +353,7 @@ export function useChatWorkspace() {
     documentProcessingStatus,
     responseProcessingStatus,
     modelReadiness,
-    isInteractionLocked:
-      !modelReadiness.ready || isResponding || documentProcessingStatus !== null,
+    isSendLocked,
     selectChat,
     createChat,
     renameChat,

@@ -32,7 +32,7 @@ export function ChatWorkspace() {
     documentProcessingStatus,
     responseProcessingStatus,
     modelReadiness,
-    isInteractionLocked,
+    isSendLocked,
     selectChat,
     createChat,
     renameChat,
@@ -71,7 +71,7 @@ export function ChatWorkspace() {
   }, [theme]);
 
   function handleFileSelect(file: File | null) {
-    if (isInteractionLocked) {
+    if (isSendLocked) {
       return;
     }
 
@@ -121,7 +121,7 @@ export function ChatWorkspace() {
           chats={chats}
           selectedChatId={selectedChatId}
           isExpanded={isSidebarOpen}
-          isInteractionLocked={isInteractionLocked}
+          isInteractionLocked={false}
           selectedModel={selectedModel}
           theme={theme}
           onChatSelect={selectChat}
@@ -143,7 +143,7 @@ export function ChatWorkspace() {
           errorMessage={errorMessage}
           isLoadingChats={isLoadingChats}
           isResponding={isResponding}
-          isInteractionLocked={isInteractionLocked}
+          isInteractionLocked={isSendLocked}
           modelReadiness={modelReadiness}
           documentProcessingStatus={documentProcessingStatus}
           responseProcessingStatus={responseProcessingStatus}

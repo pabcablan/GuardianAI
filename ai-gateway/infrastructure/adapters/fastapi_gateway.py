@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from application.usecases.send_to_llm import SendToLLM
@@ -25,6 +27,17 @@ class FastAPIGateway:
     def router(self):
         return self._router
 
+    @staticmethod
+    def _build_sse_data(payload: str) -> str:
+        """Serialize one text chunk as a safe SSE data payload."""
+        return json.dumps(
+            {
+                "type": "chunk",
+                "content": payload,
+            },
+            ensure_ascii=False,
+        )
+
     async def handle(self, request: ChatRequest) -> StreamingResponse:
         try:
             messages = [
@@ -40,7 +53,7 @@ class FastAPIGateway:
         async def event_stream():
             try:
                 async for chunk in self._send_to_llm.stream(messages, request.model):
-                    yield f"data: {chunk}\n\n"
+                    yield f"data: {self._build_sse_data(chunk)}\n\n"
                 yield "data: [DONE]\n\n"
             except ProviderRateLimitError as error:
                 print(f"AI-GATEWAY rate limit error: {error}", flush=True)

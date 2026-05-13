@@ -75,3 +75,28 @@ class ChatRepositoryPort(Protocol):
             message_id (str): The message identifier.
             anonymized_content (str): The anonymized message content.
         """
+
+    def link_document_to_message(
+        self,
+        document_id: str,
+        message_id: str,
+    ) -> None:
+        """Persist the processed document linked to one user message.
+
+        Args:
+            document_id (str): The processed document identifier.
+            message_id (str): The user message that owns the document.
+        """
+
+    def get_user_message_id_by_document(
+        self,
+        document_id: str,
+    ) -> str | None:
+        """Return the user message linked to one processed document.
+
+        Args:
+            document_id (str): The processed document identifier.
+
+        Returns:
+            str | None: The matching user message identifier, if any.
+        """

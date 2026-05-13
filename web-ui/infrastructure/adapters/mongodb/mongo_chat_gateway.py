@@ -25,6 +25,7 @@ class MongoChatGateway(ChatRepositoryPort):
         self._chats.create_index("updated_at")
         self._messages.create_index("message_id", unique=True)
         self._messages.create_index([("chat_id", 1), ("created_at", 1)])
+        self._messages.create_index("document_id", sparse=True)
 
     def create_chat(self, title: str) -> CreateChatResult:
         """Create and persist a new chat."""
@@ -92,6 +93,7 @@ class MongoChatGateway(ChatRepositoryPort):
                 content=message["content"],
                 created_at=message["created_at"],
                 anonymized_content=message.get("anonymized_content"),
+                document_id=message.get("document_id"),
             )
             for message in self._messages.find(
                 {"chat_id": chat_id},
@@ -156,6 +158,7 @@ class MongoChatGateway(ChatRepositoryPort):
                 "content": message.content,
                 "created_at": message.created_at,
                 "anonymized_content": message.anonymized_content,
+                "document_id": message.document_id,
             }
         )
 
@@ -180,3 +183,29 @@ class MongoChatGateway(ChatRepositoryPort):
         )
         if result.matched_count == 0:
             raise KeyError(message_id)
+
+    def link_document_to_message(
+        self,
+        document_id: str,
+        message_id: str,
+    ) -> None:
+        """Persist the processed document linked to one user message."""
+        result = self._messages.update_one(
+            {"message_id": message_id},
+            {"$set": {"document_id": document_id}},
+        )
+        if result.matched_count == 0:
+            raise KeyError(message_id)
+
+    def get_user_message_id_by_document(
+        self,
+        document_id: str,
+    ) -> str | None:
+        """Return the user message linked to one processed document."""
+        message = self._messages.find_one(
+            {"document_id": document_id},
+            projection={"message_id": 1},
+        )
+        if message is None:
+            return None
+        return str(message["message_id"])

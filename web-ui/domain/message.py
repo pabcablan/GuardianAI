@@ -16,9 +16,12 @@ class Message:
     Attributes:
         message_id (str): The message identifier.
         role (MessageRole): The sender role.
-    content (str): The message text.
-    anonymized_content (str | None): The anonymized user text, when available.
-    created_at (str): The message timestamp.
+        content (str): The message text.
+        created_at (str): The message timestamp.
+        anonymized_content (str | None): The anonymized user text, when
+            available.
+        document_id (str | None): The processed document linked to this
+            message, when the message originated from a PDF workflow.
     """
 
     message_id: str
@@ -26,6 +29,7 @@ class Message:
     content: str
     created_at: str
     anonymized_content: str | None = None
+    document_id: str | None = None
 
     def __post_init__(self) -> None:
         """Validate the message fields.

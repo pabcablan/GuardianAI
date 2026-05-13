@@ -391,7 +391,6 @@ export function ConversationPanel({
                         <button
                           className="message__secondary-button"
                           type="button"
-                          disabled={isResponding}
                           onClick={() => onOpenAnonymizedPdfPreview(message)}
                         >
                           Ver PDF anonimizado

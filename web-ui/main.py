@@ -59,7 +59,9 @@ from infrastructure.ports.external.orchestrator_response_port import (
 
 
 container = build_container()
-processed_document_registry = ProcessedDocumentRegistry()
+processed_document_registry = ProcessedDocumentRegistry(
+    container.chat_repository,
+)
 anonymized_history_builder = AnonymizedHistoryBuilder(
     container.chat_repository,
 )

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from typing import Any
+import re
 
 import fitz
 
@@ -13,6 +14,11 @@ from infrastructure.ports.anonymized_pdf_builder_port import (
 
 class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
     """Replace visible PDF text occurrences using PyMuPDF redactions."""
+
+    _NAMESPACED_PLACEHOLDER_PATTERN = re.compile(
+        r"^\[([A-F0-9]{8})_(.+)\]$",
+        re.IGNORECASE,
+    )
 
     def build(
         self,
@@ -56,7 +62,7 @@ class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
                         text_area = self._expand_text_area(page, area)
                         page.insert_textbox(
                             text_area,
-                            placeholder,
+                            self._display_placeholder(placeholder),
                             fontsize=max(6, min(10, text_area.height * 0.65)),
                             color=(0, 0, 0),
                             align=fitz.TEXT_ALIGN_LEFT,
@@ -92,3 +98,10 @@ class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
             min(page.rect.x1, area.x1 + 120),
             min(page.rect.y1, area.y1 + 5),
         )
+
+    def _display_placeholder(self, placeholder: str) -> str:
+        """Return a user-facing placeholder without the session namespace."""
+        match = self._NAMESPACED_PLACEHOLDER_PATTERN.fullmatch(placeholder)
+        if not match:
+            return placeholder
+        return f"[{match.group(2)}]"
