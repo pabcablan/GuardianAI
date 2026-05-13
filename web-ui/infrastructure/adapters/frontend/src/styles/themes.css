@@ -31,6 +31,9 @@
   --search-border-color: rgba(180, 205, 255, 0.18);
   --input-placeholder-color: rgba(232, 238, 252, 0.92);
   --functional-icon-filter: none;
+  --scrollbar-thumb-bg: rgba(180, 205, 255, 0.34);
+  --scrollbar-thumb-hover-bg: rgba(180, 205, 255, 0.54);
+  --scrollbar-track-bg: rgba(7, 11, 18, 0.52);
 
   /* Overlay */
   --surface-modal-backdrop: rgba(7, 11, 18, 0.78);
@@ -111,6 +114,9 @@
   --search-border-color: rgba(16, 32, 42, 0.22);
   --input-placeholder-color: rgba(16, 32, 42, 0.42);
   --functional-icon-filter: brightness(0) saturate(100%) invert(11%) sepia(16%) saturate(1169%) hue-rotate(165deg) brightness(95%) contrast(93%);
+  --scrollbar-thumb-bg: rgba(16, 32, 42, 0.24);
+  --scrollbar-thumb-hover-bg: rgba(16, 32, 42, 0.42);
+  --scrollbar-track-bg: rgba(179, 235, 242, 0.42);
 
   /* Overlay */
   --surface-modal-backdrop: rgba(16, 32, 42, 0.28);

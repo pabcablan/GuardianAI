@@ -352,6 +352,7 @@ export function ConversationPanel({
               key={message.id}
               className={`message message--${message.role}`}
             >
+              <div className="message__body">
               <div className="message__meta">
                 <span className="message__author">
                   {message.role === "assistant" ? (
@@ -363,7 +364,7 @@ export function ConversationPanel({
                   )}
                 </span>
               </div>
-              <p>{renderMessageContent(message)}</p>
+              <p className="message__content">{renderMessageContent(message)}</p>
               {message.role === "user" && message.anonymizedContent ? (
                 <>
                   {(
@@ -408,6 +409,7 @@ export function ConversationPanel({
                   ) : null}
                 </>
               ) : null}
+              </div>
             </article>
           ))
         ) : (
