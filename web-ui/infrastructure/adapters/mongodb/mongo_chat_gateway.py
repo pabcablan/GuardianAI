@@ -93,6 +93,9 @@ class MongoChatGateway(ChatRepositoryPort):
                 content=message["content"],
                 created_at=message["created_at"],
                 anonymized_content=message.get("anonymized_content"),
+                anonymization_replacements=message.get(
+                    "anonymization_replacements"
+                ),
                 document_id=message.get("document_id"),
             )
             for message in self._messages.find(
@@ -158,6 +161,9 @@ class MongoChatGateway(ChatRepositoryPort):
                 "content": message.content,
                 "created_at": message.created_at,
                 "anonymized_content": message.anonymized_content,
+                "anonymization_replacements": (
+                    message.anonymization_replacements
+                ),
                 "document_id": message.document_id,
             }
         )
@@ -175,11 +181,19 @@ class MongoChatGateway(ChatRepositoryPort):
         self,
         message_id: str,
         anonymized_content: str,
+        anonymization_replacements: dict[str, str] | None = None,
     ) -> None:
         """Store the anonymized text for one message."""
+        update_fields: dict[str, object] = {
+            "anonymized_content": anonymized_content,
+        }
+        if anonymization_replacements is not None:
+            update_fields["anonymization_replacements"] = (
+                anonymization_replacements
+            )
         result = self._messages.update_one(
             {"message_id": message_id},
-            {"$set": {"anonymized_content": anonymized_content}},
+            {"$set": update_fields},
         )
         if result.matched_count == 0:
             raise KeyError(message_id)
@@ -209,3 +223,23 @@ class MongoChatGateway(ChatRepositoryPort):
         if message is None:
             return None
         return str(message["message_id"])
+
+    def get_chat_replacements(self, chat_id: str) -> dict[str, str]:
+        """Return all anonymization replacements stored for a chat."""
+        replacements: dict[str, str] = {}
+        for message in self._messages.find(
+            {"chat_id": chat_id},
+            projection={"anonymization_replacements": 1},
+        ):
+            raw_replacements = message.get("anonymization_replacements")
+            if not isinstance(raw_replacements, dict):
+                continue
+
+            replacements.update(
+                {
+                    str(placeholder): str(original)
+                    for placeholder, original in raw_replacements.items()
+                }
+            )
+
+        return replacements

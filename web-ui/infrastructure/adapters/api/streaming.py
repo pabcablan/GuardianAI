@@ -76,6 +76,7 @@ def build_safe_streaming_response(
                         chat_repository.update_message_anonymized_content(
                             user_message_id,
                             event.content,
+                            event.replacements,
                         )
                     payload = SafeStreamAnonymizedPromptResponse(
                         content=event.content,

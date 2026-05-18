@@ -87,28 +87,30 @@
   color-scheme: light;
 
   /* Base */
-  --app-bg: #f8fdff;
+  --app-bg: #f7f7f8;
   --app-text: #10202a;
 
   /* Layout */
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #fcfcfc;
 
   /* Surfaces */
-  --surface-bg: #b3ebf2;
-  --surface-muted-bg: #e8fbfd;
+  --surface-bg: #ececec;
+  --surface-muted-bg: #f4f4f5;
   --surface-elevated-bg: #ffffff;
-  --surface-hover-bg: #d8f6fa;
+  --surface-hover-bg: #e3e3e5;
   --surface-contrast-bg: #10202a;
   --surface-contrast-text: #ffffff;
 
   /* Selected / active */
-  --surface-selected-bg: #b3ebf2;
+  --surface-selected-bg: #dddddf;
   --surface-selected-text: #10202a;
 
   /* Ghost / buttons */
   --surface-ghost-bg: rgba(16, 32, 42, 0.045);
   --surface-ghost-strong-bg: rgba(16, 32, 42, 0.08);
-  --surface-button-bg: #b3ebf2;
+  --surface-button-bg: #e7e7e9;
+  --surface-user-message-bg: #dedee2;
+  --surface-processing-card-bg: #e1e6ea;
   --search-surface-bg: #ffffff;
   --search-surface-text: #10202a;
   --search-border-color: rgba(16, 32, 42, 0.22);
@@ -116,7 +118,7 @@
   --functional-icon-filter: brightness(0) saturate(100%) invert(11%) sepia(16%) saturate(1169%) hue-rotate(165deg) brightness(95%) contrast(93%);
   --scrollbar-thumb-bg: rgba(16, 32, 42, 0.24);
   --scrollbar-thumb-hover-bg: rgba(16, 32, 42, 0.42);
-  --scrollbar-track-bg: rgba(179, 235, 242, 0.42);
+  --scrollbar-track-bg: rgba(16, 32, 42, 0.08);
 
   /* Overlay */
   --surface-modal-backdrop: rgba(16, 32, 42, 0.28);
@@ -146,7 +148,7 @@
   --border-heavy: rgba(16, 32, 42, 0.62);
 
   /* Highlights */
-  --highlight-anonymized-bg: #7ddcea;
+  --highlight-anonymized-bg: #c9c9ca;
   --highlight-anonymized-text: #10202a;
 
   /* Danger */
@@ -162,5 +164,5 @@
   --shadow-modal: 0 24px 56px rgba(16, 32, 42, 0.18);
 
   /* Focus */
-  --focus-ring: rgba(0, 145, 170, 0.22);
+  --focus-ring: rgba(16, 32, 42, 0.14);
 }

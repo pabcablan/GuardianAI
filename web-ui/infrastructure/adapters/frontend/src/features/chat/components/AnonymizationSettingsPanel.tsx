@@ -36,6 +36,11 @@ const SETTING_OPTIONS: Array<{
     description: "Direcciones postales, domicilios y ubicaciones concretas.",
   },
   {
+    key: "licensePlates",
+    label: "Matrículas",
+    description: "Matrículas de vehículos y otros identificadores similares.",
+  },
+  {
     key: "phones",
     label: "Teléfonos",
     description: "Números fijos, móviles y otros datos de contacto telefónico.",

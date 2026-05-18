@@ -29,6 +29,7 @@ class StreamMessageResponseCommand:
     model: str
     history: list[OrchestratorChatHistoryMessage]
     settings: dict[str, str]
+    replacements: dict[str, str]
 
 
 class StreamMessageResponseUseCase:
@@ -71,5 +72,6 @@ class StreamMessageResponseUseCase:
                 model=model,
                 history=command.history,
                 settings=command.settings,
+                replacements=command.replacements,
             )
         )

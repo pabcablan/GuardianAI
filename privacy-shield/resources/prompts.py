@@ -118,6 +118,7 @@ DEFAULT_ANONYMIZATION_SETTINGS = {
     "emails": "anonymize",
     "addresses": "anonymize",
     "phones": "anonymize",
+    "licensePlates": "anonymize",
     "organizations": "anonymize",
     "relevantCodes": "anonymize",
 }
@@ -150,14 +151,19 @@ _ANONYMIZATION_OPTION_SPECS = [
         "Telefonos fijos, moviles y otros numeros de contacto.",
     ),
     (
+        "licensePlates",
+        "CODIGO",
+        "Matriculas de vehiculos y otros identificadores similares.",
+    ),
+    (
         "addresses",
         "DIR",
-        "Calles, vias, codigos postales, municipios, localidades, islas y paises.",
+        "Calles, vias, codigos postales de 5 digitos, municipios, localidades, islas y paises.",
     ),
     (
         "relevantCodes",
         "CODIGO",
-        "Expedientes, localizadores, CSV, numeros de registro y codigos alfanumericos sensibles.",
+        "Expedientes, localizadores, CSV, numeros de registro y codigos alfanumericos sensibles, incluidos identificadores largos con guiones, barras o guiones bajos.",
     ),
 ]
 
@@ -318,13 +324,12 @@ def _build_enabled_rules(normalized: dict[str, str]) -> str:
 
     if normalized["addresses"] == "anonymize":
         rules.append(
-            '"DIR": Calles, vias, codigos postales, municipios, localidades, islas y paises.'
+            '"DIR": Calles, vias, codigos postales de 5 digitos, municipios, localidades, islas y paises. Incluye siempre codigos postales cuando aparezcan como parte de una direccion o ubicacion postal.'
         )
 
-    if normalized["relevantCodes"] == "anonymize":
-        rules.append(
-            '"CODIGO": Solo expedientes, localizadores, CSV y numeros de registro realmente identificativos. No incluyas fechas, URLs, hashes tecnicos ni codigos repetidos. Devuelve como maximo 5 codigos unicos y prioriza los mas relevantes.'
-        )
+    code_rule = _describe_code_rule(normalized)
+    if code_rule:
+        rules.append(f'"CODIGO": {code_rule}')
 
     return "\n".join(
         f"{index}. {rule}"
@@ -363,6 +368,11 @@ def _build_disabled_rules(normalized: dict[str, str]) -> str:
     if normalized["addresses"] != "anonymize":
         rules.append(
             '- NO extraigas ni anonimices direcciones postales ni ubicaciones concretas.'
+        )
+
+    if normalized["licensePlates"] != "anonymize":
+        rules.append(
+            '- NO extraigas ni anonimices matriculas ni identificadores de vehiculos.'
         )
 
     if normalized["relevantCodes"] != "anonymize":
@@ -407,5 +417,39 @@ def _describe_contact_rule(normalized: dict[str, str]) -> str:
 
     if include_phones:
         return "Solo numeros de telefono. No incluyas correos electronicos."
+
+    return ""
+
+
+def _describe_code_rule(normalized: dict[str, str]) -> str:
+    include_license_plates = normalized["licensePlates"] == "anonymize"
+    include_relevant_codes = normalized["relevantCodes"] == "anonymize"
+
+    if include_license_plates and include_relevant_codes:
+        return (
+            "Expedientes, localizadores, CSV, numeros de registro, matriculas "
+            "de vehiculos y otros codigos alfanumericos identificativos, aunque "
+            "sean largos o contengan guiones, barras o guiones bajos. Incluye "
+            "identificadores como NDE, UUID o cadenas similares cuando funcionen "
+            "como referencia del documento. No incluyas fechas ni URLs completas. "
+            "Devuelve como maximo 8 codigos unicos y prioriza los mas relevantes."
+        )
+
+    if include_relevant_codes:
+        return (
+            "Solo expedientes, localizadores, CSV, numeros de registro y otros "
+            "codigos alfanumericos identificativos, aunque sean largos o "
+            "contengan guiones, barras o guiones bajos. Incluye identificadores "
+            "como NDE, UUID o cadenas similares cuando funcionen como referencia "
+            "del documento. No incluyas matriculas, fechas ni URLs completas. "
+            "Devuelve como maximo 8 codigos unicos y prioriza los mas relevantes."
+        )
+
+    if include_license_plates:
+        return (
+            "Solo matriculas de vehiculos, incluidas matriculas modernas y "
+            "antiguas, con o sin espacios o guiones. No incluyas otros "
+            "expedientes ni referencias."
+        )
 
     return ""

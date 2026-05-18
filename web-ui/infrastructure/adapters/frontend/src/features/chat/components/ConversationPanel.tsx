@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { renderAssistantMarkdown } from "./assistantMarkdown";
 import type {
   ChatMessage,
   ChatThread,
@@ -282,6 +283,11 @@ export function ConversationPanel({
                   <span className="processing-card__stage">{documentProcessingStatus.stage}</span>
                 </div>
                 <p className="processing-card__message">{documentProcessingStatus.message}</p>
+                <div className="processing-card__loader" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
                 <div
                   className={`processing-card__bar ${documentProcessingStatus.progress === null ? "processing-card__bar--indeterminate" : ""}`.trim()}
                   role="progressbar"
@@ -302,11 +308,6 @@ export function ConversationPanel({
                     }
                   />
                 </div>
-                <p className="processing-card__meta">
-                  {documentProcessingStatus.progress === null
-                    ? "Esperando actualizaciones del backend..."
-                    : `${documentProcessingStatus.current} de ${documentProcessingStatus.total}`}
-                </p>
               </section>
             ) : null}
 
@@ -320,15 +321,17 @@ export function ConversationPanel({
                   <span className="processing-card__stage">{responseProcessingStatus.stage}</span>
                 </div>
                 <p className="processing-card__message">{responseProcessingStatus.message}</p>
+                <div className="processing-card__loader" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
                 <div
                   className="processing-card__bar processing-card__bar--indeterminate"
                   role="progressbar"
                 >
                   <span className="processing-card__bar-fill" />
                 </div>
-                <p className="processing-card__meta">
-                  Esperando los primeros fragmentos de la respuesta segura...
-                </p>
               </section>
             ) : null}
           </div>
@@ -364,7 +367,13 @@ export function ConversationPanel({
                   )}
                 </span>
               </div>
-              <p className="message__content">{renderMessageContent(message)}</p>
+              {message.role === "assistant" ? (
+                <div className="message__content message__content--rich">
+                  {renderAssistantMarkdown(message.content)}
+                </div>
+              ) : (
+                <p className="message__content">{renderMessageContent(message)}</p>
+              )}
               {message.role === "user" && message.anonymizedContent ? (
                 <>
                   {(

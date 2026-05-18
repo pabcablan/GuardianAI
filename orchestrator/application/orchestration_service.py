@@ -1,6 +1,7 @@
 """Application service that coordinates GuardianAI module calls."""
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -21,6 +22,8 @@ from infrastructure.ports.privacy_shield_port import AnonymizedPrompt
 class OrchestrationService:
     """Coordinate document processing, anonymization, assistant, and restore."""
 
+    _partial_placeholder_pattern = re.compile(r"\[[A-Z_0-9]*$")
+
     def __init__(self, container: OrchestratorContainer) -> None:
         """Initialize the service.
 
@@ -38,6 +41,7 @@ class OrchestrationService:
         model: str,
         settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
+        persisted_replacements: dict[str, str] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Anonymize a user prompt and stream a safe assistant response.
 
@@ -62,6 +66,7 @@ class OrchestrationService:
             model=model,
             settings=settings,
             history=history or [],
+            persisted_replacements=persisted_replacements or {},
             log_prefix="ORCHESTRATOR",
         )
         print(
@@ -131,6 +136,7 @@ class OrchestrationService:
         anonymization_id: str,
         model: str,
         history: list[AssistantMessage] | None = None,
+        persisted_replacements: dict[str, str] | None = None,
     ) -> Iterator[dict[str, Any]]:
         """Generate and restore an answer from already anonymized text.
 
@@ -143,16 +149,14 @@ class OrchestrationService:
         Returns:
             Iterator[dict[str, Any]]: Safe response stream events.
         """
-        assistant_chunks = self._collect_ai_gateway_chunks(
+        return self._stream_response_from_ai_gateway(
             chat_id=chat_id,
             anonymized_prompt=anonymized_text,
             model=model,
             history=history or [],
-        )
-        return self._stream_response_from_anonymized_chunks(
-            assistant_chunks=assistant_chunks,
             replacements=self._build_response_replacements(
                 chat_id=chat_id,
+                persisted_replacements=persisted_replacements or {},
                 current_replacements=self._anonymization_registry.get(
                     anonymization_id,
                 ),
@@ -267,6 +271,7 @@ class OrchestrationService:
         document_id: str,
         model: str,
         settings: dict[str, str] | None = None,
+        persisted_replacements: dict[str, str] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Generate a safe response for a processed document.
 
@@ -284,6 +289,7 @@ class OrchestrationService:
             text=self.build_document_text(document_id),
             model=model,
             settings=settings,
+            persisted_replacements=persisted_replacements or {},
             log_prefix="ORCHESTRATOR document",
         )
 
@@ -316,6 +322,7 @@ class OrchestrationService:
         log_prefix: str,
         settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
+        persisted_replacements: dict[str, str] | None = None,
     ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
         """Run text through privacy-shield, assistant, and restoration.
 
@@ -342,25 +349,16 @@ class OrchestrationService:
             f"replacement_count={anonymized_prompt.replacement_count}",
             flush=True,
         )
-        started_at = time.perf_counter()
-        assistant_chunks = self._collect_ai_gateway_chunks(
-            chat_id=chat_id,
-            anonymized_prompt=anonymized_prompt.text,
-            model=model,
-            history=history or [],
-        )
-        print(
-            f"{log_prefix} ai-gateway done "
-            f"elapsed={time.perf_counter() - started_at:.3f}s "
-            f"chunk_count={len(assistant_chunks)}",
-            flush=True,
-        )
         return (
             anonymized_prompt,
-            self._stream_response_from_anonymized_chunks(
-                assistant_chunks=assistant_chunks,
+            self._stream_response_from_ai_gateway(
+                chat_id=chat_id,
+                anonymized_prompt=anonymized_prompt.text,
+                model=model,
+                history=history or [],
                 replacements=self._build_response_replacements(
                     chat_id=chat_id,
+                    persisted_replacements=persisted_replacements or {},
                     current_replacements=anonymized_prompt.replacements,
                 ),
             ),
@@ -369,6 +367,7 @@ class OrchestrationService:
     def _build_response_replacements(
         self,
         chat_id: str,
+        persisted_replacements: dict[str, str],
         current_replacements: dict[str, str],
     ) -> dict[str, str]:
         """Build replacements for deanonymizing a response.
@@ -381,30 +380,40 @@ class OrchestrationService:
         Returns:
             dict[str, str]: Accumulated chat replacements plus current ones.
         """
-        replacements = self._anonymization_registry.get_for_chat(chat_id)
+        replacements = dict(persisted_replacements)
+        replacements.update(self._anonymization_registry.get_for_chat(chat_id))
         replacements.update(current_replacements)
         return replacements
 
-    def _collect_ai_gateway_chunks(
+    def _stream_response_from_ai_gateway(
         self,
         chat_id: str,
         anonymized_prompt: str,
         model: str,
         history: list[AssistantMessage],
-    ) -> list[str]:
-        """Collect assistant chunks from the configured ai-gateway.
+        replacements: dict[str, str],
+    ) -> Iterator[dict[str, Any]]:
+        """Stream ai-gateway chunks and deanonymize them on the fly.
 
         Args:
             chat_id (str): The chat that owns the request.
             anonymized_prompt (str): The anonymized prompt sent to the
                 assistant.
             model (str): The AI model selected by the user.
+            history (list[AssistantMessage]): Previous anonymized messages.
+            replacements (dict[str, str]): The replacement mappings for
+                deanonymization.
 
         Returns:
-            list[str]: The anonymized assistant response chunks.
+            Iterator[dict[str, Any]]: Safe response stream events.
         """
-        return [
-            chunk
+
+        def stream_events() -> Iterator[dict[str, Any]]:
+            started_at = time.perf_counter()
+            chunk_count = 0
+            anonymized_chunks: list[str] = []
+            buffer = ""
+
             for chunk in self._container.ai_gateway.stream_response(
                 AssistantStreamRequest(
                     chat_id=chat_id,
@@ -417,36 +426,96 @@ class OrchestrationService:
                     ],
                     model=model,
                 )
-            )
-            if chunk
-        ]
+            ):
+                if not chunk:
+                    continue
 
-    def _stream_response_from_anonymized_chunks(
-        self,
-        assistant_chunks: list[str],
-        replacements: dict[str, str],
-    ) -> Iterator[dict[str, Any]]:
-        """Restore assistant chunks through privacy-shield.
+                chunk_count += 1
+                anonymized_chunks.append(chunk)
+                safe_text, buffer = self._deanonymize_stream_fragment(
+                    current_buffer=buffer,
+                    fragment=chunk,
+                    replacements=replacements,
+                )
+                if safe_text:
+                    yield {
+                        "event": "chunk",
+                        "content": safe_text,
+                    }
 
-        Args:
-            assistant_chunks (list[str]): The anonymized assistant chunks.
-            replacements (dict[str, str]): The replacement mappings for
-                deanonymization.
-
-        Returns:
-            Iterator[dict[str, Any]]: Safe response stream events.
-        """
-        def stream_events() -> Iterator[dict[str, Any]]:
-            yield {
-                "event": "anonymized_response",
-                "content": "".join(assistant_chunks),
-            }
-            yield from self._container.privacy_shield.deanonymize_stream(
-                chunks=assistant_chunks,
+            remaining_text = self._flush_deanonymization_buffer(
+                current_buffer=buffer,
                 replacements=replacements,
             )
+            if remaining_text:
+                yield {
+                    "event": "chunk",
+                    "content": remaining_text,
+                }
+
+            print(
+                "ORCHESTRATOR ai-gateway stream done "
+                f"elapsed={time.perf_counter() - started_at:.3f}s "
+                f"chunk_count={chunk_count}",
+                flush=True,
+            )
+            yield {
+                "event": "anonymized_response",
+                "content": "".join(anonymized_chunks),
+            }
+            yield {"event": "completed"}
 
         return stream_events()
+
+    def _deanonymize_stream_fragment(
+        self,
+        current_buffer: str,
+        fragment: str,
+        replacements: dict[str, str],
+    ) -> tuple[str, str]:
+        """Restore one streamed fragment while protecting partial tags.
+
+        Args:
+            current_buffer (str): Text buffered from previous incomplete tags.
+            fragment (str): The newly received assistant chunk.
+            replacements (dict[str, str]): Placeholder replacement map.
+
+        Returns:
+            tuple[str, str]: Safe text ready to emit and the updated buffer.
+        """
+        combined = current_buffer + fragment
+        match = self._partial_placeholder_pattern.search(combined)
+
+        if match:
+            safe_text = combined[:match.start()]
+            next_buffer = combined[match.start():]
+        else:
+            safe_text = combined
+            next_buffer = ""
+
+        for placeholder, original in replacements.items():
+            safe_text = safe_text.replace(placeholder, original)
+
+        return safe_text, next_buffer
+
+    def _flush_deanonymization_buffer(
+        self,
+        current_buffer: str,
+        replacements: dict[str, str],
+    ) -> str:
+        """Flush remaining buffered placeholder text at the end of a stream.
+
+        Args:
+            current_buffer (str): The remaining buffered text.
+            replacements (dict[str, str]): Placeholder replacement map.
+
+        Returns:
+            str: The final safe text.
+        """
+        flushed = current_buffer
+        for placeholder, original in replacements.items():
+            flushed = flushed.replace(placeholder, original)
+        return flushed
 
     def _build_anonymized_pdf_filename(self, filename: str) -> str:
         """Build the filename used for the anonymized PDF preview.

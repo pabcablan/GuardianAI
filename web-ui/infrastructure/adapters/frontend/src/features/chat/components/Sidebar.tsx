@@ -190,7 +190,7 @@ export function Sidebar({
               alt=""
               aria-hidden="true"
             />
-            Añadir chat
+            Nuevo chat
           </button>
         ) : (
           <button
@@ -198,7 +198,7 @@ export function Sidebar({
             type="button"
             disabled={isInteractionLocked}
             onClick={onCreateChat}
-            aria-label="Añadir chat"
+            aria-label="Nuevo chat"
           >
             <img className="icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
           </button>

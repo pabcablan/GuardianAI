@@ -4,8 +4,6 @@ import type {
   SafeStreamResponse,
 } from "./chatApiTypes";
 
-export const SAFE_STREAM_CHUNK_DELAY_MS = 180;
-
 export async function consumeNdjsonStream(
   response: Response,
   onLine: (rawLine: string) => Promise<void> | void,
@@ -102,17 +100,10 @@ export async function handleSafeStreamLine(
 
   if (payload.event === "chunk") {
     onChunk(payload.content);
-    await wait(SAFE_STREAM_CHUNK_DELAY_MS);
     return;
   }
 
   if (payload.event === "error") {
     throw new Error(payload.detail);
   }
-}
-
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
 }

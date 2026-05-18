@@ -83,8 +83,8 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "Subiendo documento",
-          message: "Subiendo PDF al backend...",
+          stage: "Extrayendo texto",
+          message: "Extrayendo texto",
           current: 0,
           total: 1,
           progress: null,
@@ -101,9 +101,8 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "Evaluando privacidad",
-          message:
-            "Comprobando si el contenido del documento necesita anonimizarse...",
+          stage: "Extrayendo texto",
+          message: "Extrayendo texto",
           current: 1,
           total: 1,
           progress: null,
@@ -134,9 +133,8 @@ export function useChatWorkspace() {
 
         setDocumentProcessingStatus({
           filename: pendingFile.name,
-          stage: "Evaluando privacidad",
-          message:
-            "Comprobando si el contenido del documento necesita anonimizarse...",
+          stage: "Extrayendo texto",
+          message: "Extrayendo texto",
           current: 1,
           total: 1,
           progress: null,
@@ -151,31 +149,12 @@ export function useChatWorkspace() {
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
-              setDocumentProcessingStatus({
-                filename: pendingFile.name,
-                stage: "Desanonimizando respuesta",
-                message:
-                  "Restaurando los campos protegidos en la respuesta...",
-                current: 1,
-                total: 1,
-                progress: null,
-              });
-              window.setTimeout(() => {
-                setDocumentProcessingStatus(null);
-              }, 600);
+              setDocumentProcessingStatus(null);
             }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
           },
           (anonymizedContent) => {
-            setDocumentProcessingStatus({
-              filename: pendingFile.name,
-              stage: "Consultando IA",
-              message:
-                "Contenido anonimizado. Enviando la consulta al asistente...",
-              current: 1,
-              total: 1,
-              progress: null,
-            });
+            setDocumentProcessingStatus(null);
             updateUserAnonymizedContent(
               activeChatId,
               documentUserMessage.id,
@@ -193,8 +172,8 @@ export function useChatWorkspace() {
         if (shouldPreviewAnonymizedText) {
           setResponseProcessingStatus({
             title: "Mensaje del chat",
-            stage: "Evaluando privacidad",
-            message: "Comprobando si el mensaje necesita anonimizarse...",
+            stage: "Anonimizando",
+            message: "Anonimizando",
           });
           const preview = await serviceRef.current.previewMessageAnonymization(
             activeChatId,
@@ -218,8 +197,8 @@ export function useChatWorkspace() {
 
         setResponseProcessingStatus({
           title: "Mensaje del chat",
-          stage: "Evaluando privacidad",
-          message: "Comprobando si el mensaje necesita anonimizarse...",
+          stage: "Anonimizando",
+          message: "Anonimizando",
         });
 
         let didReceiveFirstChunk = false;
@@ -231,25 +210,12 @@ export function useChatWorkspace() {
           (chunk) => {
             if (!didReceiveFirstChunk) {
               didReceiveFirstChunk = true;
-              setResponseProcessingStatus({
-                title: "Respuesta del asistente",
-                stage: "Desanonimizando respuesta",
-                message:
-                  "Restaurando los campos protegidos en la respuesta...",
-              });
-              window.setTimeout(() => {
-                setResponseProcessingStatus(null);
-              }, 600);
+              setResponseProcessingStatus(null);
             }
             appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
           },
           (anonymizedContent) => {
-            setResponseProcessingStatus({
-              title: "Mensaje del chat",
-              stage: "Consultando IA",
-              message:
-                "Mensaje anonimizado. Enviando la consulta al asistente...",
-            });
+            setResponseProcessingStatus(null);
             updateUserAnonymizedContent(
               activeChatId,
               userMessage.id,
@@ -283,11 +249,7 @@ export function useChatWorkspace() {
 
     setIsResponding(true);
     setErrorMessage(null);
-    setResponseProcessingStatus({
-      title: "Texto anonimizado",
-      stage: "Consultando IA",
-      message: "Enviando el texto anonimizado al asistente...",
-    });
+    setResponseProcessingStatus(null);
     clearMessageApproval(selectedChatId, message.id);
 
     const assistantMessage = createAssistantMessage();
@@ -303,15 +265,6 @@ export function useChatWorkspace() {
         (chunk) => {
           if (!didReceiveFirstChunk) {
             didReceiveFirstChunk = true;
-            setResponseProcessingStatus({
-              title: "Respuesta del asistente",
-              stage: "Desanonimizando respuesta",
-              message:
-                "Restaurando los campos protegidos en la respuesta...",
-            });
-            window.setTimeout(() => {
-              setResponseProcessingStatus(null);
-            }, 600);
           }
           appendAssistantChunk(selectedChatId, assistantMessage.id, chunk);
         },

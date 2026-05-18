@@ -25,6 +25,7 @@ class StreamSafeResponseCommand:
     document_id: str
     model: str
     settings: dict[str, str]
+    replacements: dict[str, str]
 
 
 class StreamSafeResponseUseCase:
@@ -64,5 +65,6 @@ class StreamSafeResponseUseCase:
                 document_id=command.document_id,
                 model=command.model,
                 settings=command.settings,
+                replacements=command.replacements,
             )
         )

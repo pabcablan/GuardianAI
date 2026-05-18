@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 
@@ -33,6 +33,7 @@ class OrchestratorDocumentResponseRequest:
     document_id: str
     model: str
     settings: dict[str, str]
+    replacements: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,7 @@ class OrchestratorMessageResponseRequest:
     model: str
     history: list[OrchestratorChatHistoryMessage]
     settings: dict[str, str]
+    replacements: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -106,6 +108,7 @@ class OrchestratorAnonymizedResponseRequest:
     anonymization_id: str
     model: str
     history: list[OrchestratorChatHistoryMessage]
+    replacements: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -122,6 +125,7 @@ class OrchestratorAnonymizationPreview:
     anonymization_id: str
     replacement_count: int
     extraction_method: str | None = None
+    replacements: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -161,6 +165,7 @@ class OrchestratorAnonymizedPrompt:
 
     event: Literal["anonymized_prompt"]
     content: str
+    replacements: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

@@ -56,3 +56,21 @@ class AnonymizedHistoryBuilder:
             )
             for message in messages
         ]
+
+    def build_replacements(self, chat_id: str) -> dict[str, str]:
+        """Return the stored anonymization replacements for one chat.
+
+        Args:
+            chat_id (str): The chat whose replacements should be loaded.
+
+        Returns:
+            dict[str, str]: The accumulated placeholder replacement mappings.
+
+        Raises:
+            KeyError: If the chat does not exist.
+        """
+        chat = self._chat_repository.load_chat(chat_id)
+        if chat is None:
+            raise KeyError(chat_id)
+
+        return self._chat_repository.get_chat_replacements(chat_id)

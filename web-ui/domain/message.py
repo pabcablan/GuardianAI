@@ -20,6 +20,8 @@ class Message:
         created_at (str): The message timestamp.
         anonymized_content (str | None): The anonymized user text, when
             available.
+        anonymization_replacements (dict[str, str] | None): The replacement
+            mapping used to restore anonymized placeholders, when available.
         document_id (str | None): The processed document linked to this
             message, when the message originated from a PDF workflow.
     """
@@ -29,6 +31,7 @@ class Message:
     content: str
     created_at: str
     anonymized_content: str | None = None
+    anonymization_replacements: dict[str, str] | None = None
     document_id: str | None = None
 
     def __post_init__(self) -> None:

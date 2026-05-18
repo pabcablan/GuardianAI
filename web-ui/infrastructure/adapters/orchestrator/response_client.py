@@ -113,6 +113,7 @@ class HttpOrchestratorResponseClient(
                 "anonymized_text": request.anonymized_content,
                 "anonymization_id": request.anonymization_id,
                 "model": request.model,
+                "replacements": request.replacements,
                 "history": [
                     {
                         "role": message.role,
@@ -143,6 +144,7 @@ class HttpOrchestratorResponseClient(
                 "text": request.content,
                 "model": request.model,
                 "settings": request.settings,
+                "replacements": request.replacements,
                 "history": [
                     {
                         "role": message.role,
@@ -173,6 +175,7 @@ class HttpOrchestratorResponseClient(
                 "document_id": request.document_id,
                 "model": request.model,
                 "settings": request.settings,
+                "replacements": request.replacements,
             },
         )
 
@@ -215,6 +218,12 @@ class HttpOrchestratorResponseClient(
             return OrchestratorAnonymizedPrompt(
                 event="anonymized_prompt",
                 content=parsed["content"],
+                replacements={
+                    str(key): str(value)
+                    for key, value in (
+                        parsed.get("replacements", {}) or {}
+                    ).items()
+                },
             )
 
         if event_type == "anonymized_response":
@@ -255,4 +264,10 @@ class HttpOrchestratorResponseClient(
                 if payload.get("extraction_method") is not None
                 else None
             ),
+            replacements={
+                str(key): str(value)
+                for key, value in (
+                    payload.get("replacements", {}) or {}
+                ).items()
+            },
         )

@@ -83,6 +83,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
                 model=payload.model,
                 settings=payload.settings,
                 history=_build_assistant_history(payload.history),
+                persisted_replacements=payload.replacements,
             )
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
@@ -172,6 +173,7 @@ def stream_anonymized_response(
             anonymization_id=payload.anonymization_id,
             model=payload.model,
             history=_build_assistant_history(payload.history),
+            persisted_replacements=payload.replacements,
         )
     except (AiGatewayClientError, PrivacyShieldClientError) as error:
         raise bad_gateway(error) from error
@@ -243,6 +245,7 @@ def stream_document_response(
                 document_id=payload.document_id,
                 model=payload.model,
                 settings=payload.settings,
+                persisted_replacements=payload.replacements,
             )
         )
     except KeyError as error:

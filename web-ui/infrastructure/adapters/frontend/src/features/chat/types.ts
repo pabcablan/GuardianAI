@@ -85,6 +85,7 @@ export type AnonymizationOption =
   | "emails"
   | "addresses"
   | "phones"
+  | "licensePlates"
   | "organizations"
   | "relevantCodes";
 

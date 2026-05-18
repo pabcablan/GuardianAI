@@ -10,6 +10,7 @@ from domain.message import Message
 def make_assistant_message(
     content: str,
     anonymized_content: str | None = None,
+    anonymization_replacements: dict[str, str] | None = None,
 ) -> Message:
     """Create an assistant message for persistence.
 
@@ -25,6 +26,7 @@ def make_assistant_message(
         role="assistant",
         content=content,
         anonymized_content=anonymized_content,
+        anonymization_replacements=anonymization_replacements,
     )
 
 
@@ -32,6 +34,7 @@ def make_message(
     role: str,
     content: str,
     anonymized_content: str | None = None,
+    anonymization_replacements: dict[str, str] | None = None,
 ) -> Message:
     """Create a chat message.
 
@@ -49,6 +52,7 @@ def make_message(
         content=content,
         created_at=now(),
         anonymized_content=anonymized_content,
+        anonymization_replacements=anonymization_replacements,
     )
 
 

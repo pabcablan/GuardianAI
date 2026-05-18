@@ -148,6 +148,9 @@ def stream_message_response(
                 model=payload.model,
                 history=history,
                 settings=payload.settings,
+                replacements=anonymized_history_builder.build_replacements(
+                    chat_id,
+                ),
             ),
         )
     except ValueError as error:
@@ -195,6 +198,7 @@ def preview_message_anonymization(
         container.chat_repository.update_message_anonymized_content(
             user_message.message_id,
             preview.anonymized_content,
+            preview.replacements,
         )
     except KeyError as error:
         raise HTTPException(
@@ -226,6 +230,9 @@ def stream_approved_anonymized_response(
             history=anonymized_history_builder.build(
                 chat_id,
                 exclude_last_content=payload.anonymized_content,
+            ),
+            replacements=anonymized_history_builder.build_replacements(
+                chat_id,
             ),
         ),
     )
@@ -320,6 +327,9 @@ def stream_safe_response(
                 document_id=document_id,
                 model=payload.model,
                 settings=payload.settings,
+                replacements=anonymized_history_builder.build_replacements(
+                    chat_id,
+                ),
             ),
         )
     except ValueError as error:
@@ -368,6 +378,7 @@ def preview_document_anonymization(
     container.chat_repository.update_message_anonymized_content(
         user_message_id,
         preview.anonymized_content,
+        preview.replacements,
     )
 
     return AnonymizedPreviewResponse(

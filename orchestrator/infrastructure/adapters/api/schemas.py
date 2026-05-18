@@ -32,6 +32,7 @@ class MessageStreamRequest(BaseModel):
     model: str = Field(min_length=1)
     history: list[ChatHistoryMessageRequest] = Field(default_factory=list)
     settings: dict[str, str] = Field(default_factory=dict)
+    replacements: dict[str, str] = Field(default_factory=dict)
 
 
 class AnonymizedStreamRequest(BaseModel):
@@ -51,6 +52,7 @@ class AnonymizedStreamRequest(BaseModel):
     anonymization_id: str = Field(min_length=1)
     model: str = Field(min_length=1)
     history: list[ChatHistoryMessageRequest] = Field(default_factory=list)
+    replacements: dict[str, str] = Field(default_factory=dict)
 
 
 class DocumentPreviewRequest(BaseModel):
@@ -73,3 +75,4 @@ class DocumentStreamRequest(BaseModel):
     document_id: str = Field(min_length=1)
     model: str = Field(min_length=1)
     settings: dict[str, str] = Field(default_factory=dict)
+    replacements: dict[str, str] = Field(default_factory=dict)

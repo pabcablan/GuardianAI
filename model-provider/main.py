@@ -56,7 +56,7 @@ def main():
             request.document_base64,
         )
     
-    uvicorn.run(app, host="0.0.0.0", port=8006)
+    uvicorn.run(app, host="0.0.0.0", port=8010)
 
 
 if __name__ == "__main__":

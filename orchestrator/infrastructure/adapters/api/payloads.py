@@ -8,7 +8,7 @@ from infrastructure.ports.privacy_shield_port import AnonymizedPrompt
 
 def build_anonymized_prompt_event(
     anonymized_prompt: AnonymizedPrompt,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Build the stream event that exposes anonymized text to web-ui.
 
     Args:
@@ -20,6 +20,7 @@ def build_anonymized_prompt_event(
     return {
         "event": "anonymized_prompt",
         "content": anonymized_prompt.text,
+        "replacements": anonymized_prompt.replacements,
     }
 
 
@@ -40,4 +41,5 @@ def build_anonymized_preview_payload(
         "anonymization_id": anonymized_prompt.anonymization_id,
         "replacement_count": anonymized_prompt.replacement_count,
         "extraction_method": extraction_method,
+        "replacements": anonymized_prompt.replacements,
     }

@@ -17,6 +17,7 @@ const DEFAULT_ANONYMIZATION_SETTINGS: AnonymizationSettings = {
   emails: "anonymize",
   addresses: "anonymize",
   phones: "anonymize",
+  licensePlates: "anonymize",
   organizations: "anonymize",
   relevantCodes: "anonymize",
 };

@@ -68,12 +68,15 @@ class ChatRepositoryPort(Protocol):
         self,
         message_id: str,
         anonymized_content: str,
+        anonymization_replacements: dict[str, str] | None = None,
     ) -> None:
         """Store the anonymized version of a user message.
 
         Args:
             message_id (str): The message identifier.
             anonymized_content (str): The anonymized message content.
+            anonymization_replacements (dict[str, str] | None): Replacement
+                mappings used to restore placeholders later.
         """
 
     def link_document_to_message(
@@ -99,4 +102,14 @@ class ChatRepositoryPort(Protocol):
 
         Returns:
             str | None: The matching user message identifier, if any.
+        """
+
+    def get_chat_replacements(self, chat_id: str) -> dict[str, str]:
+        """Return all anonymization replacements stored for a chat.
+
+        Args:
+            chat_id (str): The chat identifier.
+
+        Returns:
+            dict[str, str]: The accumulated placeholder replacement mappings.
         """
