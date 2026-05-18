@@ -1,1 +1,0 @@
-PDF_CONTENT_TYPE = "application/pdf" # This comes from document.py used in ProcessingDocument class
