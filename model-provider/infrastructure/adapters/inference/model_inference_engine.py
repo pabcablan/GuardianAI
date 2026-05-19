@@ -1,4 +1,8 @@
+"""Inference adapter for text and PDF-based model generation."""
+from __future__ import annotations
+
 import base64
+from typing import Any
 
 import pymupdf
 import torch
@@ -8,21 +12,41 @@ from infrastructure.ports.text_generator import TextGenerator
 
 
 class ModelInferenceEngine(TextGenerator):
+    """Generate model responses from text prompts or PDF document pages."""
 
-    def generate(self, system_prompt: str, prompt: str, model, processor,
-                 document_base64: str | None = None) -> str:
-        pil_images = (
+    def generate(
+        self,
+        system_prompt: str | None,
+        prompt: str,
+        model: Any,
+        processor: Any,
+        document_base64: str | None = None,
+    ) -> str:
+        """Generate one response from text-only or PDF-backed input.
+
+        Args:
+            system_prompt (str | None): Optional system instructions.
+            prompt (str): The user prompt or extraction instruction.
+            model (Any): The loaded model object.
+            processor (Any): The paired processor or tokenizer.
+            document_base64 (str | None): Optional base64-encoded PDF content.
+
+        Returns:
+            str: The generated response text.
+        """
+        pages = (
             self._decode_pdf_document(document_base64)
             if document_base64
             else None
         )
-        if pil_images:
+
+        if pages:
             return self._generate_from_document_pages(
                 system_prompt=system_prompt,
                 prompt=prompt,
                 model=model,
                 processor=processor,
-                pages=pil_images,
+                pages=pages,
             )
 
         return self._generate_from_text(
@@ -34,24 +58,34 @@ class ModelInferenceEngine(TextGenerator):
 
     def _generate_from_document_pages(
         self,
-        system_prompt: str,
+        system_prompt: str | None,
         prompt: str,
-        model,
-        processor,
+        model: Any,
+        processor: Any,
         pages: list[Image.Image],
     ) -> str:
-        page_outputs: list[str] = []
+        """Generate and concatenate one response per PDF page.
 
-        for page in pages:
-            page_outputs.append(
-                self._generate_from_single_image(
-                    system_prompt=system_prompt,
-                    prompt=prompt,
-                    model=model,
-                    processor=processor,
-                    image=page,
-                )
+        Args:
+            system_prompt (str | None): Optional system instructions.
+            prompt (str): The extraction or generation prompt.
+            model (Any): The loaded model object.
+            processor (Any): The paired processor or tokenizer.
+            pages (list[Image.Image]): Rendered PDF pages.
+
+        Returns:
+            str: The combined page outputs.
+        """
+        page_outputs = [
+            self._generate_from_single_image(
+                system_prompt=system_prompt,
+                prompt=prompt,
+                model=model,
+                processor=processor,
+                image=page,
             )
+            for page in pages
+        ]
 
         return "\n\n".join(
             output.strip()
@@ -61,15 +95,27 @@ class ModelInferenceEngine(TextGenerator):
 
     def _generate_from_single_image(
         self,
-        system_prompt: str,
+        system_prompt: str | None,
         prompt: str,
-        model,
-        processor,
+        model: Any,
+        processor: Any,
         image: Image.Image,
     ) -> str:
+        """Generate one response from a single rendered PDF page.
+
+        Args:
+            system_prompt (str | None): Optional system instructions.
+            prompt (str): The extraction or generation prompt.
+            model (Any): The loaded model object.
+            processor (Any): The paired processor or tokenizer.
+            image (Image.Image): One rendered PDF page.
+
+        Returns:
+            str: The generated page response.
+        """
         messages = self._build_messages(
-            system_prompt,
-            prompt,
+            system_prompt=system_prompt,
+            prompt=prompt,
             image_count=1,
         )
         input_text = processor.apply_chat_template(
@@ -93,14 +139,25 @@ class ModelInferenceEngine(TextGenerator):
 
     def _generate_from_text(
         self,
-        system_prompt: str,
+        system_prompt: str | None,
         prompt: str,
-        model,
-        processor,
+        model: Any,
+        processor: Any,
     ) -> str:
+        """Generate one response from text-only input.
+
+        Args:
+            system_prompt (str | None): Optional system instructions.
+            prompt (str): The user prompt.
+            model (Any): The loaded model object.
+            processor (Any): The paired processor or tokenizer.
+
+        Returns:
+            str: The generated response text.
+        """
         messages = self._build_messages(
-            system_prompt,
-            prompt,
+            system_prompt=system_prompt,
+            prompt=prompt,
             image_count=0,
         )
         input_text = processor.apply_chat_template(
@@ -123,10 +180,20 @@ class ModelInferenceEngine(TextGenerator):
 
     def _decode_generation(
         self,
-        model,
-        processor,
-        inputs,
+        model: Any,
+        processor: Any,
+        inputs: Any,
     ) -> str:
+        """Run generation and decode only the newly produced tokens.
+
+        Args:
+            model (Any): The loaded model object.
+            processor (Any): The paired processor or tokenizer.
+            inputs (Any): The prepared model inputs.
+
+        Returns:
+            str: The decoded generated text.
+        """
         pad_token_id = (
             getattr(processor, "pad_token_id", None)
             or processor.tokenizer.pad_token_id
@@ -151,33 +218,53 @@ class ModelInferenceEngine(TextGenerator):
 
     def _build_messages(
         self,
-        system_prompt: str,
+        system_prompt: str | None,
         prompt: str,
         image_count: int,
-    ) -> list:
-        user_content = []
+    ) -> list[dict[str, object]]:
+        """Build the chat-template message structure expected by the processor.
+
+        Args:
+            system_prompt (str | None): Optional system instructions.
+            prompt (str): The user prompt.
+            image_count (int): The number of image placeholders to prepend.
+
+        Returns:
+            list[dict[str, object]]: The processor message payload.
+        """
+        user_content: list[dict[str, str]] = []
         for _ in range(image_count):
             user_content.append({"type": "image"})
         user_content.append({"type": "text", "text": prompt})
 
-        messages = []
+        messages: list[dict[str, object]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": user_content})
         return messages
 
     def _decode_pdf_document(self, document_base64: str) -> list[Image.Image]:
-        """Convierte un PDF base64 a una lista de imágenes (una por página)"""
+        """Convert a base64-encoded PDF into one image per page.
+
+        Args:
+            document_base64 (str): The base64-encoded PDF payload.
+
+        Returns:
+            list[Image.Image]: Rendered PDF pages as PIL images.
+        """
         pdf_bytes = base64.b64decode(document_base64)
         pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
-        
-        images = []
-        for page_num in range(len(pdf_document)):
-            page = pdf_document[page_num]
-            # Renderizar página a imagen con alta calidad
-            pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
-            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-            images.append(img)
-        
+
+        images: list[Image.Image] = []
+        for page_index in range(len(pdf_document)):
+            page = pdf_document[page_index]
+            pixmap = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
+            image = Image.frombytes(
+                "RGB",
+                (pixmap.width, pixmap.height),
+                pixmap.samples,
+            )
+            images.append(image)
+
         pdf_document.close()
         return images

@@ -1,8 +1,7 @@
-"""
-Defines an adapter to load models using the Unsloth library.
-It is responsible for loading models optimized for Unsloth given their identifier, managing the registry of loaded models and tokenizers.
-"""
+"""Model repository backed by Unsloth vision-capable runtimes."""
+from __future__ import annotations
 
+import logging
 import threading
 from typing import Any
 
@@ -11,13 +10,20 @@ from unsloth import FastVisionModel
 from infrastructure.ports.model_repository import ModelRepository
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class UnslothLoader(ModelRepository):
-    _instance = None
+    """Load, cache, and unload models through Unsloth."""
+
+    _instance: "UnslothLoader | None" = None
     _lock = threading.Lock()
 
-    def __new__(cls):
-        """
-        Handles the Singleton pattern to ensure only one instance of the Provider exists.
+    def __new__(cls) -> "UnslothLoader":
+        """Return the singleton runtime loader instance.
+
+        Returns:
+            UnslothLoader: The shared loader instance.
         """
         if cls._instance is None:
             with cls._lock:
@@ -28,74 +34,90 @@ class UnslothLoader(ModelRepository):
                     cls._instance._model_ids = {}
         return cls._instance
 
-    async def load(self, model_id: str, name: str, **kwargs) -> tuple[Any, Any]:
-        """
-        Load a model given its identifier and optional parameters using Unsloth.
+    async def load(
+        self,
+        model_id: str,
+        name: str,
+        **kwargs: Any,
+    ) -> tuple[Any, Any]:
+        """Load one Unsloth model and cache it by runtime name.
 
         Args:
-            model_id (str): The identifier of the model to load (e.g., Unsloth repo name).
-            name (str): The name to assign to the loaded model.
-            **kwargs: Additional parameters for loading the model.
-                - max_seq_length (int, optional): The maximum sequence length for the model. Default is 4096.
-                - dtype (str, optional): The data type to load the model with (e.g., "float16", "int8"). If not provided, the model will be loaded with its default data type.
-                - load_in_4bit (bool, optional): Whether to load the model in 4-bit precision. Default is True.
+            model_id (str): The source model identifier.
+            name (str): The runtime name assigned to the model.
+            **kwargs (Any): Optional Unsloth loader settings such as sequence
+                length, dtype, or 4-bit loading.
 
         Returns:
-            tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
+            tuple[Any, Any]: The loaded model and processor.
         """
-        if name not in self._models and model_id.startswith("unsloth/"):
-            print(f"Downloading/loading '{model_id}' ...")
+        if name in self._models:
+            LOGGER.info("Model '%s' already loaded, skipping.", name)
+            return self._models[name], self._processors[name]
 
-            max_seq_length = kwargs.get("max_seq_length", 4096)
-            dtype = kwargs.get("dtype", None)
-            load_in_4bit = kwargs.get("load_in_4bit", True)
+        if not model_id.startswith("unsloth/"):
+            raise ValueError(
+                f"Unsupported model provider for '{model_id}'.",
+            )
 
-            model, processor = FastVisionModel.from_pretrained(model_name=model_id, max_seq_length=max_seq_length, 
-                                                                 dtype=dtype, load_in_4bit=load_in_4bit)
-            
-            FastVisionModel.for_inference(model)
-            model.eval()
+        LOGGER.info("Loading Unsloth model '%s' from '%s'.", name, model_id)
 
-            self._processors[name] = processor
-            self._models[name] = model
-            self._model_ids[name] = model_id
-            print(f"'{name}' ready on (Unsloth).")
-        else:
-            print(f"'{name}' already loaded, skipping.")
+        max_seq_length = kwargs.get("max_seq_length", 4096)
+        dtype = kwargs.get("dtype")
+        load_in_4bit = kwargs.get("load_in_4bit", True)
 
-        return self._models[name], self._processors[name]
+        model, processor = FastVisionModel.from_pretrained(
+            model_name=model_id,
+            max_seq_length=max_seq_length,
+            dtype=dtype,
+            load_in_4bit=load_in_4bit,
+        )
+
+        FastVisionModel.for_inference(model)
+        model.eval()
+
+        self._processors[name] = processor
+        self._models[name] = model
+        self._model_ids[name] = model_id
+        LOGGER.info("Model '%s' ready on Unsloth.", name)
+        return model, processor
 
     async def get(self, name: str) -> tuple[Any, Any]:
-        """
-        Retrieve a loaded model and its tokenizer by name.
+        """Return one previously loaded model and processor.
 
         Args:
-            name (str): The name assigned to the loaded model to retrieve.
+            name (str): The runtime name of the loaded model.
 
         Returns:
-            tuple[Any, Any]: A tuple containing the loaded model object and the corresponding tokenizer.
+            tuple[Any, Any]: The loaded model and processor.
+
+        Raises:
+            ValueError: If the requested model is not loaded.
         """
         if name not in self._models:
             raise ValueError(f"'{name}' not loaded. Call load() first.")
+
         return self._models[name], self._processors[name]
 
-    async def unload(self, name: str):
-        """
-        Unload a model and its tokenizer by name.
+    async def unload(self, name: str) -> None:
+        """Unload one cached model and processor.
 
         Args:
-            name (str): The name assigned to the loaded model to unload."""
+            name (str): The runtime name of the loaded model.
+        """
         if name in self._models:
             del self._models[name]
             del self._processors[name]
             del self._model_ids[name]
-            print(f"'{name}' unloaded.")
+            LOGGER.info("Model '%s' unloaded.", name)
 
     async def list_loaded_models(self) -> list[dict[str, str]]:
-         """
-         List all currently loaded models.
+        """Return the currently loaded runtime registry.
 
-         Returns:
-             list[dict[str, str]]: A list of dictionaries containing information about each loaded model (e.g., name, identifier).
-         """
-         return [{"name": name, "model_id": self._model_ids[name]} for name in self._models.keys()]
+        Returns:
+            list[dict[str, str]]: Loaded model names and source identifiers.
+        """
+        return [
+            {"name": name, "model_id": self._model_ids[name]}
+            for name in self._models
+        ]

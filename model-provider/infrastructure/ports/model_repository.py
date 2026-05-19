@@ -1,56 +1,59 @@
-""""
-Defines the contract to load a model.
-It is responsible for loading a model given its identifier and optional parameters.
-"""
+"""Port for loading, retrieving, and unloading runtime models."""
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any
 
+
 class ModelRepository(ABC):
+    """Define the model lifecycle operations used by model-provider."""
+
     @abstractmethod
-    async def load(self, model_id: str, name:str, **kwargs) -> tuple[Any, Any]:
-        """
-        Load a model given its identifier and optional parameters.
+    async def load(
+        self,
+        model_id: str,
+        name: str,
+        **kwargs: Any,
+    ) -> tuple[Any, Any]:
+        """Load one model and its paired processor.
 
         Args:
-            model_id (str): The identifier of the model to load (e.g., HuggingFace repo name).
-            name (str): The name to assign to the loaded model.
-            **kwargs: Additional parameters for loading the model (e.g., device, quantization config).
-        
+            model_id (str): The source identifier of the model to load.
+            name (str): The runtime name assigned to the loaded model.
+            **kwargs (Any): Loader-specific options such as quantization or
+                sequence length.
+
         Returns:
-            tuple[Any, Any]: A tuple containing (model, tokenizer).
+            tuple[Any, Any]: The loaded model and processor objects.
         """
-        pass
+        ...
 
     @abstractmethod
     async def get(self, name: str) -> tuple[Any, Any]:
-        """
-        Get a loaded model and its tokenizer by name.
+        """Return one previously loaded model and processor.
 
         Args:
-            name (str): The name of the loaded model to retrieve.
-        
+            name (str): The runtime name of the loaded model.
+
         Returns:
-            tuple[Any, Any]: A tuple containing (model, tokenizer).
+            tuple[Any, Any]: The loaded model and processor objects.
         """
-        pass
+        ...
 
     @abstractmethod
-    async def unload(self, name: str):
-        """
-        Unload a model and its tokenizer by name.
+    async def unload(self, name: str) -> None:
+        """Unload one model and processor from memory.
 
         Args:
-            name (str): The name of the loaded model to unload.
+            name (str): The runtime name of the loaded model.
         """
-        pass
+        ...
 
     @abstractmethod
     async def list_loaded_models(self) -> list[dict[str, str]]:
-        """
-        List all currently loaded models.
+        """Return the registry of currently loaded models.
 
         Returns:
-            list[dict[str, str]]: A list of dictionaries containing information about each loaded model (e.g., name, identifier).
+            list[dict[str, str]]: Loaded model names and identifiers.
         """
-        pass
+        ...
