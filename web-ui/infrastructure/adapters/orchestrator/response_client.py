@@ -264,6 +264,11 @@ class HttpOrchestratorResponseClient(
                 if payload.get("extraction_method") is not None
                 else None
             ),
+            original_content=(
+                str(payload["original_text"])
+                if payload.get("original_text") is not None
+                else None
+            ),
             replacements={
                 str(key): str(value)
                 for key, value in (

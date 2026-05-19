@@ -30,6 +30,7 @@ export interface AnonymizedPreviewResponse {
   anonymization_id: string;
   replacement_count: number;
   extraction_method?: string | null;
+  original_content?: string | null;
 }
 
 export interface AttachDocumentProgressResponse {

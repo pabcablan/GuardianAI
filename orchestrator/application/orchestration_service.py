@@ -100,7 +100,7 @@ class OrchestrationService:
         chat_id: str,
         document_id: str,
         settings: dict[str, str] | None = None,
-    ) -> tuple[AnonymizedPrompt, str]:
+    ) -> tuple[AnonymizedPrompt, str, str]:
         """Anonymize a processed document without calling the assistant.
 
         Args:
@@ -108,7 +108,8 @@ class OrchestrationService:
             document_id (str): The processed document identifier.
 
         Returns:
-            AnonymizedPrompt: The anonymized document text metadata.
+            tuple[AnonymizedPrompt, str, str]: The anonymized document text
+            metadata, extraction method, and original text used for review.
 
         Raises:
             KeyError: If the processed document is unknown.
@@ -124,7 +125,7 @@ class OrchestrationService:
             text=text,
             settings=settings,
         )
-        return anonymized_prompt, document_context.extraction_method
+        return anonymized_prompt, document_context.extraction_method, text
 
     def stream_anonymized_response(
         self,

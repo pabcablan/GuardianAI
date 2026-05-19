@@ -63,6 +63,7 @@ REGLAS:
 - Extrae la cadena exactamente como aparece en el texto original.
 - Si una categoria activada no aparece, devuelve una lista vacia.
 - No repitas valores: si el mismo dato aparece varias veces, devuelvelo una sola vez.
+- Ignora valores ya parcial o totalmente ofuscados, enmascarados o redacted, por ejemplo cadenas con asteriscos como "***3691**".
 - No incluyas fechas, URLs, hashes tecnicos, numeros de pagina, codigos de verificacion repetidos ni texto administrativo que no identifique por si solo a una persona o entidad.
 - En "CODIGO", devuelve como maximo 5 valores unicos y prioriza los mas relevantes.
 - El primer caracter de tu respuesta debe ser '{{' y el ultimo '}}'.
@@ -89,6 +90,7 @@ REGLAS:
 - Extrae la cadena exactamente como aparece en el texto original.
 - Si una categoria activada no aparece, devuelve una lista vacia.
 - No repitas valores: si el mismo dato aparece varias veces, devuelvelo una sola vez.
+- Ignora valores ya parcial o totalmente ofuscados, enmascarados o redacted, por ejemplo cadenas con asteriscos como "***3691**".
 - No incluyas fechas, URLs, hashes tecnicos, numeros de pagina, codigos de verificacion repetidos ni texto administrativo que no identifique por si solo a una persona o entidad.
 - En "CODIGO", devuelve como maximo 5 valores unicos y prioriza los mas relevantes.
 - El primer caracter de tu respuesta debe ser '{{' y el ultimo '}}'.
@@ -128,7 +130,7 @@ def _build_enabled_rules(normalized: dict[str, str]) -> str:
 
     if normalized["addresses"] == "anonymize":
         rules.append(
-            '"DIR": Calles, vias, codigos postales de 5 digitos, municipios, localidades, islas y paises. Incluye siempre codigos postales cuando aparezcan como parte de una direccion o ubicacion postal.'
+            '"DIR": Calles, vias, codigos postales de 5 digitos, municipios, localidades, islas y paises. Incluye siempre codigos postales cuando aparezcan como parte de una direccion o ubicacion postal. En texto OCR o formularios linealizados, captura tambien valores que aparezcan tras etiquetas como LOCALIDAD, DOMICILIO, MUNICIPIO, PROVINCIA o DIRECCION.'
         )
 
     code_rule = _describe_code_rule(normalized)
@@ -190,7 +192,8 @@ def _describe_name_rule(normalized: dict[str, str]) -> str:
     if include_people and include_organizations:
         return (
             "Personas fisicas completas e instituciones, organizaciones o entidades. "
-            "No dividas los nombres. Si en tablas aparecen nombre y apellidos en celdas o lineas consecutivas, reconstruye el nombre completo."
+            "No dividas los nombres. Si en tablas aparecen nombre y apellidos en celdas o lineas consecutivas, reconstruye el nombre completo. "
+            "En texto OCR o formularios linealizados, si aparecen etiquetas como NOMBRE FEDERACION, NOMBRE DE LA ENTIDAD, NOMBRE/RAZON SOCIAL, INTERESADO o TITULAR, extrae el nombre completo que siga a la etiqueta y detenlo antes del siguiente campo administrativo."
         )
 
     if include_people:
@@ -200,7 +203,10 @@ def _describe_name_rule(normalized: dict[str, str]) -> str:
         )
 
     if include_organizations:
-        return "Solo instituciones, organizaciones o entidades. No incluyas personas fisicas."
+        return (
+            "Solo instituciones, organizaciones o entidades. No incluyas personas fisicas. "
+            "En texto OCR o formularios linealizados, si aparecen etiquetas como NOMBRE FEDERACION, NOMBRE DE LA ENTIDAD o NOMBRE/RAZON SOCIAL, extrae el nombre completo que siga a la etiqueta y detenlo antes del siguiente campo administrativo."
+        )
 
     return ""
 
@@ -231,8 +237,10 @@ def _describe_code_rule(normalized: dict[str, str]) -> str:
             "de vehiculos y otros codigos alfanumericos identificativos, aunque "
             "sean largos o contengan guiones, barras o guiones bajos. Incluye "
             "identificadores como NDE, UUID o cadenas similares cuando funcionen "
-            "como referencia del documento. No incluyas fechas ni URLs completas. "
-            "Devuelve como maximo 8 codigos unicos y prioriza los mas relevantes."
+            "como referencia del documento. Ignora valores ya ofuscados o "
+            "parcialmente tapados con asteriscos. No incluyas fechas ni URLs "
+            "completas. Devuelve como maximo 5 codigos unicos y prioriza los "
+            "mas relevantes."
         )
 
     if include_relevant_codes:
@@ -241,8 +249,9 @@ def _describe_code_rule(normalized: dict[str, str]) -> str:
             "codigos alfanumericos identificativos, aunque sean largos o "
             "contengan guiones, barras o guiones bajos. Incluye identificadores "
             "como NDE, UUID o cadenas similares cuando funcionen como referencia "
-            "del documento. No incluyas matriculas, fechas ni URLs completas. "
-            "Devuelve como maximo 8 codigos unicos y prioriza los mas relevantes."
+            "del documento. Ignora valores ya ofuscados o parcialmente tapados "
+            "con asteriscos. No incluyas matriculas, fechas ni URLs completas. "
+            "Devuelve como maximo 5 codigos unicos y prioriza los mas relevantes."
         )
 
     if include_license_plates:

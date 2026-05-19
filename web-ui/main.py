@@ -212,6 +212,7 @@ def preview_message_anonymization(
         anonymization_id=preview.anonymization_id,
         replacement_count=preview.replacement_count,
         extraction_method=preview.extraction_method,
+        original_content=preview.original_content,
     )
 
 
@@ -387,6 +388,7 @@ def preview_document_anonymization(
         anonymization_id=preview.anonymization_id,
         replacement_count=preview.replacement_count,
         extraction_method=preview.extraction_method,
+        original_content=preview.original_content,
     )
 
 

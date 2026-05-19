@@ -46,6 +46,7 @@ export interface AnonymizedContentApproval {
   replacementCount?: number;
   documentId?: string;
   extractionMethod?: string;
+  originalContent?: string;
 }
 
 export interface ChatSummary {

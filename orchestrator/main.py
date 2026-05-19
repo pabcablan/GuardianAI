@@ -140,7 +140,7 @@ def preview_document_anonymization(
         dict[str, Any]: The anonymized document prompt metadata.
     """
     try:
-        anonymized_prompt, extraction_method = (
+        anonymized_prompt, extraction_method, original_text = (
             orchestration_service.preview_document_anonymization(
                 chat_id=payload.chat_id,
                 document_id=payload.document_id,
@@ -157,6 +157,7 @@ def preview_document_anonymization(
     return build_anonymized_preview_payload(
         anonymized_prompt,
         extraction_method=extraction_method,
+        original_text=original_text,
     )
 
 

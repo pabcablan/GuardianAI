@@ -123,6 +123,7 @@ export function useChatWorkspace() {
             preview.replacement_count,
             documentId,
             preview.extraction_method ?? undefined,
+            preview.original_content ?? undefined,
           );
           setDocumentProcessingStatus(null);
           return true;

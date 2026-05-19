@@ -205,6 +205,7 @@ export function useChatCollection({
     replacementCount?: number,
     documentId?: string,
     extractionMethod?: string,
+    originalContent?: string,
   ): void {
     setSelectedChat((currentChat) => {
       if (!currentChat || currentChat.id !== chatId) {
@@ -225,6 +226,7 @@ export function useChatCollection({
                       replacementCount,
                       documentId,
                       extractionMethod,
+                      originalContent,
                     }
                   : message.pendingApproval,
               }

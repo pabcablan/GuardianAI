@@ -125,6 +125,7 @@ class OrchestratorAnonymizationPreview:
     anonymization_id: str
     replacement_count: int
     extraction_method: str | None = None
+    original_content: str | None = None
     replacements: dict[str, str] = field(default_factory=dict)
 
 

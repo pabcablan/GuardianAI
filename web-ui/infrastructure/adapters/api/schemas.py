@@ -110,6 +110,8 @@ class AnonymizedPreviewResponse(BaseModel):
         replacement_count (int): The number of replacements found.
         extraction_method (str | None): How the document text was extracted,
             when the preview belongs to a document.
+        original_content (str | None): The original text used to build the
+            anonymized preview, when available.
     """
 
     message_id: str
@@ -117,6 +119,7 @@ class AnonymizedPreviewResponse(BaseModel):
     anonymization_id: str
     replacement_count: int
     extraction_method: str | None = None
+    original_content: str | None = None
 
 
 class ContinueAnonymizedRequest(BaseModel):
