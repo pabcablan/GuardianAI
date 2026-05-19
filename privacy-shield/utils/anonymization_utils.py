@@ -19,11 +19,11 @@ def redact_text(original_text: str, entities_json: dict) -> tuple[str, dict]:
     """Replace sensitive entities with category placeholders.
 
     Args:
-        original_text (str): The source text that should be anonymized.
-        entities_json (dict): The entity payload grouped by category.
+        original_text (str): Source text that should be anonymized.
+        entities_json (dict): Entity payload grouped by anonymization category.
 
     Returns:
-        tuple[str, dict]: The anonymized text and placeholder mapping.
+        tuple[str, dict]: Anonymized text and placeholder replacement mapping.
     """
     enriched_entities = _augment_entities(original_text, entities_json)
     sorted_entities = _get_sorted_entities(enriched_entities)

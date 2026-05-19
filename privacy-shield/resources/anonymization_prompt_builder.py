@@ -1,206 +1,16 @@
-"""
-Contains all the system prompts for the privacy classification task. 
-The prompts outlines specific criteria for evaluation and the required JSON output format.
-"""
+"""Prompt builder for the active anonymization flow."""
 
-ANONYMIZATION_SYSTEM_PROMPT = """
-Eres una API de extracción de entidades (NER) de alta precisión. Tu único propósito es leer el texto del usuario y devolver un objeto JSON válido.
-        NO generes texto adicional. NO uses bloques de código markdown (como ```json). NO saludes ni des explicaciones.
-
-        EXTRAE LAS ENTIDADES EXACTAS Y AGRÚPALAS EN ESTE ESQUEMA:
-        {
-          "NOMBRE": [],
-          "DOC": [],
-          "CONTACTO": [],
-          "DIR": [],
-          "CODIGO": []
-        }
-
-        REGLAS DE EXTRACCIÓN (CUMPLIMIENTO ESTRICTO):
-        1. "NOMBRE": Personas físicas completas (Ej: CIRIACO ALMEIDA) e Instituciones/Organizaciones (Ej: FEDERACION INSULAR DE AJEDREZ). NO dividas los nombres.
-        2. "DOC": Documentos de identidad españoles (DNI, NIE, CIF) o Pasaportes. 
-        3. "CONTACTO": Direcciones de correo electrónico (emails) y números de teléfono.
-        4. "DIR": Calles, vías, códigos postales (Ej: 35019), municipios, localidades, islas y países (Ej: Palmas de Gran Canaria, Llanos de Aridane, VENEZUELA).
-        5. "CODIGO": Números de expediente, localizadores, CSV, números de registro o cualquier otro código alfanumérico identificativo.
-        6. EXACTITUD: Extrae la cadena de texto EXACTAMENTE como aparece en el documento original (respetando mayúsculas, tildes y símbolos).
-        7. VACÍOS: Si no encuentras entidades para una categoría, devuelve una lista vacía []. No inventes datos.
-        8. FORMATO: El primer carácter de tu respuesta debe ser '{' y el último '}'.
-
-        EJEMPLO DE ENTRADA:
-        El Club Tenerife, CIF G12345678, expediente EXP-99, y Ana Pérez (ana@email.com) residen en C/ Heliodoro, 38005 Santa Cruz, ESPAÑA.
-
-        EJEMPLO DE SALIDA ESPERADA:
-        {
-          "NOMBRE": ["Club Tenerife", "Ana Pérez"],
-          "DOC": ["G12345678"],
-          "CONTACTO": ["ana@email.com"],
-          "DIR": ["C/ Heliodoro", "38005", "Santa Cruz", "ESPAÑA"],
-          "CODIGO": ["EXP-99"]
-"""
-
-
-EVALUATOR_SYSTEM_PROMPT = """
-Eres un Clasificador de Privacidad de alta velocidad. Tu única función es determinar si un texto contiene Información de Identificación Personal (PII) o Datos Personales Sensibles (SPI) que requieran anonimización.
-
-### CRITERIOS DE EVALUACIÓN
-Responde "true" (necesita_anonimizacion: true) si detectas:
-- Nombres: Personas físicas completas (Ej: CIRIACO ALMEIDA) e Instituciones/Organizaciones (Ej: FEDERACION INSULAR DE AJEDREZ). NO dividas los nombres.
-- Documentos: Documentos de identidad españoles (DNI, NIE, CIF) o Pasaportes.        
-- Contactos: Direcciones de correo electrónico (emails) y números de teléfono.        
-- Direcciones: Calles, vías, códigos postales (Ej: 35019), municipios, localidades, islas y países (Ej: Palmas de Gran Canaria, Llanos de Aridane, VENEZUELA).    
-- Codigos: Números de expediente, localizadores, CSV, números de registro o cualquier otro código alfanumérico identificativo.         
-
-Responde "false" (necesita_anonimizacion: false) si el texto no contiene nada de lo anterior.
-
-### REQUISITOS DE SALIDA
-- Debes responder ÚNICAMENTE con un objeto JSON válido.
-- No incluyas explicaciones, ni etiquetas de bloque de código (no uses ```json).
-- Estructura del JSON:
-{"necesita_anonimizacion": boolean, "confianza": float}
-"""
-
-
-ANONYMIZATION_EVALUTION_SYSTEM_PROMPT = """
-Eres una API de extracción de entidades (NER) de alta precisión. Tu único propósito es leer el texto del usuario y devolver un objeto JSON válido.
-NO generes texto adicional. NO uses bloques de código markdown (como ```json). NO saludes ni des explicaciones.
-
-Si el texto NO contiene entidades, responde ÚNICAMENTE con:
-{"necesita_anonimizacion": false}
-
-Si el texto SÍ contiene entidades, responde con este esquema:
-{
-  "necesita_anonimizacion": true,
-  "entidades": {
-    "NOMBRE": [],
-    "DOC": [],
-    "CONTACTO": [],
-    "DIR": [],
-    "CODIGO": []
-  }
-}
-
-REGLAS DE EXTRACCIÓN (CUMPLIMIENTO ESTRICTO):
-1. "NOMBRE": Personas físicas completas (Ej: CIRIACO ALMEIDA) e Instituciones/Organizaciones (Ej: FEDERACION INSULAR DE AJEDREZ). NO dividas los nombres.
-2. "DOC": Documentos de identidad españoles (DNI, NIE, CIF) o Pasaportes.
-3. "CONTACTO": Direcciones de correo electrónico (emails) y números de teléfono.
-4. "DIR": Calles, vías, códigos postales (Ej: 35019), municipios, localidades, islas y países (Ej: Palmas de Gran Canaria, Llanos de Aridane, VENEZUELA).
-5. "CODIGO": Números de expediente, localizadores, CSV, números de registro o cualquier otro código alfanumérico identificativo.
-6. EXACTITUD: Extrae la cadena de texto EXACTAMENTE como aparece en el documento original (respetando mayúsculas, tildes y símbolos).
-7. VACÍOS: Si no encuentras entidades para una categoría, devuelve una lista vacía []. No inventes datos.
-8. FORMATO: El primer carácter de tu respuesta debe ser '{' y el último '}'.
-
-EJEMPLO DE ENTRADA (con entidades):
-El Club Tenerife, CIF G12345678, expediente EXP-99, y Ana Pérez (ana@email.com) residen en C/ Heliodoro, 38005 Santa Cruz, ESPAÑA.
-
-EJEMPLO DE SALIDA (con entidades):
-{
-  "necesita_anonimizacion": true,
-  "entidades": {
-    "NOMBRE": ["Club Tenerife", "Ana Pérez"],
-    "DOC": ["G12345678"],
-    "CONTACTO": ["ana@email.com"],
-    "DIR": ["C/ Heliodoro", "38005", "Santa Cruz", "ESPAÑA"],
-    "CODIGO": ["EXP-99"]
-  }
-}
-
-EJEMPLO DE ENTRADA (sin entidades):
-¿Cuál es la capital de Francia?
-
-EJEMPLO DE SALIDA (sin entidades):
-{"necesita_anonimizacion": false}
-"""
-
-
-DEFAULT_ANONYMIZATION_SETTINGS = {
-    "personNames": "anonymize",
-    "identityDocuments": "anonymize",
-    "emails": "anonymize",
-    "addresses": "anonymize",
-    "phones": "anonymize",
-    "licensePlates": "anonymize",
-    "organizations": "anonymize",
-    "relevantCodes": "anonymize",
-}
-
-
-_ANONYMIZATION_OPTION_SPECS = [
-    (
-        "personNames",
-        "NOMBRE",
-        "Personas fisicas completas.",
-    ),
-    (
-        "organizations",
-        "NOMBRE",
-        "Empresas, administraciones, clubes, unidades y otras entidades.",
-    ),
-    (
-        "identityDocuments",
-        "DOC",
-        "DNI, NIE, CIF, pasaportes y otros identificadores oficiales.",
-    ),
-    (
-        "emails",
-        "CONTACTO",
-        "Direcciones de correo electronico.",
-    ),
-    (
-        "phones",
-        "CONTACTO",
-        "Telefonos fijos, moviles y otros numeros de contacto.",
-    ),
-    (
-        "licensePlates",
-        "CODIGO",
-        "Matriculas de vehiculos y otros identificadores similares.",
-    ),
-    (
-        "addresses",
-        "DIR",
-        "Calles, vias, codigos postales de 5 digitos, municipios, localidades, islas y paises.",
-    ),
-    (
-        "relevantCodes",
-        "CODIGO",
-        "Expedientes, localizadores, CSV, numeros de registro y codigos alfanumericos sensibles, incluidos identificadores largos con guiones, barras o guiones bajos.",
-    ),
-]
-
-_OUTPUT_KEY_ORDER = ["NOMBRE", "DOC", "CONTACTO", "DIR", "CODIGO"]
-
-
-def normalize_anonymization_settings(
-    settings: dict[str, str] | None,
-) -> dict[str, str]:
-    normalized = dict(DEFAULT_ANONYMIZATION_SETTINGS)
-    if not settings:
-        return normalized
-
-    for key, value in settings.items():
-        if key in normalized and value in {"anonymize", "keep"}:
-            normalized[key] = value
-
-    return normalized
-
-
-def should_anonymize_anything(settings: dict[str, str] | None) -> bool:
-    normalized = normalize_anonymization_settings(settings)
-    return any(value == "anonymize" for value in normalized.values())
-
-
-def build_standard_anonymization_system_prompt(
-    settings: dict[str, str] | None,
-) -> str:
-    return _build_dynamic_anonymization_prompt(
-        settings=settings,
-        include_decision=False,
-    )
+from resources.anonymization_settings import (
+    ANONYMIZATION_OPTION_SPECS,
+    OUTPUT_KEY_ORDER,
+    normalize_anonymization_settings,
+)
 
 
 def build_optimized_anonymization_system_prompt(
     settings: dict[str, str] | None,
 ) -> str:
+    """Build the single-pass anonymization prompt used by the live flow."""
     return _build_dynamic_anonymization_prompt(
         settings=settings,
         include_decision=True,
@@ -214,15 +24,9 @@ def _build_dynamic_anonymization_prompt(
     normalized = normalize_anonymization_settings(settings)
     enabled_specs = [
         spec
-        for spec in _ANONYMIZATION_OPTION_SPECS
+        for spec in ANONYMIZATION_OPTION_SPECS
         if normalized[spec[0]] == "anonymize"
     ]
-    disabled_specs = [
-        spec
-        for spec in _ANONYMIZATION_OPTION_SPECS
-        if normalized[spec[0]] != "anonymize"
-    ]
-
     enabled_output_keys = _collect_enabled_output_keys(enabled_specs)
 
     schema_lines = [f'    "{output_key}": []' for output_key in enabled_output_keys]
@@ -301,7 +105,7 @@ def _collect_enabled_output_keys(
 
     return [
         output_key
-        for output_key in _OUTPUT_KEY_ORDER
+        for output_key in OUTPUT_KEY_ORDER
         if output_key in enabled_output_keys
     ]
 
@@ -341,9 +145,7 @@ def _build_disabled_rules(normalized: dict[str, str]) -> str:
     rules: list[str] = []
 
     if normalized["personNames"] != "anonymize":
-        rules.append(
-            '- NO extraigas ni anonimices nombres de personas fisicas.'
-        )
+        rules.append('- NO extraigas ni anonimices nombres de personas fisicas.')
 
     if normalized["organizations"] != "anonymize":
         rules.append(
@@ -361,9 +163,7 @@ def _build_disabled_rules(normalized: dict[str, str]) -> str:
         )
 
     if normalized["phones"] != "anonymize":
-        rules.append(
-            '- NO extraigas ni anonimices numeros de telefono.'
-        )
+        rules.append('- NO extraigas ni anonimices numeros de telefono.')
 
     if normalized["addresses"] != "anonymize":
         rules.append(

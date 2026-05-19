@@ -1,26 +1,14 @@
-"""
-Defines the contract for the anonymizer component.
-It is responsible for anonymizing text data to protect sensitive information.
-"""
-
 from abc import ABC, abstractmethod
 
+
 class Anonymizer(ABC):
+    """Contract for components that anonymize input text."""
+
     @abstractmethod
     async def anonymize(
         self,
         text: str,
         settings: dict[str, str] | None = None,
-    ) -> dict:
-        """
-        Anonymizes the given text and returns the anonymized version.
-
-        Args:
-            text (str): The input text to be anonymized.
-            settings (dict[str, str] | None): UI-selected anonymization
-                categories and modes.
-        
-        Returns:
-            dict: The anonymized version of the input text with the anonymized fields.
-        """
-        pass
+    ) -> dict[str, object]:
+        """Return anonymized text plus the placeholder replacement map."""
+        ...
