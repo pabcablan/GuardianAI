@@ -1,22 +1,20 @@
-"""
-Defines the contract for a document parser.
-Its responsible for parsing a document file and returning a ParsedDocument object
-with its metadata and content.
-"""
-
-from typing import Protocol, Any
+from abc import ABC, abstractmethod
+from typing import Any
 
 from domain.parsed_document import ParsedDocument
 
-class DocumentParser(Protocol):
-    def parse(self, uploaded_file: Any) -> ParsedDocument:
-        """
-        Parses a document file and returns a ParsedDocument
-        
+
+class DocumentParser(ABC):
+    """Contract for components that parse uploaded documents."""
+
+    @abstractmethod
+    async def parse(self, uploaded_file: Any) -> ParsedDocument:
+        """Parse an incoming document into the internal domain model.
+
         Args:
-            uploaded_file: The document file to parse. Its type is any since it can be
-            obtained from various sources.
+            uploaded_file (Any): File-like object received from an external source.
+
         Returns:
-            A ParsedDocument object containing the metadata and content of the parsed document.
+            ParsedDocument: Parsed document metadata and raw binary content.
         """
         ...

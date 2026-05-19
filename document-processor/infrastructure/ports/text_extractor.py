@@ -1,14 +1,20 @@
-"""
-Defines the contract for a document text extractor.
-Its responsible for extracting the text content from a parsed document
-and returning an ExtractedDocument object
-"""
+from abc import ABC, abstractmethod
 
-from typing import Protocol
-
-from domain.parsed_document import ParsedDocument
 from domain.extracted_document import ExtractedDocument
+from domain.parsed_document import ParsedDocument
 
-class TextExtractor(Protocol):
+
+class TextExtractor(ABC):
+    """Contract for components that extract text from parsed documents."""
+
+    @abstractmethod
     async def extract_text(self, document: ParsedDocument) -> ExtractedDocument:
+        """Extract text content from a parsed document.
+
+        Args:
+            document (ParsedDocument): Parsed document with metadata and bytes.
+
+        Returns:
+            ExtractedDocument: Extracted text plus document metadata.
+        """
         ...

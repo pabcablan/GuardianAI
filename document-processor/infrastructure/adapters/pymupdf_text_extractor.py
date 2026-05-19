@@ -1,11 +1,22 @@
 import pymupdf
 
-from infrastructure.ports.text_extractor import TextExtractor
-from domain.parsed_document import ParsedDocument
 from domain.extracted_document import ExtractedDocument
+from domain.parsed_document import ParsedDocument
+from infrastructure.ports.text_extractor import TextExtractor
+
 
 class PyMuPDFTextExtractor(TextExtractor):
+    """Extract text from PDFs using PyMuPDF when pages contain real text."""
+
     async def extract_text(self, document: ParsedDocument) -> ExtractedDocument:
+        """Extract text from a parsed PDF document.
+
+        Args:
+            document (ParsedDocument): Parsed PDF bytes and metadata.
+
+        Returns:
+            ExtractedDocument: Extracted text plus document metadata.
+        """
         pdf_content = pymupdf.open(stream=document.content, filetype="pdf")
 
         extracted_pages: list[str] = []
@@ -72,4 +83,3 @@ class PyMuPDFTextExtractor(TextExtractor):
             text_area += max(0.0, x1 - x0) * max(0.0, y1 - y0)
 
         return text_area / page_area
-

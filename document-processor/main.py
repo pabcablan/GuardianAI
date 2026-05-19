@@ -12,7 +12,11 @@ from infrastructure.utils.text_extraction_fallback import FallbackTextExtractor
 
 
 def main() -> None:
-    """Start the document processing API."""
+    """Start the document processing API.
+
+    Returns:
+        None: Runs the FastAPI application until shutdown.
+    """
     llm_client = LLMClient(base_url=os.getenv("LLM_BASE_URL"))
 
     parser = FastAPIDocumentParser()
@@ -31,7 +35,14 @@ def main() -> None:
 
     @app.post("/extract")
     async def extract_document(file: UploadFile = File(...)) -> dict[str, str]:
-        """Extract text from an uploaded PDF document."""
+        """Extract text from an uploaded PDF document.
+
+        Args:
+            file (UploadFile): Source PDF uploaded by the client.
+
+        Returns:
+            dict[str, str]: Document metadata plus extracted text content.
+        """
         extracted = await process_doc.execute(file)
         return {
             "document_id": extracted.document_id,
