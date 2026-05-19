@@ -1,9 +1,9 @@
 """Port for requesting assistant streams from ai-gateway."""
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -35,9 +35,10 @@ class AssistantStreamRequest:
     model: str
 
 
-class AiGatewayPort(Protocol):
+class AiGatewayPort(ABC):
     """Define how orchestrator consumes assistant response streams."""
 
+    @abstractmethod
     def stream_response(
         self,
         request: AssistantStreamRequest,
@@ -50,3 +51,4 @@ class AiGatewayPort(Protocol):
         Returns:
             Iterator[str]: The anonymized assistant response chunks.
         """
+        ...

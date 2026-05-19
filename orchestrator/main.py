@@ -8,6 +8,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 
 from application.orchestration_service import OrchestrationService
+from application.body_params_schemas.anonymized_stream_request import (
+    AnonymizedStreamRequest,
+)
+from application.body_params_schemas.document_preview_request import (
+    DocumentPreviewRequest,
+)
+from application.body_params_schemas.document_stream_request import (
+    DocumentStreamRequest,
+)
+from application.body_params_schemas.message_stream_request import (
+    MessageStreamRequest,
+)
 from infrastructure.adapters.api.errors import (
     bad_gateway,
     processed_document_not_found,
@@ -15,12 +27,6 @@ from infrastructure.adapters.api.errors import (
 from infrastructure.adapters.api.payloads import (
     build_anonymized_preview_payload,
     build_anonymized_prompt_event,
-)
-from infrastructure.adapters.api.schemas import (
-    AnonymizedStreamRequest,
-    DocumentStreamRequest,
-    DocumentPreviewRequest,
-    MessageStreamRequest,
 )
 from infrastructure.adapters.api.streaming import (
     build_document_streaming_response,
@@ -233,7 +239,7 @@ def stream_document_response(
     """Generate a safe response for a processed document.
 
     Args:
-        payload (dict[str, str]): The chat and document identifiers.
+        payload (DocumentStreamRequest): The processed document stream request.
 
     Returns:
         StreamingResponse: The safe NDJSON stream consumed by web-ui.

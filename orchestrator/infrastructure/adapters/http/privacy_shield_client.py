@@ -1,7 +1,7 @@
 """HTTP client used by orchestrator to call privacy-shield."""
 from __future__ import annotations
 
-import json
+import logging
 import os
 import uuid
 from collections.abc import Iterator
@@ -18,6 +18,9 @@ from infrastructure.ports.privacy_shield_port import (
     AnonymizedPrompt,
     PrivacyShieldPort,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PrivacyShieldClientError(ExternalServiceClientError):
@@ -94,45 +97,67 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
 
     def deanonymize_stream(
         self,
-        chunks: list[str],
+        chunks: Iterator[str],
         replacements: dict[str, str],
     ) -> Iterator[dict[str, Any]]:
-        """Stream deanonymized chunks through privacy-shield.
+        """Stream restored chunks through privacy-shield.
 
         Args:
-            chunks (list[str]): The anonymized assistant response chunks.
-            replacements (dict[str, str]): The replacements for
-                deanonymization.
+            chunks (Iterator[str]): The anonymized assistant response chunks.
+            replacements (dict[str, str]): Placeholder replacement mappings.
 
         Returns:
             Iterator[dict[str, Any]]: NDJSON events emitted by privacy-shield.
         """
-        payload = {
-            "chunks": chunks,
-            "replacements": replacements,
-        }
+        session_id = str(uuid.uuid4())
+        flush_required = False
+
+        self._post_json(
+            "/deanonymize/session/start",
+            {
+                "session_id": session_id,
+                "replacements": replacements,
+            },
+        )
+        flush_required = True
 
         try:
-            with httpx.stream(
-                "POST",
-                f"{self.base_url}/deanonymize/stream",
-                json=payload,
-                timeout=self.timeout_seconds,
-            ) as response:
-                self._raise_for_status(
-                    response=response,
-                    service_name="Privacy-shield",
-                    error_type=PrivacyShieldClientError,
-                    read_stream=True,
+            for chunk in chunks:
+                response = self._post_json(
+                    "/deanonymize/session/chunk",
+                    {
+                        "session_id": session_id,
+                        "chunk": chunk,
+                    }
                 )
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-                    yield json.loads(line)
-        except httpx.RequestError as error:
-            raise PrivacyShieldClientError(
-                "Privacy-shield service is unavailable."
-            ) from error
+                restored_content = str(response.get("content", ""))
+                if restored_content:
+                    yield {
+                        "event": "chunk",
+                        "content": restored_content,
+                    }
+        finally:
+            if flush_required:
+                try:
+                    response = self._post_json(
+                        "/deanonymize/session/flush",
+                        {"session_id": session_id},
+                    )
+                except PrivacyShieldClientError as error:
+                    LOGGER.warning(
+                        "Could not flush privacy-shield deanonymization session "
+                        "%s: %s",
+                        session_id,
+                        error,
+                    )
+                else:
+                    restored_tail = str(response.get("content", ""))
+                    if restored_tail:
+                        yield {
+                            "event": "chunk",
+                            "content": restored_tail,
+                        }
+            yield {"event": "completed"}
 
     def _post_json(self, path: str, payload: dict[str, Any]) -> Any:
         """Send JSON and parse a JSON response.

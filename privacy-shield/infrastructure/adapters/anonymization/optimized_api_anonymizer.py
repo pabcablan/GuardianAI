@@ -1,3 +1,4 @@
+import logging
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,9 @@ from resources.anonymization_prompt_builder import (
 from resources.anonymization_settings import should_anonymize_anything
 from utils.anonymization_utils import redact_text
 from utils.json_utils import extract_json_safely
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OptimizedApiAnonymizer(Anonymizer):
@@ -187,5 +191,8 @@ class OptimizedApiAnonymizer(Anonymizer):
             }
             with self._debug_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+        except Exception as error:
+            LOGGER.warning(
+                "Could not write anonymization debug entry: %s",
+                error,
+            )

@@ -1,9 +1,10 @@
 """Port for requesting document extraction from document-processor."""
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -21,9 +22,10 @@ class DocumentUploadRequest:
     content: bytes
 
 
-class DocumentProcessorPort(Protocol):
+class DocumentProcessorPort(ABC):
     """Define how orchestrator requests document extraction."""
 
+    @abstractmethod
     def stream_extract_document(
         self,
         request: DocumentUploadRequest,
@@ -36,3 +38,4 @@ class DocumentProcessorPort(Protocol):
         Returns:
             Iterator[dict[str, Any]]: Document extraction events.
         """
+        ...

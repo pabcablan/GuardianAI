@@ -1,12 +1,13 @@
 """Port for building anonymized visual PDF previews."""
 from __future__ import annotations
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 
-class AnonymizedPdfBuilderPort(Protocol):
+class AnonymizedPdfBuilderPort(ABC):
     """Define how the orchestrator builds anonymized PDF previews."""
 
+    @abstractmethod
     def build(
         self,
         pdf_content: bytes,
@@ -24,3 +25,4 @@ class AnonymizedPdfBuilderPort(Protocol):
         Raises:
             ValueError: If no visible text can be replaced.
         """
+        ...

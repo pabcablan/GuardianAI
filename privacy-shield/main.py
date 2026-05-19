@@ -1,18 +1,35 @@
 import asyncio
-import json
 import os
 
 import httpx
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException
 
 from application.body_params_schemas.anonymize_request import AnonymizeRequest
-from application.body_params_schemas.deanonymize_request import DeanonymizeRequest
+from application.body_params_schemas.deanonymize_session_chunk_request import (
+    DeanonymizeSessionChunkRequest,
+)
+from application.body_params_schemas.deanonymize_session_flush_request import (
+    DeanonymizeSessionFlushRequest,
+)
+from application.body_params_schemas.deanonymize_session_start_request import (
+    DeanonymizeSessionStartRequest,
+)
+from application.services.deanonymization_session_registry import (
+    DeanonymizationSessionRegistry,
+)
 from application.usecases.document_anonymizer.anonymize_document_optimized import (
     AnonymizeDocumentOptimized,
 )
-from application.usecases.document_deanonymizer.deanonymize_document_stream import DeanonymizeDocumentStream
+from application.usecases.document_deanonymizer.deanonymize_session_chunk import (
+    DeanonymizeSessionChunk,
+)
+from application.usecases.document_deanonymizer.flush_deanonymize_session import (
+    FlushDeanonymizeSession,
+)
+from application.usecases.document_deanonymizer.start_deanonymize_session import (
+    StartDeanonymizeSession,
+)
 from infrastructure.adapters.anonymization.anonymizer_provider import (
     AnonymizerProvider,
 )
@@ -35,14 +52,30 @@ async def main() -> None:
         "http://localhost:8010/generate_response",
     )
     model_name = os.getenv("PRIVACY_MODEL_NAME", "qwen3.5")
+    deanonymization_session_ttl_seconds = float(
+        os.getenv("DEANONYMIZATION_SESSION_TTL_SECONDS", "900")
+    )
 
     provider = AnonymizerProvider(
         api_url=model_provider_url,
         client=client,
     )
     anonymizer = provider.get_anonymizer(model_alias=model_name)
+    deanonymization_sessions = DeanonymizationSessionRegistry(
+        session_ttl_seconds=deanonymization_session_ttl_seconds,
+    )
 
     anonymize_usecase = AnonymizeDocumentOptimized(anonymizer=anonymizer)
+    start_deanonymize_session_usecase = StartDeanonymizeSession(
+        registry=deanonymization_sessions,
+        deanonymizer_factory=StreamingDeanonymizer,
+    )
+    deanonymize_session_chunk_usecase = DeanonymizeSessionChunk(
+        registry=deanonymization_sessions,
+    )
+    flush_deanonymize_session_usecase = FlushDeanonymizeSession(
+        registry=deanonymization_sessions,
+    )
 
     @app.post("/anonymize/optimized")
     async def anonymize_optimized_route(request: AnonymizeRequest):
@@ -59,43 +92,67 @@ async def main() -> None:
             settings=request.settings,
         )
 
-    @app.post("/deanonymize/stream")
-    async def deanonymize_route(request: DeanonymizeRequest):
-        """Restore placeholders from a streamed assistant response.
+    @app.post("/deanonymize/session/start")
+    async def start_deanonymize_session_route(
+        request: DeanonymizeSessionStartRequest,
+    ):
+        """Open a stateful deanonymization session.
 
         Args:
-            request (DeanonymizeRequest): Stream chunks and replacement mapping.
+            request (DeanonymizeSessionStartRequest): Session identifier and
+                replacement mappings.
 
         Returns:
-            StreamingResponse: NDJSON stream with restored text chunks.
+            dict: Confirmation payload with the opened session identifier.
         """
-        deanonymizer = StreamingDeanonymizer()
-        use_case = DeanonymizeDocumentStream(deanonymizer=deanonymizer)
+        try:
+            return start_deanonymize_session_usecase.execute(
+                session_id=request.session_id,
+                replacements=request.replacements,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
-        async def transform_to_json():
-            """Emit restored chunks as NDJSON events.
+    @app.post("/deanonymize/session/chunk")
+    async def deanonymize_session_chunk_route(
+        request: DeanonymizeSessionChunkRequest,
+    ):
+        """Restore one chunk within an active deanonymization session.
 
-            Yields:
-                str: Serialized NDJSON events for chunk and completion updates.
-            """
-            async for restored_text in use_case.execute(
-                request.chunks,
-                request.replacements,
-            ):
-                yield (
-                    json.dumps(
-                        {"event": "chunk", "content": restored_text},
-                        ensure_ascii=False,
-                    )
-                    + "\n"
-                )
-            yield json.dumps({"event": "completed"}) + "\n"
+        Args:
+            request (DeanonymizeSessionChunkRequest): Session identifier and
+                one anonymized chunk.
 
-        return StreamingResponse(
-            transform_to_json(),
-            media_type="application/x-ndjson",
-            headers={"X-Accel-Buffering": "no"},
-        )
+        Returns:
+            dict: The restored chunk content.
+        """
+        try:
+            return deanonymize_session_chunk_usecase.execute(
+                session_id=request.session_id,
+                chunk=request.chunk,
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="Unknown session.") from error
+
+    @app.post("/deanonymize/session/flush")
+    async def deanonymize_session_flush_route(
+        request: DeanonymizeSessionFlushRequest,
+    ):
+        """Flush and close one active deanonymization session.
+
+        Args:
+            request (DeanonymizeSessionFlushRequest): Session identifier to
+                close.
+
+        Returns:
+            dict: Any trailing restored buffered content.
+        """
+        try:
+            return flush_deanonymize_session_usecase.execute(
+                request.session_id,
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="Unknown session.") from error
 
     config = uvicorn.Config(app, host="0.0.0.0", port=8002)
     server = uvicorn.Server(config)

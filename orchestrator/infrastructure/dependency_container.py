@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from application.services.anonymization_registry import AnonymizationRegistry
+from application.services.document_registry import DocumentRegistry
 from infrastructure.adapters.fake_assistant_stream_gateway import (
     FakeAssistantStreamGateway,
 )
@@ -36,12 +38,18 @@ class OrchestratorContainer:
         ai_gateway (AiGatewayPort): The assistant stream gateway.
         anonymized_pdf_builder (AnonymizedPdfBuilderPort): The visual PDF
             preview builder.
+        document_registry (DocumentRegistry): In-memory processed document
+            storage.
+        anonymization_registry (AnonymizationRegistry): In-memory replacement
+            storage.
     """
 
     privacy_shield: PrivacyShieldPort
     document_processor: DocumentProcessorPort
     ai_gateway: AiGatewayPort
     anonymized_pdf_builder: AnonymizedPdfBuilderPort
+    document_registry: DocumentRegistry
+    anonymization_registry: AnonymizationRegistry
 
 
 def build_container() -> OrchestratorContainer:
@@ -50,16 +58,24 @@ def build_container() -> OrchestratorContainer:
     Returns:
         OrchestratorContainer: The configured dependency container.
     """
-    assistant_mode = os.getenv("ORCHESTRATOR_ASSISTANT_MODE", "fake").lower()
-    ai_gateway: AiGatewayPort
-    if assistant_mode == "real":
-        ai_gateway = HttpAiGatewayClient()
-    else:
-        ai_gateway = FakeAssistantStreamGateway()
-
     return OrchestratorContainer(
         privacy_shield=HttpPrivacyShieldClient(),
         document_processor=HttpDocumentProcessingClient(),
-        ai_gateway=ai_gateway,
+        ai_gateway=_build_ai_gateway(),
         anonymized_pdf_builder=PyMuPdfAnonymizedPdfBuilder(),
+        document_registry=DocumentRegistry(),
+        anonymization_registry=AnonymizationRegistry(),
     )
+
+
+def _build_ai_gateway() -> AiGatewayPort:
+    """Build the configured assistant gateway implementation.
+
+    Returns:
+        AiGatewayPort: Real or fake gateway depending on the environment mode.
+    """
+    assistant_mode = os.getenv("ORCHESTRATOR_ASSISTANT_MODE", "fake").lower()
+    if assistant_mode == "real":
+        return HttpAiGatewayClient()
+
+    return FakeAssistantStreamGateway()
