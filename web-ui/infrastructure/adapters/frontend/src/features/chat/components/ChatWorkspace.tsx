@@ -122,7 +122,7 @@ export function ChatWorkspace() {
           chats={chats}
           selectedChatId={selectedChatId}
           isExpanded={isSidebarOpen}
-          isInteractionLocked={false}
+          isInteractionLocked={isSendLocked}
           selectedModel={selectedModel}
           theme={theme}
           onChatSelect={selectChat}

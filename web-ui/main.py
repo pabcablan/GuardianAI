@@ -4,8 +4,25 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from application.body_params_schemas.continue_anonymized_request import (
+    ContinueAnonymizedRequest,
+)
+from application.body_params_schemas.create_chat_request import (
+    CreateChatRequest,
+)
+from application.body_params_schemas.document_anonymization_request import (
+    DocumentAnonymizationRequest,
+)
+from application.body_params_schemas.document_safe_stream_request import (
+    DocumentSafeStreamRequest,
+)
+from application.body_params_schemas.rename_chat_request import (
+    RenameChatRequest,
+)
+from application.body_params_schemas.stream_message_request import (
+    StreamMessageRequest,
+)
 from application.services.anonymized_history import AnonymizedHistoryBuilder
-from application.services.model_readiness import ModelReadinessService
 from application.services.processed_document_registry import (
     ProcessedDocumentRegistry,
 )
@@ -33,25 +50,22 @@ from infrastructure.adapters.api.mappers import (
     to_chat_summary_response,
     to_create_chat_response,
 )
-from infrastructure.adapters.api.schemas import (
+from infrastructure.adapters.api.response_models import (
     AnonymizedPreviewResponse,
     ChatDetailResponse,
     ChatSummaryResponse,
-    ContinueAnonymizedRequest,
-    CreateChatRequest,
     CreateChatResponse,
-    DocumentAnonymizationRequest,
-    DocumentSafeStreamRequest,
-    RenameChatRequest,
-    StreamMessageRequest,
 )
 from infrastructure.adapters.api.streaming import (
     build_document_streaming_response,
     build_safe_streaming_response,
 )
+from infrastructure.adapters.http.model_readiness_client import (
+    ModelReadinessClient,
+)
 from infrastructure.adapters.orchestrator.base import OrchestratorClientError
 from infrastructure.dependency_container import build_container
-from infrastructure.ports.external.orchestrator_response_port import (
+from infrastructure.ports.orchestrator_response_types import (
     OrchestratorAnonymizationPreviewRequest,
     OrchestratorAnonymizedResponseRequest,
     OrchestratorDocumentAnonymizationPreviewRequest,
@@ -65,7 +79,7 @@ processed_document_registry = ProcessedDocumentRegistry(
 anonymized_history_builder = AnonymizedHistoryBuilder(
     container.chat_repository,
 )
-model_readiness_service = ModelReadinessService(
+model_readiness_client = ModelReadinessClient(
     base_url=MODEL_PROVIDER_BASE_URL,
     privacy_model_name=PRIVACY_MODEL_NAME,
     document_model_name=DOCUMENT_MODEL_NAME,
@@ -75,7 +89,7 @@ model_readiness_service = ModelReadinessService(
 app = FastAPI(
     title="GuardianAI Web UI Backend",
     version="0.1.0",
-    description="API propia del módulo web-ui para gestionar el chat.",
+    description="API propia del modulo web-ui para gestionar el chat.",
 )
 
 app.add_middleware(
@@ -96,7 +110,7 @@ def healthcheck() -> dict[str, str]:
 @app.get("/api/system/model-readiness")
 def model_readiness() -> dict[str, object]:
     """Return whether the required backend models are loaded."""
-    return model_readiness_service.get_readiness()
+    return model_readiness_client.get_readiness()
 
 
 @app.get("/api/chats", response_model=list[ChatSummaryResponse])
@@ -187,13 +201,15 @@ def preview_message_anonymization(
 
     try:
         container.chat_repository.append_message(chat_id, user_message)
-        preview = container.orchestrator_response.preview_message_anonymization(
-            OrchestratorAnonymizationPreviewRequest(
-                chat_id=chat_id,
-                content=content,
-                model=payload.model,
-                settings=payload.settings,
-            ),
+        preview = (
+            container.orchestrator_response.preview_message_anonymization(
+                OrchestratorAnonymizationPreviewRequest(
+                    chat_id=chat_id,
+                    content=content,
+                    model=payload.model,
+                    settings=payload.settings,
+                ),
+            )
         )
         container.chat_repository.update_message_anonymized_content(
             user_message.message_id,
@@ -425,3 +441,14 @@ def download_anonymized_pdf_preview(
             "Content-Disposition": f'inline; filename="{preview.filename}"',
         },
     )
+
+
+def main() -> None:
+    """Run the web-ui backend with the local Uvicorn server."""
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8003, reload=False)
+
+
+if __name__ == "__main__":
+    main()

@@ -10,9 +10,11 @@ from infrastructure.adapters.orchestrator.base import (
     OrchestratorClientError,
     OrchestratorHttpClientBase,
 )
-from infrastructure.ports.external.orchestrator_document_port import (
-    OrchestratorDocumentEvent,
+from infrastructure.ports.orchestrator_document_port import (
     OrchestratorDocumentPort,
+)
+from infrastructure.ports.orchestrator_document_types import (
+    OrchestratorDocumentEvent,
     ProcessDocumentCompletedEvent,
     ProcessDocumentErrorEvent,
     ProcessDocumentProgressEvent,
@@ -85,6 +87,10 @@ class HttpOrchestratorDocumentClient(
             OrchestratorDocumentEvent: The parsed processing event.
         """
         parsed = json.loads(payload)
+        if not isinstance(parsed, dict):
+            raise OrchestratorClientError(
+                "Invalid orchestrator document event payload."
+            )
         event_type = parsed["event"]
 
         if event_type == "progress":

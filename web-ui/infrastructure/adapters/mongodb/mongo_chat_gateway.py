@@ -10,7 +10,7 @@ from application.usecases.create_chat import CreateChatResult
 from application.usecases.list_chats import ChatSummary
 from domain.chat import Chat
 from domain.message import Message
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 class MongoChatGateway(ChatRepositoryPort):
@@ -76,12 +76,7 @@ class MongoChatGateway(ChatRepositoryPort):
 
     def load_chat(self, chat_id: str) -> Chat | None:
         """Load one chat and its ordered message history."""
-        chat = self._chats.find_one(
-            {
-                "chat_id": chat_id,
-                "deleted": False,
-            }
-        )
+        chat = self._find_active_chat(chat_id)
 
         if chat is None:
             return None
@@ -143,14 +138,7 @@ class MongoChatGateway(ChatRepositoryPort):
 
     def append_message(self, chat_id: str, message: Message) -> None:
         """Append one message to a chat."""
-        chat = self._chats.find_one(
-            {
-                "chat_id": chat_id,
-                "deleted": False,
-            }
-        )
-
-        if chat is None:
+        if self._find_active_chat(chat_id) is None:
             raise KeyError(chat_id)
 
         self._messages.insert_one(
@@ -174,8 +162,17 @@ class MongoChatGateway(ChatRepositoryPort):
         )
 
     def _now(self) -> str:
-        """Return an UTC timestamp."""
+        """Return a UTC timestamp."""
         return datetime.now(timezone.utc).isoformat()
+
+    def _find_active_chat(self, chat_id: str) -> dict[str, object] | None:
+        """Return one non-deleted chat document from MongoDB."""
+        return self._chats.find_one(
+            {
+                "chat_id": chat_id,
+                "deleted": False,
+            }
+        )
 
     def update_message_anonymized_content(
         self,

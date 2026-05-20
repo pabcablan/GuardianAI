@@ -24,8 +24,9 @@ from infrastructure.adapters.orchestrator.document_client import (
 from infrastructure.adapters.orchestrator.response_client import (
     HttpOrchestratorResponseClient,
 )
-from infrastructure.ports.internal.chat_repository_port import (
-    ChatRepositoryPort,
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.orchestrator_response_port import (
+    OrchestratorResponsePort,
 )
 
 
@@ -42,7 +43,7 @@ class WebUiContainer:
     stream_safe_response: StreamSafeResponseUseCase
     stream_message_response: StreamMessageResponseUseCase
     chat_repository: ChatRepositoryPort
-    orchestrator_response: HttpOrchestratorResponseClient
+    orchestrator_response: OrchestratorResponsePort
 
 
 def build_container() -> WebUiContainer:
@@ -52,8 +53,10 @@ def build_container() -> WebUiContainer:
         WebUiContainer: The configured use case container.
     """
     database = build_mongo_database()
-    gateway = MongoChatGateway(database)
-    orchestrator_response = HttpOrchestratorResponseClient()
+    gateway: ChatRepositoryPort = MongoChatGateway(database)
+    orchestrator_response: OrchestratorResponsePort = (
+        HttpOrchestratorResponseClient()
+    )
     orchestrator_document = HttpOrchestratorDocumentClient()
     document_service = ConnectedDocumentService(gateway, orchestrator_document)
 

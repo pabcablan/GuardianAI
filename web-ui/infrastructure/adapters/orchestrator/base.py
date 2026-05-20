@@ -30,6 +30,10 @@ class OrchestratorHttpClientBase:
     )
     timeout_seconds: float = 600.0
 
+    def _build_url(self, path: str) -> str:
+        """Return the absolute orchestrator URL for one API path."""
+        return f"{self.base_url}{path}"
+
     def _stream_json_lines(
         self,
         path: str,
@@ -47,7 +51,7 @@ class OrchestratorHttpClientBase:
         try:
             with httpx.stream(
                 "POST",
-                f"{self.base_url}{path}",
+                self._build_url(path),
                 json=payload,
                 timeout=self.timeout_seconds,
             ) as response:
@@ -75,7 +79,7 @@ class OrchestratorHttpClientBase:
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
                 response = client.post(
-                    f"{self.base_url}{path}",
+                    self._build_url(path),
                     json=payload,
                 )
                 self._raise_for_status(response)
@@ -109,7 +113,7 @@ class OrchestratorHttpClientBase:
         try:
             with httpx.stream(
                 "POST",
-                f"{self.base_url}{path}",
+                self._build_url(path),
                 data=data,
                 files=files,
                 timeout=self.timeout_seconds,

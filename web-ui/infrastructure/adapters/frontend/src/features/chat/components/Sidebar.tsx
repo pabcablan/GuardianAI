@@ -1,45 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AiModel, ChatSummary } from "../types";
+
 import { AI_MODEL_OPTIONS, AI_MODEL_PRICING } from "../types";
+import type { AiModel, ChatSummary } from "../types";
 
 interface SidebarProps {
   chats: ChatSummary[];
-  selectedChatId: string;
   isExpanded: boolean;
   isInteractionLocked: boolean;
+  selectedChatId: string;
   selectedModel: AiModel;
   theme: "dark" | "light";
   onChatSelect: (chatId: string) => void;
   onCreateChat: () => void;
-  onRenameChat: (chatId: string, title: string) => Promise<boolean>;
   onDeleteChat: (chatId: string) => Promise<boolean>;
   onModelChange: (model: AiModel) => void;
+  onOpenSettings: () => void;
+  onRenameChat: (chatId: string, title: string) => Promise<boolean>;
   onThemeToggle: () => void;
   onToggleSidebar: () => void;
-  onOpenSettings: () => void;
 }
 
 export function Sidebar({
   chats,
-  selectedChatId,
   isExpanded,
   isInteractionLocked,
+  selectedChatId,
   selectedModel,
   theme,
   onChatSelect,
   onCreateChat,
-  onRenameChat,
   onDeleteChat,
   onModelChange,
+  onOpenSettings,
+  onRenameChat,
   onThemeToggle,
   onToggleSidebar,
-  onOpenSettings,
 }: SidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeChat, setActiveChat] = useState<ChatSummary | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [isApplyingAction, setIsApplyingAction] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement | null>(null);
+
   const filteredChats = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -54,17 +57,15 @@ export function Sidebar({
     );
   }, [chats, searchTerm]);
 
-  const modelDropdownRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    function handleClickOutside(event: MouseEvent) {
       if (
         modelDropdownRef.current &&
         !modelDropdownRef.current.contains(event.target as Node)
       ) {
         setIsModelDropdownOpen(false);
       }
-    };
+    }
 
     document.addEventListener("mousedown", handleClickOutside);
 
@@ -123,11 +124,17 @@ export function Sidebar({
         <button
           className="icon-button sidebar__panel-button"
           type="button"
-          aria-label={isExpanded ? "Comprimir panel lateral" : "Expandir panel lateral"}
-          disabled={isInteractionLocked}
+          aria-label={
+            isExpanded ? "Comprimir panel lateral" : "Expandir panel lateral"
+          }
           onClick={onToggleSidebar}
         >
-          <img className="icon-image" src="/icons/sidebar-toggle.svg" alt="" aria-hidden="true" />
+          <img
+            className="icon-image"
+            src="/icons/sidebar-toggle.svg"
+            alt=""
+            aria-hidden="true"
+          />
         </button>
         <div className="sidebar__brand">
           <img
@@ -200,7 +207,12 @@ export function Sidebar({
             onClick={onCreateChat}
             aria-label="Nuevo chat"
           >
-            <img className="icon-image" src="/icons/add-chat.svg" alt="" aria-hidden="true" />
+            <img
+              className="icon-image"
+              src="/icons/add-chat.svg"
+              alt=""
+              aria-hidden="true"
+            />
           </button>
         )}
       </div>
@@ -274,11 +286,11 @@ export function Sidebar({
                     </span>
                   </span>
                   <span className="model-dropdown__chevron" aria-hidden="true">
-                    ⌄
+                    ▾
                   </span>
                 </button>
 
-                {isModelDropdownOpen && !isInteractionLocked && (
+                {isModelDropdownOpen && !isInteractionLocked ? (
                   <ul className="model-dropdown__menu" role="listbox">
                     {AI_MODEL_OPTIONS.map((model) => {
                       const pricing = AI_MODEL_PRICING[model];
@@ -304,7 +316,7 @@ export function Sidebar({
                       );
                     })}
                   </ul>
-                )}
+                ) : null}
               </div>
             </div>
 

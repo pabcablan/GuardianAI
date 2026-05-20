@@ -1,9 +1,7 @@
 """Track temporary relations between processed documents and messages."""
 from __future__ import annotations
 
-from infrastructure.ports.internal.chat_repository_port import (
-    ChatRepositoryPort,
-)
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 class ProcessedDocumentRegistry:

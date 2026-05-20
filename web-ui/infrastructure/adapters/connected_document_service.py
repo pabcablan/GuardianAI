@@ -9,15 +9,17 @@ from application.usecases.attach_document import (
     AttachDocumentProgress,
     AttachDocumentStreamEvent,
 )
-from infrastructure.ports.external.orchestrator_document_port import (
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.document_service_port import DocumentServicePort
+from infrastructure.ports.orchestrator_document_port import (
     OrchestratorDocumentPort,
+)
+from infrastructure.ports.orchestrator_document_types import (
     ProcessDocumentCompletedEvent,
     ProcessDocumentErrorEvent,
     ProcessDocumentProgressEvent,
     ProcessDocumentRequest,
 )
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
-from infrastructure.ports.internal.document_service_port import DocumentServicePort
 
 
 class ConnectedDocumentService(DocumentServicePort):

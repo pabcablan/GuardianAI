@@ -6,8 +6,9 @@ from collections.abc import Callable, Iterator
 
 from fastapi.responses import StreamingResponse
 
+from application.usecases.attach_document import AttachDocumentStreamEvent
 from domain.message import Message
-from infrastructure.adapters.api.schemas import (
+from infrastructure.adapters.api.response_models import (
     AttachDocumentCompletedResponse,
     AttachDocumentErrorResponse,
     AttachDocumentProgressResponse,
@@ -16,16 +17,14 @@ from infrastructure.adapters.api.schemas import (
     SafeStreamCompletedResponse,
     SafeStreamErrorResponse,
 )
-from infrastructure.ports.external.orchestrator_response_port import (
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.orchestrator_response_types import (
     OrchestratorAnonymizedResponse,
     OrchestratorAnonymizedPrompt,
     OrchestratorStreamChunk,
     OrchestratorStreamCompleted,
     OrchestratorStreamEvent,
     OrchestratorStreamFailed,
-)
-from infrastructure.ports.internal.chat_repository_port import (
-    ChatRepositoryPort,
 )
 
 
@@ -93,7 +92,7 @@ def build_safe_streaming_response(
                     ).model_dump()
                 else:
                     payload = SafeStreamErrorResponse(
-                        detail="Unknown privacy-shield stream event.",
+                        detail="Unknown orchestrator stream event.",
                     ).model_dump()
 
                 yield json.dumps(payload, ensure_ascii=True) + "\n"
@@ -121,20 +120,20 @@ def build_safe_streaming_response(
 
 
 def build_document_streaming_response(
-    events: Iterator[object],
+    events: Iterator[AttachDocumentStreamEvent],
     remember_user_message: Callable[[str], None],
 ) -> StreamingResponse:
     """Build an NDJSON response for document attachment events.
 
     Args:
-        events (Iterator[object]): The document attachment events.
+        events (Iterator[AttachDocumentStreamEvent]): The document attachment
+            events.
         remember_user_message (Callable[[str], None]): Callback that stores
             the completed document identifier.
 
     Returns:
         StreamingResponse: The serialized document stream.
     """
-
     from application.usecases.attach_document import (
         AttachDocumentCompleted,
         AttachDocumentFailed,

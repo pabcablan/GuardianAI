@@ -4,7 +4,7 @@ from __future__ import annotations
 from application.usecases.create_chat import CreateChatResult
 from application.usecases.list_chats import ChatSummary
 from domain.chat import Chat
-from infrastructure.adapters.api.schemas import (
+from infrastructure.adapters.api.response_models import (
     ChatDetailResponse,
     ChatMessageResponse,
     ChatSummaryResponse,

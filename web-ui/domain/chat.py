@@ -39,14 +39,6 @@ class Chat:
         """
         self.messages.append(message)
 
-    def add_messages(self, messages: list[Message]) -> None:
-        """Add several messages to the conversation history.
-
-        Args:
-            messages (list[Message]): The messages to append in order.
-        """
-        self.messages.extend(messages)
-
     def rename(self, title: str) -> None:
         """Update the conversation title.
 
@@ -60,36 +52,3 @@ class Chat:
         if not normalized_title:
             raise ValueError("Chat title cannot be empty.")
         self.title = normalized_title
-
-    def last_message_preview(self) -> str:
-        """Return the latest message content as a preview.
-
-        Returns:
-            str: The latest message content, or an empty string when there are
-            no messages.
-        """
-        if not self.messages:
-            return ""
-        return self.messages[-1].content
-
-    def updated_at(self) -> str:
-        """Return the timestamp used to display the chat update time.
-
-        Returns:
-            str: The latest message timestamp, or the default value for empty
-            conversations.
-        """
-        if not self.messages:
-            return "Ahora"
-        return self.messages[-1].created_at
-
-    def last_assistant_chunks(self) -> list[str]:
-        """Split the latest assistant response into simple chunks.
-
-        Returns:
-            list[str]: The latest assistant response split by whitespace.
-        """
-        for message in reversed(self.messages):
-            if message.role == "assistant":
-                return message.content.split()
-        return []

@@ -3,17 +3,17 @@ import { useRef, useState } from "react";
 import { createChatApplicationService } from "../application/chatApplicationService";
 import { DEFAULT_AI_MODEL } from "../types";
 import type {
+  AiModel,
   AnonymizationSettings,
   ChatMessage,
-  AiModel,
   DocumentProcessingStatus,
   ResponseProcessingStatus,
 } from "../types";
+import { createAssistantMessage, getErrorMessage } from "./chatWorkspaceUtils";
 import {
-  createAssistantMessage,
-  createUserMessage,
-  getErrorMessage,
-} from "./chatWorkspaceUtils";
+  sendDocumentMessage,
+  sendTextMessage,
+} from "./chatWorkspaceActions";
 import { useChatCollection } from "./useChatCollection";
 import { useModelReadiness } from "./useModelReadiness";
 
@@ -75,156 +75,36 @@ export function useChatWorkspace() {
         throw new Error("No hay ningún chat activo disponible.");
       }
 
+      const actions = {
+        appendAssistantChunk,
+        appendAssistantMessage,
+        appendChatMessage,
+        updateUserAnonymizedContent,
+      };
+
       if (pendingFile) {
-        const documentUserMessage = createUserMessage(
-          normalizedContent || `Documento: ${pendingFile.name}`,
-        );
-        appendChatMessage(activeChatId, documentUserMessage);
-
-        setDocumentProcessingStatus({
-          filename: pendingFile.name,
-          stage: "Extrayendo texto",
-          message: "Extrayendo texto",
-          current: 0,
-          total: 1,
-          progress: null,
-        });
-
-        const documentId = await serviceRef.current.attachDocumentWithProgress(
+        await sendDocumentMessage({
+          actions,
           activeChatId,
+          model,
+          normalizedContent,
           pendingFile,
-          normalizedContent,
-          (status) => {
-            setDocumentProcessingStatus(status);
-          },
-        );
-
-        setDocumentProcessingStatus({
-          filename: pendingFile.name,
-          stage: "Extrayendo texto",
-          message: "Extrayendo texto",
-          current: 1,
-          total: 1,
-          progress: null,
-        });
-
-        if (shouldPreviewAnonymizedText) {
-          const preview =
-            await serviceRef.current.previewDocumentAnonymization(
-              activeChatId,
-              documentId,
-              settings,
-            );
-          updateUserAnonymizedContent(
-            activeChatId,
-            documentUserMessage.id,
-            preview.anonymized_content,
-            preview.anonymization_id,
-            preview.replacement_count,
-            documentId,
-            preview.extraction_method ?? undefined,
-            preview.original_content ?? undefined,
-          );
-          setDocumentProcessingStatus(null);
-          return true;
-        }
-
-        const assistantMessage = createAssistantMessage();
-        appendAssistantMessage(activeChatId, assistantMessage);
-
-        setDocumentProcessingStatus({
-          filename: pendingFile.name,
-          stage: "Extrayendo texto",
-          message: "Extrayendo texto",
-          current: 1,
-          total: 1,
-          progress: null,
-        });
-
-        let didReceiveFirstChunk = false;
-        await serviceRef.current.streamSafeResponse(
-          activeChatId,
-          documentId,
-          model,
+          service: serviceRef.current,
           settings,
-          (chunk) => {
-            if (!didReceiveFirstChunk) {
-              didReceiveFirstChunk = true;
-              setDocumentProcessingStatus(null);
-            }
-            appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
-          },
-          (anonymizedContent) => {
-            setDocumentProcessingStatus(null);
-            updateUserAnonymizedContent(
-              activeChatId,
-              documentUserMessage.id,
-              anonymizedContent,
-              undefined,
-            );
-          },
-        );
-      }
-
-      if (!pendingFile) {
-        const userMessage = createUserMessage(normalizedContent);
-        appendChatMessage(activeChatId, userMessage);
-
-        if (shouldPreviewAnonymizedText) {
-          setResponseProcessingStatus({
-            title: "Mensaje del chat",
-            stage: "Anonimizando",
-            message: "Anonimizando",
-          });
-          const preview = await serviceRef.current.previewMessageAnonymization(
-            activeChatId,
-            normalizedContent,
-            model,
-            settings,
-          );
-          updateUserAnonymizedContent(
-            activeChatId,
-            userMessage.id,
-            preview.anonymized_content,
-            preview.anonymization_id,
-            preview.replacement_count,
-          );
-          setResponseProcessingStatus(null);
-          return true;
-        }
-
-        const assistantMessage = createAssistantMessage();
-        appendChatMessage(activeChatId, assistantMessage);
-
-        setResponseProcessingStatus({
-          title: "Mensaje del chat",
-          stage: "Anonimizando",
-          message: "Anonimizando",
+          setDocumentProcessingStatus,
+          shouldPreviewAnonymizedText,
         });
-
-        let didReceiveFirstChunk = false;
-        await serviceRef.current.streamMessage(
+      } else {
+        await sendTextMessage({
+          actions,
           activeChatId,
-          normalizedContent,
           model,
+          normalizedContent,
+          service: serviceRef.current,
           settings,
-          (chunk) => {
-            if (!didReceiveFirstChunk) {
-              didReceiveFirstChunk = true;
-              setResponseProcessingStatus(null);
-            }
-            appendAssistantChunk(activeChatId, assistantMessage.id, chunk);
-          },
-          (anonymizedContent) => {
-            setResponseProcessingStatus(null);
-            updateUserAnonymizedContent(
-              activeChatId,
-              userMessage.id,
-              anonymizedContent,
-              undefined,
-            );
-          },
-        );
+          setResponseProcessingStatus,
+          shouldPreviewAnonymizedText,
+        });
       }
 
       setDocumentProcessingStatus(null);
@@ -257,16 +137,12 @@ export function useChatWorkspace() {
     appendChatMessage(selectedChatId, assistantMessage);
 
     try {
-      let didReceiveFirstChunk = false;
       await serviceRef.current.streamApprovedAnonymizedResponse(
         selectedChatId,
         message.pendingApproval.anonymizedContent,
         message.pendingApproval.anonymizationId,
         model,
         (chunk) => {
-          if (!didReceiveFirstChunk) {
-            didReceiveFirstChunk = true;
-          }
           appendAssistantChunk(selectedChatId, assistantMessage.id, chunk);
         },
       );

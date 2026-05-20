@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from domain.message import Message
+from domain.message import Message, MessageRole
 
 
 def make_assistant_message(
@@ -31,7 +31,7 @@ def make_assistant_message(
 
 
 def make_message(
-    role: str,
+    role: MessageRole,
     content: str,
     anonymized_content: str | None = None,
     anonymization_replacements: dict[str, str] | None = None,

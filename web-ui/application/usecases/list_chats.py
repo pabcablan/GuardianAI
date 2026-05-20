@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,7 @@ class ChatSummary:
     title: str
     last_message_preview: str
     updated_at: str
+
 
 class ListChatsUseCase:
     """Retrieve stored chat summaries."""

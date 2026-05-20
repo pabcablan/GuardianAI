@@ -1,8 +1,8 @@
 import type {
+  AiModel,
   AnonymizationSettings,
   ChatSummary,
   ChatThread,
-  AiModel,
   DocumentProcessingStatus,
   ModelReadinessStatus,
 } from "../types";
@@ -176,7 +176,9 @@ export class ChatApplicationService {
       return completedDocumentId;
     }
 
-    throw new Error("El procesamiento del documento finalizó sin un identificador.");
+    throw new Error(
+      "El procesamiento del documento finalizó sin un identificador.",
+    );
   }
 
   async streamSafeResponse(

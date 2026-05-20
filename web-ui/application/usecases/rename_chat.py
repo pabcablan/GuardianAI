@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class RenameChatCommand:
 
     chat_id: str
     title: str
+
 
 class RenameChatUseCase:
     """Validate and apply chat title changes."""

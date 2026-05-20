@@ -11,7 +11,10 @@ from infrastructure.adapters.orchestrator.base import (
     OrchestratorClientError,
     OrchestratorHttpClientBase,
 )
-from infrastructure.ports.external.orchestrator_response_port import (
+from infrastructure.ports.orchestrator_response_port import (
+    OrchestratorResponsePort,
+)
+from infrastructure.ports.orchestrator_response_types import (
     OrchestratorAnonymizedPdfPreview,
     OrchestratorAnonymizationPreview,
     OrchestratorAnonymizationPreviewRequest,
@@ -21,7 +24,6 @@ from infrastructure.ports.external.orchestrator_response_port import (
     OrchestratorDocumentAnonymizationPreviewRequest,
     OrchestratorDocumentResponseRequest,
     OrchestratorMessageResponseRequest,
-    OrchestratorResponsePort,
     OrchestratorStreamChunk,
     OrchestratorStreamCompleted,
     OrchestratorStreamEvent,
@@ -76,8 +78,9 @@ class HttpOrchestratorResponseClient(
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
                 response = client.get(
-                    f"{self.base_url}/api/documents/"
-                    f"{document_id}/anonymized-pdf-preview",
+                    self._build_url(
+                        f"/api/documents/{document_id}/anonymized-pdf-preview"
+                    ),
                     params={"anonymization_id": anonymization_id},
                 )
                 self._raise_for_status(response)
@@ -86,15 +89,9 @@ class HttpOrchestratorResponseClient(
                 "Orchestrator service is unavailable."
             ) from error
 
-        filename = "documento_anonimizado.pdf"
-        content_disposition = response.headers.get("content-disposition", "")
-        if "filename=" in content_disposition:
-            filename = (
-                content_disposition
-                .split("filename=", maxsplit=1)[1]
-                .strip()
-                .strip('"')
-            )
+        filename = self._resolve_preview_filename(
+            response.headers.get("content-disposition", "")
+        )
 
         return OrchestratorAnonymizedPdfPreview(
             filename=filename,
@@ -188,7 +185,7 @@ class HttpOrchestratorResponseClient(
 
         Args:
             path (str): The orchestrator API path.
-            json_payload (dict[str, str]): The JSON request body.
+            json_payload (dict[str, object]): The JSON request body.
 
         Returns:
             Iterator[OrchestratorStreamEvent]: Parsed stream events.
@@ -206,6 +203,8 @@ class HttpOrchestratorResponseClient(
             OrchestratorStreamEvent: The parsed stream event.
         """
         parsed = json.loads(payload)
+        if not isinstance(parsed, dict):
+            raise OrchestratorClientError("Invalid orchestrator event payload.")
         event_type = parsed["event"]
 
         if event_type == "chunk":
@@ -275,4 +274,16 @@ class HttpOrchestratorResponseClient(
                     payload.get("replacements", {}) or {}
                 ).items()
             },
+        )
+
+    def _resolve_preview_filename(self, content_disposition: str) -> str:
+        """Extract the PDF preview filename from a content-disposition header."""
+        if "filename=" not in content_disposition:
+            return "documento_anonimizado.pdf"
+
+        return (
+            content_disposition
+            .split("filename=", maxsplit=1)[1]
+            .strip()
+            .strip('"')
         )

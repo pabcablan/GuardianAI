@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from domain.document import DocumentAttachment
-from infrastructure.ports.internal.document_service_port import DocumentServicePort
+from infrastructure.ports.document_service_port import DocumentServicePort
 
 
 @dataclass(frozen=True)

@@ -1,10 +1,10 @@
-"""Check whether the required backend models are ready."""
+"""HTTP client for checking model-provider readiness."""
 from __future__ import annotations
 
 import httpx
 
 
-class ModelReadinessService:
+class ModelReadinessClient:
     """Query model-provider readiness for the models used by web-ui."""
 
     def __init__(
@@ -21,17 +21,13 @@ class ModelReadinessService:
 
     def get_readiness(self) -> dict[str, object]:
         """Return whether the required models are loaded."""
-        model_names = [self._privacy_model_name]
-        if self._document_model_name != self._privacy_model_name:
-            model_names.append(self._document_model_name)
-
         statuses: dict[str, str] = {}
         try:
             with httpx.Client(
                 base_url=self._base_url,
                 timeout=self._timeout_seconds,
             ) as client:
-                for model_name in model_names:
+                for model_name in self._required_model_names():
                     response = client.get(
                         "/model_status",
                         params={"name": model_name},
@@ -63,3 +59,10 @@ class ModelReadinessService:
             "message": "Modelos listos.",
             "models": statuses,
         }
+
+    def _required_model_names(self) -> list[str]:
+        """Return the unique backend model names required by the UI."""
+        model_names = [self._privacy_model_name]
+        if self._document_model_name != self._privacy_model_name:
+            model_names.append(self._document_model_name)
+        return model_names

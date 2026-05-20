@@ -9,13 +9,13 @@ import {
 } from "./chatWorkspaceUtils";
 
 interface UseChatCollectionOptions {
-  service: ChatApplicationService;
   onError: (message: string | null) => void;
+  service: ChatApplicationService;
 }
 
 export function useChatCollection({
-  service,
   onError,
+  service,
 }: UseChatCollectionOptions) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selectedChatId, setSelectedChatId] = useState("");
@@ -93,60 +93,67 @@ export function useChatCollection({
     });
   }
 
-  function appendAssistantMessage(chatId: string, message: ChatMessage): void {
+  function updateChatSummary(
+    chatId: string,
+    updates: Partial<ChatSummary>,
+  ): void {
     setChats((currentChats) =>
       currentChats.map((chat) =>
         chat.id === chatId
           ? {
               ...chat,
-              lastMessagePreview: message.content,
-              updatedAt: message.createdAt,
+              ...updates,
             }
           : chat,
       ),
     );
+  }
 
+  function updateSelectedChat(
+    chatId: string,
+    updater: (chat: ChatThread) => ChatThread,
+    createIfMissing = false,
+  ): void {
     setSelectedChat((currentChat) => {
       const targetChat =
-        currentChat?.id === chatId ? currentChat : createEmptyChat(chatId);
+        currentChat?.id === chatId
+          ? currentChat
+          : createIfMissing
+            ? createEmptyChat(chatId)
+            : null;
 
-      if (targetChat.id !== chatId) {
+      if (!targetChat || targetChat.id !== chatId) {
         return currentChat;
       }
 
-      return {
-        ...targetChat,
-        lastMessagePreview: message.content,
-        updatedAt: message.createdAt,
-        messages: [...targetChat.messages, message],
-      };
+      return updater(targetChat);
     });
   }
 
-  function appendChatMessage(chatId: string, message: ChatMessage): void {
-    setChats((currentChats) =>
-      currentChats.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              lastMessagePreview: message.content,
-              updatedAt: message.createdAt,
-            }
-          : chat,
-      ),
-    );
+  function appendMessage(chatId: string, message: ChatMessage): void {
+    updateChatSummary(chatId, {
+      lastMessagePreview: message.content,
+      updatedAt: message.createdAt,
+    });
 
-    setSelectedChat((currentChat) => {
-      const targetChat =
-        currentChat?.id === chatId ? currentChat : createEmptyChat(chatId);
-
-      return {
-        ...targetChat,
+    updateSelectedChat(
+      chatId,
+      (chat) => ({
+        ...chat,
         lastMessagePreview: message.content,
         updatedAt: message.createdAt,
-        messages: [...targetChat.messages, message],
-      };
-    });
+        messages: [...chat.messages, message],
+      }),
+      true,
+    );
+  }
+
+  function appendAssistantMessage(chatId: string, message: ChatMessage): void {
+    appendMessage(chatId, message);
+  }
+
+  function appendChatMessage(chatId: string, message: ChatMessage): void {
+    appendMessage(chatId, message);
   }
 
   function appendAssistantChunk(
@@ -166,12 +173,8 @@ export function useChatCollection({
       ),
     );
 
-    setSelectedChat((currentChat) => {
-      if (!currentChat || currentChat.id !== chatId) {
-        return currentChat;
-      }
-
-      const messages = currentChat.messages.map((message) => {
+    updateSelectedChat(chatId, (chat) => {
+      const messages = chat.messages.map((message) => {
         if (message.id !== messageId) {
           return message;
         }
@@ -185,12 +188,9 @@ export function useChatCollection({
         (message) => message.id === messageId,
       );
 
-      const nextPreview =
-        streamedMessage?.content ?? currentChat.lastMessagePreview;
-
       return {
-        ...currentChat,
-        lastMessagePreview: nextPreview,
+        ...chat,
+        lastMessagePreview: streamedMessage?.content ?? chat.lastMessagePreview,
         updatedAt: "Ahora",
         messages,
       };
@@ -207,53 +207,41 @@ export function useChatCollection({
     extractionMethod?: string,
     originalContent?: string,
   ): void {
-    setSelectedChat((currentChat) => {
-      if (!currentChat || currentChat.id !== chatId) {
-        return currentChat;
-      }
-
-      return {
-        ...currentChat,
-        messages: currentChat.messages.map((message) =>
-          message.id === messageId
-            ? {
-                ...message,
-                anonymizedContent,
-                pendingApproval: anonymizationId
-                  ? {
-                      anonymizationId,
-                      anonymizedContent,
-                      replacementCount,
-                      documentId,
-                      extractionMethod,
-                      originalContent,
-                    }
-                  : message.pendingApproval,
-              }
-            : message,
-        ),
-      };
-    });
+    updateSelectedChat(chatId, (chat) => ({
+      ...chat,
+      messages: chat.messages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              anonymizedContent,
+              pendingApproval: anonymizationId
+                ? {
+                    anonymizationId,
+                    anonymizedContent,
+                    replacementCount,
+                    documentId,
+                    extractionMethod,
+                    originalContent,
+                  }
+                : message.pendingApproval,
+            }
+          : message,
+      ),
+    }));
   }
 
   function clearMessageApproval(chatId: string, messageId: string): void {
-    setSelectedChat((currentChat) => {
-      if (!currentChat || currentChat.id !== chatId) {
-        return currentChat;
-      }
-
-      return {
-        ...currentChat,
-        messages: currentChat.messages.map((message) =>
-          message.id === messageId
-            ? {
-                ...message,
-                pendingApproval: undefined,
-              }
-            : message,
-        ),
-      };
-    });
+    updateSelectedChat(chatId, (chat) => ({
+      ...chat,
+      messages: chat.messages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              pendingApproval: undefined,
+            }
+          : message,
+      ),
+    }));
   }
 
   async function createChat(): Promise<string | null> {
@@ -298,25 +286,11 @@ export function useChatCollection({
     try {
       await service.renameChat(chatId, normalizedTitle);
 
-      setChats((currentChats) =>
-        currentChats.map((chat) =>
-          chat.id === chatId
-            ? {
-                ...chat,
-                title: normalizedTitle,
-              }
-            : chat,
-        ),
-      );
-
-      setSelectedChat((currentChat) =>
-        currentChat?.id === chatId
-          ? {
-              ...currentChat,
-              title: normalizedTitle,
-            }
-          : currentChat,
-      );
+      updateChatSummary(chatId, { title: normalizedTitle });
+      updateSelectedChat(chatId, (chat) => ({
+        ...chat,
+        title: normalizedTitle,
+      }));
 
       return true;
     } catch (error) {

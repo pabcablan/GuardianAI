@@ -1,7 +1,7 @@
 """Use case for deleting chat conversations."""
 from __future__ import annotations
 
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 class DeleteChatUseCase:

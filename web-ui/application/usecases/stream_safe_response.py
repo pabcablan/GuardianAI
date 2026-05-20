@@ -4,9 +4,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from infrastructure.ports.external.orchestrator_response_port import (
-    OrchestratorDocumentResponseRequest,
+from infrastructure.ports.orchestrator_response_port import (
     OrchestratorResponsePort,
+)
+from infrastructure.ports.orchestrator_response_types import (
+    OrchestratorDocumentResponseRequest,
     OrchestratorStreamEvent,
 )
 

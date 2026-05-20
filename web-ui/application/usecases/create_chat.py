@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,7 @@ class CreateChatResult:
 
     chat_id: str
     title: str
+
 
 class CreateChatUseCase:
     """Create chats and apply the default title when needed."""

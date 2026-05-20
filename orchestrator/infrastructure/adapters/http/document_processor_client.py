@@ -55,7 +55,7 @@ class HttpDocumentProcessingClient(
             "stage": "uploading",
             "current": 1,
             "total": 3,
-            "message": "Sending document to document processor...",
+            "message": "Extrayendo texto",
         }
 
         try:

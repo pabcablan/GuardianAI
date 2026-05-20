@@ -1,11 +1,9 @@
 """Build anonymized chat history to send to orchestrator."""
 from __future__ import annotations
 
-from infrastructure.ports.external.orchestrator_response_port import (
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.orchestrator_response_types import (
     OrchestratorChatHistoryMessage,
-)
-from infrastructure.ports.internal.chat_repository_port import (
-    ChatRepositoryPort,
 )
 
 

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from domain.chat import Chat as ChatDetail
-from infrastructure.ports.internal.chat_repository_port import ChatRepositoryPort
+from infrastructure.ports.chat_repository_port import ChatRepositoryPort
 
 
 class LoadChatUseCase:
