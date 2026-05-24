@@ -5,6 +5,7 @@ import type {
   ModelReadinessResponse,
 } from "./chatApiTypes";
 
+// Map the backend readiness payload into the frontend readiness model.
 export function mapModelReadinessResponse(
   payload: ModelReadinessResponse,
 ): ModelReadinessStatus {
@@ -14,6 +15,7 @@ export function mapModelReadinessResponse(
   };
 }
 
+// Map one backend chat summary into the frontend sidebar model.
 export function mapChatSummaryResponse(
   chat: ChatSummaryResponse,
 ): ChatSummary {
@@ -25,6 +27,7 @@ export function mapChatSummaryResponse(
   };
 }
 
+// Map one full backend chat response into the frontend thread model.
 export function mapChatDetailResponse(payload: ChatDetailResponse): ChatThread {
   return {
     id: payload.chat_id,

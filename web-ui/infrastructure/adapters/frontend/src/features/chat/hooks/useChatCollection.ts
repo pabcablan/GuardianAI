@@ -13,6 +13,7 @@ interface UseChatCollectionOptions {
   service: ChatApplicationService;
 }
 
+// Manage the chat list, the selected chat, and local message updates.
 export function useChatCollection({
   onError,
   service,
@@ -35,6 +36,7 @@ export function useChatCollection({
     void loadChatDetail(selectedChatId);
   }, [selectedChatId]);
 
+  // Load all chat summaries and keep the current selection in sync.
   async function loadChats(preferredChatId?: string): Promise<string | null> {
     setIsLoadingChats(true);
     onError(null);
@@ -63,6 +65,7 @@ export function useChatCollection({
     }
   }
 
+  // Load one full chat thread when the selected chat changes.
   async function loadChatDetail(chatId: string): Promise<void> {
     onError(null);
 
@@ -76,6 +79,7 @@ export function useChatCollection({
     }
   }
 
+  // Sync one full chat thread back into the sidebar summary list.
   function syncChatSummary(chat: ChatThread): void {
     setChats((currentChats) => {
       const nextSummary = createChatSummary(chat);
@@ -93,6 +97,7 @@ export function useChatCollection({
     });
   }
 
+  // Patch one existing chat summary in the local sidebar state.
   function updateChatSummary(
     chatId: string,
     updates: Partial<ChatSummary>,
@@ -109,6 +114,7 @@ export function useChatCollection({
     );
   }
 
+  // Update the selected chat in place and optionally create it if missing.
   function updateSelectedChat(
     chatId: string,
     updater: (chat: ChatThread) => ChatThread,
@@ -130,6 +136,7 @@ export function useChatCollection({
     });
   }
 
+  // Append one full message to both the sidebar summary and the selected chat.
   function appendMessage(chatId: string, message: ChatMessage): void {
     updateChatSummary(chatId, {
       lastMessagePreview: message.content,
@@ -148,14 +155,17 @@ export function useChatCollection({
     );
   }
 
+  // Append one assistant message after it is first created.
   function appendAssistantMessage(chatId: string, message: ChatMessage): void {
     appendMessage(chatId, message);
   }
 
+  // Append one user-facing chat message to the current thread.
   function appendChatMessage(chatId: string, message: ChatMessage): void {
     appendMessage(chatId, message);
   }
 
+  // Append one streamed assistant chunk to the existing assistant message.
   function appendAssistantChunk(
     chatId: string,
     messageId: string,
@@ -197,6 +207,7 @@ export function useChatCollection({
     });
   }
 
+  // Store anonymized content and approval metadata on one user message.
   function updateUserAnonymizedContent(
     chatId: string,
     messageId: string,
@@ -230,6 +241,7 @@ export function useChatCollection({
     }));
   }
 
+  // Clear the pending approval state from one message after confirmation.
   function clearMessageApproval(chatId: string, messageId: string): void {
     updateSelectedChat(chatId, (chat) => ({
       ...chat,
@@ -244,6 +256,7 @@ export function useChatCollection({
     }));
   }
 
+  // Create a new chat from the UI and select it.
   async function createChat(): Promise<string | null> {
     onError(null);
 
@@ -258,6 +271,7 @@ export function useChatCollection({
     }
   }
 
+  // Ensure there is an active chat before sending a new message.
   async function ensureActiveChat(): Promise<string | null> {
     if (selectedChatId) {
       return selectedChatId;
@@ -274,6 +288,7 @@ export function useChatCollection({
     return chatId;
   }
 
+  // Rename one chat and mirror the change in local state.
   async function renameChat(chatId: string, title: string): Promise<boolean> {
     const normalizedTitle = title.trim();
     if (!normalizedTitle) {
@@ -299,6 +314,7 @@ export function useChatCollection({
     }
   }
 
+  // Delete one chat and move the selection if needed.
   async function deleteChat(chatId: string): Promise<boolean> {
     onError(null);
 
@@ -324,6 +340,7 @@ export function useChatCollection({
     }
   }
 
+  // Switch the current chat selection from the sidebar.
   function selectChat(chatId: string): void {
     setSelectedChatId(chatId);
   }

@@ -7,6 +7,7 @@ interface MarkdownTokenMatch {
   type: "bold" | "boldItalic" | "italic" | "code";
 }
 
+// Find the next supported inline markdown token inside one text slice.
 function findNextMarkdownToken(content: string): MarkdownTokenMatch | null {
   const patterns: Array<{
     expression: RegExp;
@@ -51,6 +52,7 @@ function findNextMarkdownToken(content: string): MarkdownTokenMatch | null {
   return nextMatch;
 }
 
+// Render inline markdown tokens such as bold, italic, and inline code.
 function renderInlineMarkdown(content: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   let cursor = 0;
@@ -101,6 +103,7 @@ function renderInlineMarkdown(content: string): ReactNode[] {
   return nodes;
 }
 
+// Render one assistant message with lightweight markdown support.
 export function renderAssistantMarkdown(content: string): ReactNode {
   const blocks = content.split(/\n{2,}/).filter((block) => block.trim().length);
 

@@ -20,6 +20,7 @@ interface SidebarProps {
   onToggleSidebar: () => void;
 }
 
+// Render the sidebar with chat navigation, model selection, and settings access.
 export function Sidebar({
   chats,
   isExpanded,
@@ -74,11 +75,13 @@ export function Sidebar({
     };
   }, []);
 
+  // Open the per-chat actions modal for rename and delete operations.
   function openChatActions(chat: ChatSummary): void {
     setActiveChat(chat);
     setDraftTitle(chat.title);
   }
 
+  // Close the per-chat actions modal unless an action is still running.
   function closeChatActions(): void {
     if (isApplyingAction) {
       return;
@@ -88,6 +91,7 @@ export function Sidebar({
     setDraftTitle("");
   }
 
+  // Rename the active chat and close the modal when the update succeeds.
   async function handleRenameChat(): Promise<void> {
     if (!activeChat) {
       return;
@@ -102,6 +106,7 @@ export function Sidebar({
     }
   }
 
+  // Delete the active chat and close the modal when the removal succeeds.
   async function handleDeleteChat(): Promise<void> {
     if (!activeChat) {
       return;
@@ -118,6 +123,7 @@ export function Sidebar({
 
   const selectedModelPricing = AI_MODEL_PRICING[selectedModel];
 
+  // Render the sidebar with chat navigation, model selection, and settings access.
   return (
     <aside className={`sidebar ${isExpanded ? "" : "sidebar--collapsed"}`.trim()}>
       <div className="sidebar__header">

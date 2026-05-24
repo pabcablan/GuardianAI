@@ -1,21 +1,15 @@
 export type MessageRole = "user" | "assistant";
 
-export type AiModel =
-  | "gpt-5-nano"
-  | "gpt-4.1-nano"
-  | "gpt-5.4-nano"
-  | "gpt-5-mini"
-  | "gpt-4.1-mini"
-  | "gpt-5.4-mini";
-
-export const AI_MODEL_OPTIONS: AiModel[] = [
+export const AI_MODEL_OPTIONS = [
   "gpt-5-nano",
   "gpt-4.1-nano",
   "gpt-5.4-nano",
   "gpt-5-mini",
   "gpt-4.1-mini",
   "gpt-5.4-mini",
-];
+ ] as const;
+
+export type AiModel = (typeof AI_MODEL_OPTIONS)[number];
 
 export const AI_MODEL_PRICING: Record<
   AiModel,

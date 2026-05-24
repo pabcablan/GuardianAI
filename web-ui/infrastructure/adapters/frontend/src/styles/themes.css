@@ -108,7 +108,7 @@
   /* Ghost / buttons */
   --surface-ghost-bg: rgba(16, 32, 42, 0.045);
   --surface-ghost-strong-bg: rgba(16, 32, 42, 0.08);
-  --surface-button-bg: #e7e7e9;
+  --surface-button-bg: #e0e0e0;
   --surface-user-message-bg: #dedee2;
   --surface-processing-card-bg: #e1e6ea;
   --search-surface-bg: #ffffff;

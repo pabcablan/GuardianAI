@@ -14,6 +14,7 @@ interface ConversationComposerProps {
   statusMessage: string;
 }
 
+// Render the chat composer with draft, upload, preview, and send controls.
 export function ConversationComposer({
   draft,
   fileInputRef,
@@ -27,10 +28,12 @@ export function ConversationComposer({
   shouldPreviewAnonymizedText,
   statusMessage,
 }: ConversationComposerProps) {
+  // Forward the currently selected file from the hidden input.
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     onFileSelect(event.target.files?.[0] ?? null);
   }
 
+  // Submit the current draft when the user presses Enter without Shift.
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (
       event.key === "Enter" &&

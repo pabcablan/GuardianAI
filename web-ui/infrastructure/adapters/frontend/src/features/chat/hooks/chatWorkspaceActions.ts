@@ -51,6 +51,7 @@ interface SendTextMessageArgs {
   shouldPreviewAnonymizedText: boolean;
 }
 
+// Set the temporary document progress status shown while processing an upload.
 function setDocumentStatus(
   filename: string,
   current: number,
@@ -68,6 +69,7 @@ function setDocumentStatus(
   });
 }
 
+// Send one document message and drive either preview or safe-response streaming.
 export async function sendDocumentMessage({
   actions,
   activeChatId,
@@ -147,6 +149,7 @@ export async function sendDocumentMessage({
   );
 }
 
+// Send one text message and drive either preview or safe-response streaming.
 export async function sendTextMessage({
   actions,
   activeChatId,

@@ -17,6 +17,7 @@ import {
 import { useChatCollection } from "./useChatCollection";
 import { useModelReadiness } from "./useModelReadiness";
 
+// Orchestrate the full chat workspace state and high-level user actions.
 export function useChatWorkspace() {
   const serviceRef = useRef(createChatApplicationService());
   const [isResponding, setIsResponding] = useState(false);
@@ -49,10 +50,12 @@ export function useChatWorkspace() {
   const isSendLocked =
     !modelReadiness.ready || isResponding || documentProcessingStatus !== null;
 
+  // Create a new chat from the workspace toolbar or sidebar.
   async function createChat(): Promise<void> {
     await createChatInternal();
   }
 
+  // Send one text message or one document through the main chat workflow.
   async function sendMessage(
     content: string,
     pendingFile: File | null = null,
@@ -120,6 +123,7 @@ export function useChatWorkspace() {
     }
   }
 
+  // Continue the chat after the user approves one anonymized message preview.
   async function approveAnonymizedMessage(
     message: ChatMessage,
     model: AiModel,
@@ -155,6 +159,7 @@ export function useChatWorkspace() {
     }
   }
 
+  // Open the anonymized PDF preview linked to one pending document message.
   async function openAnonymizedPdfPreview(message: ChatMessage): Promise<void> {
     if (!selectedChatId || !message.pendingApproval?.documentId) {
       return;

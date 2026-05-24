@@ -4,6 +4,7 @@ import type {
   SafeStreamResponse,
 } from "./chatApiTypes";
 
+// Read one NDJSON response line by line and forward each parsed line to a callback.
 export async function consumeNdjsonStream(
   response: Response,
   onLine: (rawLine: string) => Promise<void> | void,
@@ -43,6 +44,7 @@ export async function consumeNdjsonStream(
   }
 }
 
+// Handle one document stream line and return the final document ID when it arrives.
 export function handleDocumentStreamLine(
   rawLine: string,
   filename: string,
@@ -86,6 +88,7 @@ export function handleDocumentStreamLine(
   return null;
 }
 
+// Handle one safe response stream line and forward chunks or prompt updates.
 export async function handleSafeStreamLine(
   rawLine: string,
   onChunk: (chunk: string) => void,

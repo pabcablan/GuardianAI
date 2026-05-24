@@ -7,6 +7,7 @@ import {
   MODEL_READINESS_POLL_INTERVAL_MS,
 } from "./chatWorkspaceUtils";
 
+// Poll the backend until the required models are ready for chat use.
 export function useModelReadiness(
   service: ChatApplicationService,
 ): ModelReadinessStatus {
@@ -18,6 +19,7 @@ export function useModelReadiness(
     let isActive = true;
     let timeoutId: number | null = null;
 
+    // Refresh the current readiness state and reschedule polling when needed.
     async function refreshModelReadiness(): Promise<void> {
       try {
         const readiness = await service.getModelReadiness();

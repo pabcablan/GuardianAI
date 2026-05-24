@@ -10,6 +10,7 @@ interface ConversationProgressStackProps {
   responseProcessingStatus: ResponseProcessingStatus | null;
 }
 
+// Render readiness and progress cards for model startup and active processing.
 export function ConversationProgressStack({
   documentProcessingStatus,
   modelReadiness,

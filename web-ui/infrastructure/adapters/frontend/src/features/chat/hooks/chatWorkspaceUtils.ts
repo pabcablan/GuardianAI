@@ -12,10 +12,12 @@ export const INITIAL_MODEL_READINESS_STATUS: ModelReadinessStatus = {
   message: "Comprobando si el modelo está cargado...",
 };
 
+// Normalize unknown failures into one user-facing error message.
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Error inesperado.";
 }
 
+// Create the empty assistant message used as the initial stream target.
 export function createAssistantMessage(): ChatMessage {
   return {
     id: `assistant-stream-${crypto.randomUUID()}`,
@@ -25,6 +27,7 @@ export function createAssistantMessage(): ChatMessage {
   };
 }
 
+// Create one local user message before it is sent to the backend.
 export function createUserMessage(content: string): ChatMessage {
   return {
     id: `user-stream-${crypto.randomUUID()}`,
@@ -34,6 +37,7 @@ export function createUserMessage(content: string): ChatMessage {
   };
 }
 
+// Create one empty chat shell before the full thread is loaded.
 export function createEmptyChat(chatId: string): ChatThread {
   return {
     id: chatId,
@@ -44,6 +48,7 @@ export function createEmptyChat(chatId: string): ChatThread {
   };
 }
 
+// Build one sidebar summary from the current state of a full chat thread.
 export function createChatSummary(chat: ChatThread): ChatSummary {
   return {
     id: chat.id,

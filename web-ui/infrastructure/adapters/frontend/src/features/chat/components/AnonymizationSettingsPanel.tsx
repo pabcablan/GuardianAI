@@ -57,6 +57,7 @@ const SETTING_OPTIONS: Array<{
   },
 ];
 
+// Render the anonymization settings panel used to tune protection rules.
 export function AnonymizationSettingsPanel({
   settings,
   onChange,

@@ -20,6 +20,7 @@ interface HighlightedSegment {
 
 const ANONYMIZATION_PLACEHOLDER_PATTERN = /\[[A-Z0-9_]+\]/g;
 
+// Split one original message into normal and highlighted anonymized segments.
 function buildHighlightedSegments(
   originalContent: string,
   anonymizedContent?: string,
@@ -104,6 +105,7 @@ function buildHighlightedSegments(
   return segments.filter((segment) => segment.content.length > 0);
 }
 
+// Render one message body with markdown or anonymization highlights when needed.
 function renderMessageContent(message: ChatMessage): ReactNode {
   if (message.role !== "user" || !message.anonymizedContent) {
     return message.content;
@@ -139,6 +141,7 @@ function renderMessageContent(message: ChatMessage): ReactNode {
   });
 }
 
+// Render the current message list, including approval and preview actions.
 export function ConversationMessageList({
   chat,
   errorMessage,

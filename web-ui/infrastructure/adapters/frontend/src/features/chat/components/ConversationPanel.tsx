@@ -32,6 +32,7 @@ interface ConversationPanelProps {
   onSubmit: () => void;
 }
 
+// Render the full conversation area with progress cards, messages, and composer.
 export function ConversationPanel({
   chat,
   draft,
@@ -74,6 +75,7 @@ export function ConversationPanel({
     isResponding,
   ]);
 
+  // Mark the conversation as a valid drop target while dragging a PDF over it.
   function handleDragOver(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     if (isInteractionLocked) {
@@ -82,11 +84,13 @@ export function ConversationPanel({
     setIsDragOver(true);
   }
 
+  // Clear the drag state when the pointer leaves the conversation area.
   function handleDragLeave(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     setIsDragOver(false);
   }
 
+  // Accept one dropped PDF file and forward it to the workspace.
   function handleDrop(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     setIsDragOver(false);

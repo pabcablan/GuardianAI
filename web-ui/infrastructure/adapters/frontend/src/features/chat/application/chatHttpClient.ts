@@ -1,12 +1,14 @@
 export class ChatHttpClient {
   constructor(private readonly apiBaseUrl: string) {}
 
+  // Fetch one JSON payload with GET and type it at the call site.
   async getJson<T>(path: string): Promise<T> {
     const response = await fetch(`${this.apiBaseUrl}${path}`);
     await this.ensureSuccess(response);
     return (await response.json()) as T;
   }
 
+  // Send one JSON body with POST and parse the JSON response.
   async postJson<T>(
     path: string,
     payload: unknown,
@@ -22,6 +24,7 @@ export class ChatHttpClient {
     return (await response.json()) as T;
   }
 
+  // Send JSON with POST when the caller needs the raw Response, usually for streams.
   async postJsonForResponse(path: string, payload: unknown): Promise<Response> {
     const response = await fetch(`${this.apiBaseUrl}${path}`, {
       method: "POST",
@@ -34,6 +37,7 @@ export class ChatHttpClient {
     return response;
   }
 
+  // Send multipart form data and keep the raw Response for streamed processing.
   async postFormForResponse(
     path: string,
     formData: FormData,
@@ -46,6 +50,7 @@ export class ChatHttpClient {
     return response;
   }
 
+  // Send a partial JSON update with PATCH when no response body is needed.
   async patchJson(path: string, payload: unknown): Promise<void> {
     const response = await fetch(`${this.apiBaseUrl}${path}`, {
       method: "PATCH",
@@ -57,6 +62,7 @@ export class ChatHttpClient {
     await this.ensureSuccess(response);
   }
 
+  // Delete one backend resource and only fail if the HTTP status is not successful.
   async delete(path: string): Promise<void> {
     const response = await fetch(`${this.apiBaseUrl}${path}`, {
       method: "DELETE",
@@ -64,12 +70,14 @@ export class ChatHttpClient {
     await this.ensureSuccess(response);
   }
 
+  // Download one binary payload, used for files such as anonymized PDF previews.
   async getBlob(path: string): Promise<Blob> {
     const response = await fetch(`${this.apiBaseUrl}${path}`);
     await this.ensureSuccess(response);
     return await response.blob();
   }
 
+  // Normalize failed HTTP responses into one frontend Error with the best detail available.
   private async ensureSuccess(response: Response): Promise<void> {
     if (response.ok) {
       return;

@@ -22,6 +22,7 @@ const DEFAULT_ANONYMIZATION_SETTINGS: AnonymizationSettings = {
   relevantCodes: "anonymize",
 };
 
+// Render the main chat screen and wire it to the workspace hooks.
 export function ChatWorkspace() {
   const {
     chats,
@@ -71,6 +72,7 @@ export function ChatWorkspace() {
     window.localStorage.setItem("guardianai-theme", theme);
   }, [theme]);
 
+  // Accept one selected PDF file when the workspace is ready for uploads.
   function handleFileSelect(file: File | null) {
     if (isSendLocked) {
       return;
@@ -89,6 +91,7 @@ export function ChatWorkspace() {
     setPendingFile(file);
   }
 
+  // Send the current draft or pending document through the main chat flow.
   async function handleSubmit() {
     const didSend = await sendMessage(
       draft,
@@ -105,6 +108,7 @@ export function ChatWorkspace() {
     setPendingFile(null);
   }
 
+  // Update one anonymization rule from the settings panel.
   function updateAnonymizationSetting(
     option: AnonymizationOption,
     mode: AnonymizationMode,

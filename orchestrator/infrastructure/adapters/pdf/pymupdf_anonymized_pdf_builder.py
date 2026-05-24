@@ -13,7 +13,7 @@ from infrastructure.ports.anonymized_pdf_builder_port import (
 
 
 class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
-    """Replace visible PDF text occurrences using PyMuPDF redactions."""
+    """Overlay visible PDF text occurrences with placeholder labels."""
 
     _NAMESPACED_PLACEHOLDER_PATTERN = re.compile(
         r"^\[([A-F0-9]{8})_(.+)\]$",
@@ -49,17 +49,18 @@ class PyMuPdfAnonymizedPdfBuilder(AnonymizedPdfBuilderPort):
                         continue
 
                     for area in page.search_for(original_text):
-                        page.add_redact_annot(
-                            area,
-                            text="",
-                            fill=(1, 1, 1),
-                        )
                         page_replacements.append((area, placeholder))
 
                 if page_replacements:
-                    page.apply_redactions()
                     for area, placeholder in page_replacements:
                         text_area = self._expand_text_area(page, area)
+                        page.draw_rect(
+                            text_area,
+                            color=(1, 1, 1),
+                            fill=(1, 1, 1),
+                            width=0,
+                            overlay=True,
+                        )
                         page.insert_textbox(
                             text_area,
                             self._display_placeholder(placeholder),
