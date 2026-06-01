@@ -1,6 +1,6 @@
 # Sistema Bastión
 
-Sistema Bastión orientado a la anonimización de información sensible antes de su envío a servicios externos de inteligencia artificial (En el caso de ese sistema OpenAI).
+Sistema Bastión orientado a la anonimización de información sensible antes de su envío a servicios externos de inteligencia artificial (En el caso de este sistema OpenAI).
 
 La aplicación está formada por distintos módulos independientes. La mayoría se despliegan mediante Docker Compose, mientras que el módulo proveedor de modelos se ejecuta por separado para poder ejecutarse en un equipo a parte por la necesidad de más requisitos de hardware.
 
