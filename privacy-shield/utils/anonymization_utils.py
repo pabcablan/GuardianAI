@@ -13,6 +13,14 @@ _DOCUMENT_LINE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _DATE_LINE_PATTERN = re.compile(r"^\d{2}/\d{2}/\d{4}$")
+_ADDRESS_FIELD_LABEL_PATTERN = re.compile(
+    r"^(Calle:\s*\*?|Calle:?|\*|Número:?|Puerta/Piso/Otros:?|Código Postal:?|Población:?|Municipio:?|Provincia:?)$",
+    re.IGNORECASE,
+)
+_ADDRESS_SECTION_HEADER_PATTERN = re.compile(
+    r"^Domicilio social:?$",
+    re.IGNORECASE,
+)
 
 
 def redact_text(original_text: str, entities_json: dict) -> tuple[str, dict]:
@@ -49,6 +57,19 @@ def _augment_entities(original_text: str, entities_json: dict) -> dict:
             if _normalize_entity_value(name) not in existing_names:
                 normalized_entities["NOMBRE"].append(name)
                 existing_names.add(_normalize_entity_value(name))
+
+    reconstructed_addresses = _extract_structured_address_values(original_text)
+    if reconstructed_addresses:
+        existing_addresses = {
+            _normalize_entity_value(value)
+            for value in normalized_entities.get("DIR", [])
+        }
+        normalized_entities.setdefault("DIR", [])
+        for address_value in reconstructed_addresses:
+            normalized_address = _normalize_entity_value(address_value)
+            if normalized_address not in existing_addresses:
+                normalized_entities["DIR"].append(address_value)
+                existing_addresses.add(normalized_address)
 
     return normalized_entities
 
@@ -112,7 +133,10 @@ def _get_sorted_entities(entities_json: dict) -> list[tuple[str, str]]:
 
         for value in values:
             normalized_value = _normalize_entity_value(str(value))
-            if len(normalized_value) <= 2:
+            if len(normalized_value) <= 2 and not _should_keep_short_entity(
+                normalized_value,
+                category,
+            ):
                 continue
 
             entity = (normalized_value, category)
@@ -162,3 +186,71 @@ def _build_entity_pattern(value: str) -> re.Pattern[str]:
 def _normalize_entity_value(value: str) -> str:
     """Normalize whitespace while preserving the visible token content."""
     return " ".join(value.split())
+
+
+def _extract_structured_address_values(text: str) -> list[str]:
+    """Extract address field values from linealized form sections."""
+    lines = [line.strip() for line in text.splitlines()]
+    extracted_values: list[str] = []
+    inside_address_section = False
+    index = 0
+
+    while index < len(lines):
+        line = lines[index]
+        if not line:
+            index += 1
+            continue
+
+        if _ADDRESS_SECTION_HEADER_PATTERN.fullmatch(line):
+            inside_address_section = True
+            index += 1
+            continue
+
+        if inside_address_section and line.endswith(":") and not _ADDRESS_FIELD_LABEL_PATTERN.fullmatch(line):
+            break
+
+        if inside_address_section and _ADDRESS_FIELD_LABEL_PATTERN.fullmatch(line):
+            next_value = _collect_next_field_value(lines, index + 1)
+            if next_value:
+                extracted_values.append(next_value)
+
+        index += 1
+
+    return extracted_values
+
+
+def _collect_next_field_value(lines: list[str], start_index: int) -> str | None:
+    """Collect the first real value that follows one form field label."""
+    cursor = start_index
+    collected_parts: list[str] = []
+
+    while cursor < len(lines):
+        candidate = lines[cursor].strip()
+        if not candidate:
+            cursor += 1
+            continue
+
+        if _ADDRESS_FIELD_LABEL_PATTERN.fullmatch(candidate):
+            break
+
+        if candidate.endswith(":") and not collected_parts:
+            break
+
+        if candidate.endswith(":") and collected_parts:
+            break
+
+        collected_parts.append(candidate)
+        break
+
+    if not collected_parts:
+        return None
+
+    return " ".join(collected_parts).strip()
+
+
+def _should_keep_short_entity(value: str, category: str) -> bool:
+    """Allow short address fragments such as house numbers to be anonymized."""
+    if category != "DIR":
+        return False
+
+    return bool(re.fullmatch(r"[\dA-Z/-]{1,4}", value, re.IGNORECASE))
