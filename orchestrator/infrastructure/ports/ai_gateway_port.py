@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 
@@ -39,16 +39,16 @@ class AiGatewayPort(ABC):
     """Define how orchestrator consumes assistant response streams."""
 
     @abstractmethod
-    def stream_response(
+    async def stream_response(
         self,
         request: AssistantStreamRequest,
-    ) -> Iterator[str]:
+    ) -> AsyncIterator[str]:
         """Stream an assistant response for an anonymized prompt.
 
         Args:
             request (AssistantStreamRequest): The assistant stream request.
 
         Returns:
-            Iterator[str]: The anonymized assistant response chunks.
+            AsyncIterator[str]: The anonymized assistant response chunks.
         """
         ...

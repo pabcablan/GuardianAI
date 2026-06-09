@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from domain.anonymized_pdf_preview import AnonymizedPdfPreview
@@ -33,7 +33,7 @@ class OrchestrationService:
         self._document_registry = container.document_registry
         self._anonymization_registry = container.anonymization_registry
 
-    def stream_message_response(
+    async def stream_message_response(
         self,
         chat_id: str,
         text: str,
@@ -41,7 +41,7 @@ class OrchestrationService:
         settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
         persisted_replacements: dict[str, str] | None = None,
-    ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
+    ) -> tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]:
         """Anonymize a user prompt and stream a safe assistant response.
 
         Args:
@@ -50,8 +50,8 @@ class OrchestrationService:
             model (str): The AI model selected by the user.
 
         Returns:
-            tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]: The anonymized
-            prompt metadata and safe stream events.
+            tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]: The
+            anonymized prompt metadata and safe stream events.
         """
         started_at = time.perf_counter()
         LOGGER.info(
@@ -59,7 +59,7 @@ class OrchestrationService:
             chat_id,
             len(text),
         )
-        anonymized_prompt, events = self.stream_safe_response_for_text(
+        anonymized_prompt, events = await self.stream_safe_response_for_text(
             chat_id=chat_id,
             text=text,
             model=model,
@@ -74,7 +74,7 @@ class OrchestrationService:
         )
         return anonymized_prompt, events
 
-    def preview_message_anonymization(
+    async def preview_message_anonymization(
         self,
         chat_id: str,
         text: str,
@@ -89,13 +89,13 @@ class OrchestrationService:
         Returns:
             AnonymizedPrompt: The anonymized text metadata.
         """
-        return self._anonymize_and_store(
+        return await self._anonymize_and_store(
             chat_id=chat_id,
             text=text,
             settings=settings,
         )
 
-    def preview_document_anonymization(
+    async def preview_document_anonymization(
         self,
         chat_id: str,
         document_id: str,
@@ -120,7 +120,7 @@ class OrchestrationService:
         if not text.strip():
             raise ValueError("Document processor returned empty text.")
 
-        anonymized_prompt = self._anonymize_and_store(
+        anonymized_prompt = await self._anonymize_and_store(
             chat_id=chat_id,
             text=text,
             settings=settings,
@@ -135,7 +135,7 @@ class OrchestrationService:
         model: str,
         history: list[AssistantMessage] | None = None,
         persisted_replacements: dict[str, str] | None = None,
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Generate and restore an answer from already anonymized text.
 
         Args:
@@ -145,7 +145,7 @@ class OrchestrationService:
             model (str): The AI model selected by the user.
 
         Returns:
-            Iterator[dict[str, Any]]: Safe response stream events.
+            AsyncIterator[dict[str, Any]]: Safe response stream events.
 
         Raises:
             ValueError: If the anonymization session is unknown.
@@ -169,7 +169,7 @@ class OrchestrationService:
         filename: str,
         content_type: str,
         content: bytes,
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Send a document to document-processor.
 
         Args:
@@ -178,7 +178,7 @@ class OrchestrationService:
             content (bytes): The uploaded document bytes.
 
         Returns:
-            Iterator[dict[str, Any]]: Document processing events.
+            AsyncIterator[dict[str, Any]]: Document processing events.
         """
         return self._container.document_processor.stream_extract_document(
             DocumentUploadRequest(
@@ -266,14 +266,14 @@ class OrchestrationService:
         )
         return AnonymizedPdfPreview(filename=filename, content=output)
 
-    def stream_document_response(
+    async def stream_document_response(
         self,
         chat_id: str,
         document_id: str,
         model: str,
         settings: dict[str, str] | None = None,
         persisted_replacements: dict[str, str] | None = None,
-    ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
+    ) -> tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]:
         """Generate a safe response for a processed document.
 
         Args:
@@ -282,10 +282,10 @@ class OrchestrationService:
             model (str): The AI model selected by the user.
 
         Returns:
-            tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]: The anonymized
-            text metadata and safe stream events.
+            tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]: The
+            anonymized text metadata and safe stream events.
         """
-        return self.stream_safe_response_for_text(
+        return await self.stream_safe_response_for_text(
             chat_id=chat_id,
             text=self.build_document_text(document_id),
             model=model,
@@ -315,7 +315,7 @@ class OrchestrationService:
 
         return text
 
-    def stream_safe_response_for_text(
+    async def stream_safe_response_for_text(
         self,
         chat_id: str,
         text: str,
@@ -324,7 +324,7 @@ class OrchestrationService:
         settings: dict[str, str] | None = None,
         history: list[AssistantMessage] | None = None,
         persisted_replacements: dict[str, str] | None = None,
-    ) -> tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]:
+    ) -> tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]:
         """Run text through privacy-shield, assistant, and restoration.
 
         Args:
@@ -334,11 +334,11 @@ class OrchestrationService:
             log_prefix (str): The prefix used in diagnostic logs.
 
         Returns:
-            tuple[AnonymizedPrompt, Iterator[dict[str, Any]]]: The anonymized
-            text metadata and safe stream events.
+            tuple[AnonymizedPrompt, AsyncIterator[dict[str, Any]]]: The
+            anonymized text metadata and safe stream events.
         """
         started_at = time.perf_counter()
-        anonymized_prompt = self._anonymize_and_store(
+        anonymized_prompt = await self._anonymize_and_store(
             chat_id=chat_id,
             text=text,
             settings=settings,
@@ -385,7 +385,7 @@ class OrchestrationService:
         replacements.update(current_replacements)
         return replacements
 
-    def _anonymize_and_store(
+    async def _anonymize_and_store(
         self,
         chat_id: str,
         text: str,
@@ -401,7 +401,7 @@ class OrchestrationService:
         Returns:
             AnonymizedPrompt: The anonymized prompt and replacement metadata.
         """
-        anonymized_prompt = self._container.privacy_shield.anonymize(
+        anonymized_prompt = await self._container.privacy_shield.anonymize(
             chat_id=chat_id,
             text=text,
             settings=settings,
@@ -416,7 +416,7 @@ class OrchestrationService:
         model: str,
         history: list[AssistantMessage],
         replacements: dict[str, str],
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Stream ai-gateway chunks and restore them through privacy-shield.
 
         Args:
@@ -429,9 +429,9 @@ class OrchestrationService:
                 deanonymization.
 
         Returns:
-            Iterator[dict[str, Any]]: Safe response stream events.
+            AsyncIterator[dict[str, Any]]: Safe response stream events.
         """
-        def stream_events() -> Iterator[dict[str, Any]]:
+        async def stream_events() -> AsyncIterator[dict[str, Any]]:
             started_at = time.perf_counter()
             anonymized_chunks: list[str] = []
 
@@ -442,7 +442,7 @@ class OrchestrationService:
                 history=history,
             )
 
-            for event in self._container.privacy_shield.deanonymize_stream(
+            async for event in self._container.privacy_shield.deanonymize_stream(
                 chunks=self._iter_anonymized_chunks(
                     request=request,
                     anonymized_chunks=anonymized_chunks,
@@ -458,7 +458,8 @@ class OrchestrationService:
                 time.perf_counter() - started_at,
                 len(anonymized_chunks),
             )
-            yield from self._iter_stream_completion_events(anonymized_chunks)
+            for event in self._iter_stream_completion_events(anonymized_chunks):
+                yield event
 
         return stream_events()
 
@@ -492,11 +493,11 @@ class OrchestrationService:
             model=model,
         )
 
-    def _iter_anonymized_chunks(
+    async def _iter_anonymized_chunks(
         self,
         request: AssistantStreamRequest,
         anonymized_chunks: list[str],
-    ) -> Iterator[str]:
+    ) -> AsyncIterator[str]:
         """Yield ai-gateway chunks while storing them for later events.
 
         Args:
@@ -506,7 +507,7 @@ class OrchestrationService:
         Yields:
             str: Non-empty anonymized chunks from ai-gateway.
         """
-        for chunk in self._container.ai_gateway.stream_response(request):
+        async for chunk in self._container.ai_gateway.stream_response(request):
             if not chunk:
                 continue
 

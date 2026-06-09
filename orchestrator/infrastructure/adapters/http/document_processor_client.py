@@ -5,7 +5,7 @@ import json
 import mimetypes
 import os
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -37,17 +37,17 @@ class HttpDocumentProcessingClient(
         "http://127.0.0.1:8001",
     )
 
-    def stream_extract_document(
+    async def stream_extract_document(
         self,
         request: DocumentUploadRequest,
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Send a PDF to document-processor and yield extraction events.
 
         Args:
             request (DocumentUploadRequest): The document upload data.
 
         Returns:
-            Iterator[dict[str, Any]]: Progress and completion events adapted
+            AsyncIterator[dict[str, Any]]: Progress and completion events adapted
             from the document-processor response.
         """
         yield {
@@ -59,8 +59,10 @@ class HttpDocumentProcessingClient(
         }
 
         try:
-            with httpx.Client(timeout=self.timeout_seconds) as client:
-                response = client.post(
+            async with httpx.AsyncClient(
+                timeout=self.timeout_seconds,
+            ) as client:
+                response = await client.post(
                     f"{self.base_url}/extract",
                     files={
                         "file": (

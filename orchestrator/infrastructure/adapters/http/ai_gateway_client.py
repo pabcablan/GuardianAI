@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import httpx
@@ -32,24 +32,24 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
     )
     org_id: str = os.getenv("AI_GATEWAY_ORG_ID", "guardianai")
 
-    def stream_response(
+    async def stream_response(
         self,
         request: AssistantStreamRequest,
-    ) -> Iterator[str]:
+    ) -> AsyncIterator[str]:
         """Stream an anonymized assistant response from ai-gateway.
 
         Args:
             request (AssistantStreamRequest): The assistant stream request.
 
         Returns:
-            Iterator[str]: The anonymized assistant response chunks.
+            AsyncIterator[str]: The anonymized assistant response chunks.
         """
         try:
-            with httpx.Client(
+            async with httpx.AsyncClient(
                 base_url=self.base_url,
                 timeout=self.timeout_seconds,
             ) as client:
-                yield from self._stream_completion(
+                async for chunk in self._stream_completion(
                     client=client,
                     messages=[
                         {
@@ -59,22 +59,23 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
                         for message in request.messages
                     ],
                     model=request.model,
-                )
+                ):
+                    yield chunk
         except httpx.RequestError as error:
             raise AiGatewayClientError(
                 "Ai-gateway service is unavailable."
             ) from error
 
-    def _stream_completion(
+    async def _stream_completion(
         self,
-        client: httpx.Client,
+        client: httpx.AsyncClient,
         messages: list[dict[str, str]],
         model: str,
-    ) -> Iterator[str]:
+    ) -> AsyncIterator[str]:
         """Stream a completion from ai-gateway.
 
         Args:
-            client (httpx.Client): The configured HTTP client.
+            client (httpx.AsyncClient): The configured HTTP client.
             messages (list[dict[str, str]]): The anonymized messages sent to
                 the model.
             model (str): The AI model selected by the user.
@@ -87,19 +88,20 @@ class HttpAiGatewayClient(ExternalHttpClientBase, AiGatewayPort):
             "model": model,
         }
 
-        with client.stream(
+        async with client.stream(
             "POST",
             "/handle",
             json=payload,
             timeout=self.timeout_seconds,
         ) as response:
+            if not response.is_success:
+                await response.aread()
             self._raise_for_status(
                 response=response,
                 service_name="Ai-gateway",
                 error_type=AiGatewayClientError,
-                read_stream=True,
             )
-            for line in response.iter_lines():
+            async for line in response.aiter_lines():
                 if not line:
                     continue
 

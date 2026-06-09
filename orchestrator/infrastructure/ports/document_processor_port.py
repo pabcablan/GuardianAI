@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,16 +26,16 @@ class DocumentProcessorPort(ABC):
     """Define how orchestrator requests document extraction."""
 
     @abstractmethod
-    def stream_extract_document(
+    async def stream_extract_document(
         self,
         request: DocumentUploadRequest,
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Send a document and stream extraction events.
 
         Args:
             request (DocumentUploadRequest): The document upload request.
 
         Returns:
-            Iterator[dict[str, Any]]: Document extraction events.
+            AsyncIterator[dict[str, Any]]: Document extraction events.
         """
         ...

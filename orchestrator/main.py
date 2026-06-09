@@ -72,7 +72,9 @@ def healthcheck() -> dict[str, str]:
 
 
 @app.post("/api/messages/stream")
-def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
+async def stream_message_response(
+    payload: MessageStreamRequest,
+) -> StreamingResponse:
     """Coordinate prompt anonymization, assistant, and deanonymization.
 
     Args:
@@ -83,7 +85,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
     """
     try:
         anonymized_prompt, events = (
-            orchestration_service.stream_message_response(
+            await orchestration_service.stream_message_response(
                 chat_id=payload.chat_id,
                 text=payload.text,
                 model=payload.model,
@@ -102,7 +104,7 @@ def stream_message_response(payload: MessageStreamRequest) -> StreamingResponse:
 
 
 @app.post("/api/messages/anonymize-preview")
-def preview_message_anonymization(
+async def preview_message_anonymization(
     payload: MessageStreamRequest,
 ) -> dict[str, Any]:
     """Return the anonymized prompt without calling the assistant.
@@ -115,7 +117,7 @@ def preview_message_anonymization(
     """
     try:
         anonymized_prompt = (
-            orchestration_service.preview_message_anonymization(
+            await orchestration_service.preview_message_anonymization(
                 chat_id=payload.chat_id,
                 text=payload.text,
                 settings=payload.settings,
@@ -128,7 +130,7 @@ def preview_message_anonymization(
 
 
 @app.post("/api/documents/anonymize-preview")
-def preview_document_anonymization(
+async def preview_document_anonymization(
     payload: DocumentPreviewRequest,
 ) -> dict[str, Any]:
     """Return the anonymized document prompt without calling the assistant.
@@ -141,7 +143,7 @@ def preview_document_anonymization(
     """
     try:
         anonymized_prompt, extraction_method, original_text = (
-            orchestration_service.preview_document_anonymization(
+            await orchestration_service.preview_document_anonymization(
                 chat_id=payload.chat_id,
                 document_id=payload.document_id,
                 settings=payload.settings,
@@ -162,7 +164,7 @@ def preview_document_anonymization(
 
 
 @app.post("/api/anonymized/stream")
-def stream_anonymized_response(
+async def stream_anonymized_response(
     payload: AnonymizedStreamRequest,
 ) -> StreamingResponse:
     """Call the assistant with already anonymized text and restore the answer.
@@ -234,7 +236,7 @@ async def extract_document_stream(
 
 
 @app.post("/api/documents/safe-stream")
-def stream_document_response(
+async def stream_document_response(
     payload: DocumentStreamRequest,
 ) -> StreamingResponse:
     """Generate a safe response for a processed document.
@@ -247,7 +249,7 @@ def stream_document_response(
     """
     try:
         anonymized_prompt, events = (
-            orchestration_service.stream_document_response(
+            await orchestration_service.stream_document_response(
                 chat_id=payload.chat_id,
                 document_id=payload.document_id,
                 model=payload.model,

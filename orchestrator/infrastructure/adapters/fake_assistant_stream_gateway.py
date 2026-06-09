@@ -1,7 +1,7 @@
 """Fake assistant stream gateway used while the ChatGPT API is pending."""
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from infrastructure.ports.ai_gateway_port import (
@@ -20,17 +20,17 @@ class FakeAssistantStreamGateway(AiGatewayPort):
 
     chunk_size: int = 18
 
-    def stream_response(
+    async def stream_response(
         self,
         request: AssistantStreamRequest,
-    ) -> Iterator[str]:
+    ) -> AsyncIterator[str]:
         """Stream a fake assistant response for an anonymized prompt.
 
         Args:
             request (AssistantStreamRequest): The assistant stream request.
 
         Returns:
-            Iterator[str]: The fake assistant response chunks.
+            AsyncIterator[str]: The fake assistant response chunks.
         """
         prompt = request.messages[-1].content if request.messages else ""
         response = (

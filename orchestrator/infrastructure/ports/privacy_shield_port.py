@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,7 +29,7 @@ class PrivacyShieldPort(ABC):
     """Define how orchestrator consumes privacy-shield operations."""
 
     @abstractmethod
-    def anonymize(
+    async def anonymize(
         self,
         chat_id: str,
         text: str,
@@ -49,19 +49,19 @@ class PrivacyShieldPort(ABC):
         ...
 
     @abstractmethod
-    def deanonymize_stream(
+    async def deanonymize_stream(
         self,
-        chunks: Iterator[str],
+        chunks: AsyncIterator[str],
         replacements: dict[str, str],
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Restore anonymized stream chunks through privacy-shield.
 
         Args:
-            chunks (Iterator[str]): The anonymized assistant response chunks.
+            chunks (AsyncIterator[str]): The anonymized assistant response chunks.
             replacements (dict[str, str]): Placeholder replacement mappings.
 
         Returns:
-            Iterator[dict[str, Any]]: NDJSON-like stream events emitted by
+            AsyncIterator[dict[str, Any]]: NDJSON-like stream events emitted by
                 privacy-shield.
         """
         ...

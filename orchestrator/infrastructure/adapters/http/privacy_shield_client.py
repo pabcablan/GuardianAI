@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,7 +36,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         "http://127.0.0.1:8002",
     )
 
-    def anonymize(
+    async def anonymize(
         self,
         chat_id: str,
         text: str,
@@ -56,7 +56,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             "text": text,
             "settings": settings or {},
         }
-        response = self._post_json("/anonymize/optimized", payload)
+        response = await self._post_json("/anonymize/optimized", payload)
 
         if isinstance(response, str):
             return AnonymizedPrompt(
@@ -95,24 +95,25 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             replacement_count=len(normalized_replacements),
         )
 
-    def deanonymize_stream(
+    async def deanonymize_stream(
         self,
-        chunks: Iterator[str],
+        chunks: AsyncIterator[str],
         replacements: dict[str, str],
-    ) -> Iterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Stream restored chunks through privacy-shield.
 
         Args:
-            chunks (Iterator[str]): The anonymized assistant response chunks.
+            chunks (AsyncIterator[str]): The anonymized assistant response
+                chunks.
             replacements (dict[str, str]): Placeholder replacement mappings.
 
         Returns:
-            Iterator[dict[str, Any]]: NDJSON events emitted by privacy-shield.
+            AsyncIterator[dict[str, Any]]: NDJSON events emitted by privacy-shield.
         """
         session_id = str(uuid.uuid4())
         flush_required = False
 
-        self._post_json(
+        await self._post_json(
             "/deanonymize/session/start",
             {
                 "session_id": session_id,
@@ -122,8 +123,8 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         flush_required = True
 
         try:
-            for chunk in chunks:
-                response = self._post_json(
+            async for chunk in chunks:
+                response = await self._post_json(
                     "/deanonymize/session/chunk",
                     {
                         "session_id": session_id,
@@ -139,7 +140,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
         finally:
             if flush_required:
                 try:
-                    response = self._post_json(
+                    response = await self._post_json(
                         "/deanonymize/session/flush",
                         {"session_id": session_id},
                     )
@@ -159,7 +160,7 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
                         }
             yield {"event": "completed"}
 
-    def _post_json(self, path: str, payload: dict[str, Any]) -> Any:
+    async def _post_json(self, path: str, payload: dict[str, Any]) -> Any:
         """Send JSON and parse a JSON response.
 
         Args:
@@ -170,8 +171,11 @@ class HttpPrivacyShieldClient(ExternalHttpClientBase, PrivacyShieldPort):
             Any: The parsed JSON response.
         """
         try:
-            with httpx.Client(timeout=self.timeout_seconds) as client:
-                response = client.post(f"{self.base_url}{path}", json=payload)
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(
+                    f"{self.base_url}{path}",
+                    json=payload,
+                )
                 self._raise_for_status(
                     response=response,
                     service_name="Privacy-shield",
