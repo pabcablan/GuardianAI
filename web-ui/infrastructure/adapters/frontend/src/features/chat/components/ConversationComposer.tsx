@@ -31,6 +31,7 @@ export function ConversationComposer({
   // Forward the currently selected file from the hidden input.
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     onFileSelect(event.target.files?.[0] ?? null);
+    event.target.value = "";
   }
 
   // Submit the current draft when the user presses Enter without Shift.
